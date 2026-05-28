@@ -1,0 +1,57 @@
+name: Update Main Repo Submodule (Backend)
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Main Repository
+        uses: actions/checkout@v4
+        with:
+          repository: Beyond-Imagination/goto
+          token: ${{ secrets.SUBMODULE_UPDATE_TOKEN }}
+          ref: main
+          submodules: true
+          fetch-depth: 0
+
+      - name: Update Submodule and Extract Info
+        id: sub_info
+        run: |
+          git config --global user.name "joonamin"
+          git config --global user.email "joonamin44@gmail.com"
+          
+          # 1. Update submodule pointer in main repo
+          git submodule update --remote backend
+          
+          # 2. Extract information from the updated submodule
+          cd backend
+          {
+            echo "HASH=$(git rev-parse --short HEAD)"
+            echo "AUTHOR=$(git log -1 --format='%an <%ae>')"
+            echo "MSG=$(git log -1 --format='%s')"
+            echo "TIME=$(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+          } >> "$GITHUB_OUTPUT"
+          cd ..
+
+      - name: Commit and Push to Main Repo
+        run: |
+          git add backend
+          
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            COMMIT_MSG=$(printf '%s\n\n%s\n%s\n%s\n%s\n%s' \
+              "chore(submodule): update backend to latest (${{ steps.sub_info.outputs.HASH }})" \
+              "Submodule: backend" \
+              "Commit Hash: ${{ steps.sub_info.outputs.HASH }}" \
+              "Author: ${{ steps.sub_info.outputs.AUTHOR }}" \
+              "Original Message: ${{ steps.sub_info.outputs.MSG }}" \
+              "Reflected at: ${{ steps.sub_info.outputs.TIME }}")
+
+            git commit -m "$COMMIT_MSG"
+            git pull --rebase origin main
+            git push origin main
+          fi
