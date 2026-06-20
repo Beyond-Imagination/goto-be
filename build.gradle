@@ -1,0 +1,90 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '4.1.0'
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'kr.bi'
+version = '0.0.1-SNAPSHOT'
+description = 'Goto'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+def loadDotenv(File dotenvFile) {
+    if (!dotenvFile.exists()) {
+        return [:]
+    }
+
+    return dotenvFile.readLines()
+            .collect { it.trim() }
+            .findAll { it && !it.startsWith('#') && it.contains('=') }
+            .collectEntries { line ->
+                def parts = line.split('=', 2)
+                def key = parts[0].trim().replaceFirst('^export\\s+', '')
+                def value = parts[1].trim()
+
+                if ((value.startsWith('"') && value.endsWith('"'))
+                        || (value.startsWith("'") && value.endsWith("'"))) {
+                    value = value.substring(1, value.length() - 1)
+                }
+
+                if (!key || !value) {
+                    return [:]
+                }
+
+                [(key): value]
+            }
+}
+
+ext {
+    set('springCloudAwsVersion', '4.0.2')
+    set('springdocOpenapiVersion', '3.0.3')
+    set('testcontainersVersion', '1.21.4')
+}
+
+dependencyManagement {
+    imports {
+        mavenBom "io.awspring.cloud:spring-cloud-aws-dependencies:${springCloudAwsVersion}"
+        mavenBom "org.testcontainers:testcontainers-bom:${testcontainersVersion}"
+    }
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-flyway'
+    implementation 'org.springframework.boot:spring-boot-starter-jackson'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-restclient'
+    implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    implementation 'io.awspring.cloud:spring-cloud-aws-starter-parameter-store'
+    implementation "org.springdoc:springdoc-openapi-starter-webmvc-ui:${springdocOpenapiVersion}"
+    runtimeOnly 'org.flywaydb:flyway-database-postgresql'
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+    runtimeOnly 'org.postgresql:postgresql'
+    testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-restclient-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+    testImplementation 'org.springframework.boot:spring-boot-test-autoconfigure'
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+    testImplementation 'org.testcontainers:junit-jupiter'
+    testImplementation 'org.testcontainers:postgresql'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+tasks.named('bootRun') {
+    environment loadDotenv(file('.env'))
+}
