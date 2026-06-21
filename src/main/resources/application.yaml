@@ -1,0 +1,37 @@
+spring:
+  application:
+    name: Goto
+  cloud:
+    aws:
+      region:
+        static: ap-northeast-2
+  datasource:
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+
+---
+spring:
+  config:
+    activate:
+      on-profile: "!test"
+    import: 'optional:aws-parameterstore:/goto/'
+
+security:
+  jwt:
+    issuer: GOTO-BE
+    access-token-ttl: 60m
+    refresh-token-ttl: 14d
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
