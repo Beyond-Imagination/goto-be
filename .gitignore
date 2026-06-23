@@ -26,3 +26,6 @@ gradle-app.setting
 .env
 .env.*
 !.env.example
+
+# System files
+**/.DS_Store
