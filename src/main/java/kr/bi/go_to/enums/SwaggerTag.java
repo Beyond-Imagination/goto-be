@@ -7,8 +7,8 @@ import java.util.List;
 
 public enum SwaggerTag {
     AUTH("A. Auth", "인증 API"),
-    // USER("B. User", "사용자 API")
-    ;
+// USER("B. User", "사용자 API")
+;
 
     public static final String AUTH_NAME = "A. Auth";
     public static final String AUTH_DESCRIPTION = "인증 API";
@@ -30,9 +30,7 @@ public enum SwaggerTag {
     }
 
     public Tag toOpenApiTag() {
-        return new Tag()
-                .name(tagName)
-                .description(description);
+        return new Tag().name(tagName).description(description);
     }
 
     public static List<Tag> openApiTags() {

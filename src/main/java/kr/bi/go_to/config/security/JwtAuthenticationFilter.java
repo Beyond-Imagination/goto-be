@@ -6,7 +6,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
-
 import kr.bi.go_to.enums.TokenType;
 import kr.bi.go_to.service.JwtService;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -25,11 +24,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected void doFilterInternal(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            FilterChain filterChain
-    ) throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
         String authorization = request.getHeader("Authorization");
 
         if (authorization != null
@@ -38,10 +34,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String token = authorization.substring(7);
             jwtService.parseAndValidate(token, TokenType.ACCESS).ifPresent(claims -> {
                 var authentication = new UsernamePasswordAuthenticationToken(
-                        claims.subject(),
-                        null,
-                        List.of(new SimpleGrantedAuthority("ROLE_USER"))
-                );
+                        claims.subject(), null, List.of(new SimpleGrantedAuthority("ROLE_USER")));
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             });
         }

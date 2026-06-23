@@ -24,8 +24,7 @@ public class RefreshToken extends BaseAuditEntity {
     @Column(nullable = false)
     private boolean revoked;
 
-    protected RefreshToken() {
-    }
+    protected RefreshToken() {}
 
     public RefreshToken(UUID id, String username, Instant expiresAt) {
         this.id = id;
@@ -49,5 +48,4 @@ public class RefreshToken extends BaseAuditEntity {
     public boolean isRevoked() {
         return revoked;
     }
-
 }
