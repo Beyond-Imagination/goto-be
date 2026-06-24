@@ -3,6 +3,8 @@ package kr.bi.go_to.model.place;
 import jakarta.persistence.*;
 import kr.bi.go_to.model.common.BaseAuditEntity;
 import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.locationtech.jts.geom.Point;
@@ -11,6 +13,8 @@ import org.locationtech.jts.geom.Point;
  * 관광지 및 장소의 기본 정보를 관리하는 엔티티
  */
 @Getter
+@Builder
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(
