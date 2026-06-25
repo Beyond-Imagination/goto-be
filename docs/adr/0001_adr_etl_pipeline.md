@@ -253,9 +253,11 @@ Spring Batch 프레임워크는 Job과 Step의 상태 관리를 위해 자체적
 
 ### Context & Alternatives
 기본 API에서 제공하는 위도(mapy)와 경도(mapx) 좌표 데이터를 PostgreSQL `PLACE` 테이블의 `location_point` (PostGIS `geometry`) 컬럼으로 마이그레이션하기 위한 방법 결정입니다.
+또한, 실내 편의시설 노드(`facility_nodes.geojson_point`)의 공간 참조(SRID)를 무엇으로 할지에 대한 논의도 포함합니다.
 
 ### Decision
 * 데이터를 DB에 로드하는 시점에 **PostGIS의 `ST_SetSRID(ST_MakePoint(lng, lat), 4326)`** 함수를 실행하여 경위도 좌표계를 EPSG:4326(WGS84) 공간 좌표 타입으로 정제하여 적재합니다.
+* **실내 도면 노드(facility_nodes)의 SRID도 4326으로 통일**합니다. 이는 프론트엔드에서 Mapbox GL JS를 사용하여 실내외 지도를 연속적으로 렌더링할 때 WGS84를 기본 규격으로 요구하기 때문이며, 데이터 정합성을 일원화하기 위함입니다.
 
 ### Consequences
 * JPA 영속화 과정에서 공간 geometry 데이터를 매핑하기 위해 `hibernate-spatial` 라이브러리를 활용하거나, Native Query 또는 JdbcTemplate를 사용해 명시적인 공간 쿼리를 실행하여 변환 오차 없이 적재되도록 설계해야 함.
