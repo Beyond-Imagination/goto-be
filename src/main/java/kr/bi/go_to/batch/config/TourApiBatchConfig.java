@@ -1,10 +1,11 @@
 package kr.bi.go_to.batch.config;
 
+import kr.bi.go_to.batch.dto.PlaceProcessingResult;
 import kr.bi.go_to.batch.dto.TourApiItemDto;
+import kr.bi.go_to.batch.listener.TourApiSkipListener;
 import kr.bi.go_to.batch.processor.TourApiItemProcessor;
 import kr.bi.go_to.batch.reader.TourApiItemReader;
 import kr.bi.go_to.batch.writer.PlaceItemWriter;
-import kr.bi.go_to.model.place.Place;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.job.builder.JobBuilder;
@@ -24,6 +25,7 @@ public class TourApiBatchConfig {
     private final TourApiItemReader itemReader;
     private final TourApiItemProcessor itemProcessor;
     private final PlaceItemWriter itemWriter;
+    private final TourApiSkipListener tourApiSkipListener;
 
     @Bean
     public Job tourApiSyncJob() {
@@ -35,11 +37,15 @@ public class TourApiBatchConfig {
     @Bean
     public Step tourApiSyncStep() {
         return new StepBuilder("tourApiSyncStep", jobRepository)
-                .<TourApiItemDto, Place>chunk(100)
+                .<TourApiItemDto, PlaceProcessingResult>chunk(100)
                 .transactionManager(transactionManager)
                 .reader(itemReader)
                 .processor(itemProcessor)
                 .writer(itemWriter)
+                .faultTolerant()
+                .skip(Exception.class)
+                .skipLimit(100)
+                .listener(tourApiSkipListener)
                 .build();
     }
 }
