@@ -22,7 +22,7 @@ import org.locationtech.jts.geom.Point;
         uniqueConstraints = {
             @UniqueConstraint(
                     name = "uk_places_external_id_source",
-                    columnNames = {"external_id", "source"})
+                    columnNames = {"external_id", "source"}),
         })
 public class Place extends BaseAuditEntity {
 

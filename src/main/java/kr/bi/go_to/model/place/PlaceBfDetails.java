@@ -50,6 +50,7 @@ public class PlaceBfDetails {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class BfItem {
+
         /**
          * 이용 가능 여부
          */

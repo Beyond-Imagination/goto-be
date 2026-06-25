@@ -6,7 +6,7 @@ import java.util.Comparator;
 import java.util.List;
 
 public enum SwaggerTag {
-    AUTH("A. Auth", "인증 API"),
+    AUTH("A. Auth", "인증 API")
 // USER("B. User", "사용자 API")
 ;
 

@@ -24,10 +24,14 @@ public class GotoApplication {
         }
 
         Map<String, String> awsPropertyNames = Map.of(
-                "AWS_ACCESS_KEY_ID", "aws.accessKeyId",
-                "AWS_SECRET_ACCESS_KEY", "aws.secretAccessKey",
-                "AWS_SESSION_TOKEN", "aws.sessionToken",
-                "AWS_REGION", "aws.region");
+                "AWS_ACCESS_KEY_ID",
+                "aws.accessKeyId",
+                "AWS_SECRET_ACCESS_KEY",
+                "aws.secretAccessKey",
+                "AWS_SESSION_TOKEN",
+                "aws.sessionToken",
+                "AWS_REGION",
+                "aws.region");
 
         try {
             for (String line : Files.readAllLines(dotenvPath)) {
@@ -56,7 +60,9 @@ public class GotoApplication {
     }
 
     private static Path findDotenvPath() {
-        for (Path path : new Path[] {Path.of(".env"), Path.of("backend/.env")}) {
+        for (Path path : new Path[] {
+            Path.of(".env"), Path.of("backend/.env"),
+        }) {
             if (Files.isRegularFile(path)) {
                 return path;
             }

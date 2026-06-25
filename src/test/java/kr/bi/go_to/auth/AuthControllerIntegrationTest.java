@@ -49,11 +49,11 @@ class AuthControllerIntegrationTest {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(
                                         """
-                                {
-                                  "username": "tester",
-                                  "password": "password"
-                                }
-                                """))
+                        {
+                          "username": "tester",
+                          "password": "password"
+                        }
+                        """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.tokenType").value("Bearer"))
                 .andExpect(jsonPath("$.accessToken").isString())
@@ -76,11 +76,11 @@ class AuthControllerIntegrationTest {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(
                                         """
-                                {
-                                  "username": "tester",
-                                  "password": "password"
-                                }
-                                """))
+                        {
+                          "username": "tester",
+                          "password": "password"
+                        }
+                        """))
                 .andExpect(status().isCreated())
                 .andReturn()
                 .getResponse()
@@ -105,10 +105,10 @@ class AuthControllerIntegrationTest {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(
                                         """
-                                {
-                                  "refreshToken": "not-a-jwt"
-                                }
-                                """))
+                        {
+                          "refreshToken": "not-a-jwt"
+                        }
+                        """))
                 .andExpect(status().isUnauthorized());
     }
 }

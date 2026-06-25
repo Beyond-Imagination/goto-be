@@ -18,7 +18,11 @@ import org.springframework.test.context.ActiveProfiles;
 
 @DataJpaTest
 @ActiveProfiles("test")
-@Import({TestcontainersConfiguration.class, ClockConfig.class, JpaAuditConfig.class})
+@Import({
+    TestcontainersConfiguration.class,
+    ClockConfig.class,
+    JpaAuditConfig.class,
+})
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class RefreshTokenRepositoryTest {
 

@@ -11,6 +11,7 @@ import lombok.ToString;
 @ToString
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class TourApiResponseDto {
+
     private Response response;
 
     @Getter
@@ -18,6 +19,7 @@ public class TourApiResponseDto {
     @ToString
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class Response {
+
         private Header header;
         private Body body;
     }
@@ -27,6 +29,7 @@ public class TourApiResponseDto {
     @ToString
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class Header {
+
         private String resultCode;
         private String resultMsg;
     }
@@ -36,6 +39,7 @@ public class TourApiResponseDto {
     @ToString
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class Body {
+
         private Items items;
         private int numOfRows;
         private int pageNo;
@@ -47,6 +51,7 @@ public class TourApiResponseDto {
     @ToString
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class Items {
+
         private List<TourApiItemDto> item;
     }
 }

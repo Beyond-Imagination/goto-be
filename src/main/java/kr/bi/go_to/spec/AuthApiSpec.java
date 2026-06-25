@@ -16,7 +16,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 @Tag(name = SwaggerTag.AUTH_NAME, description = SwaggerTag.AUTH_DESCRIPTION)
 public interface AuthApiSpec {
-
     @Operation(
             tags = SwaggerTag.AUTH_NAME,
             summary = "임시 로그인",
@@ -26,7 +25,7 @@ public interface AuthApiSpec {
                 responseCode = "201",
                 description = "토큰 발급 성공",
                 content = @Content(schema = @Schema(implementation = LoginResponse.class))),
-        @ApiResponse(responseCode = "400", description = "요청 값 검증 실패", content = @Content)
+        @ApiResponse(responseCode = "400", description = "요청 값 검증 실패", content = @Content),
     })
     LoginResponse login(@Valid @RequestBody LoginRequest request);
 
@@ -40,7 +39,7 @@ public interface AuthApiSpec {
                 description = "액세스 토큰 갱신 성공",
                 content = @Content(schema = @Schema(implementation = AccessTokenResponse.class))),
         @ApiResponse(responseCode = "400", description = "요청 값 검증 실패", content = @Content),
-        @ApiResponse(responseCode = "401", description = "유효하지 않은 리프레시 토큰", content = @Content)
+        @ApiResponse(responseCode = "401", description = "유효하지 않은 리프레시 토큰", content = @Content),
     })
     AccessTokenResponse refresh(@Valid @RequestBody RefreshRequest request);
 }
