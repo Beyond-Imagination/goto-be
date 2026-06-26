@@ -79,8 +79,7 @@ class PlaceItemWriterTest {
         Chunk<PlaceProcessingResult> chunk = new Chunk<>(List.of(res1, res2));
 
         // when & then
-        assertThatThrownBy(() -> writer.write(chunk))
-                .isInstanceOf(MixedSourceChunkException.class);
+        assertThatThrownBy(() -> writer.write(chunk)).isInstanceOf(MixedSourceChunkException.class);
 
         verifyNoInteractions(jdbcTemplate);
     }

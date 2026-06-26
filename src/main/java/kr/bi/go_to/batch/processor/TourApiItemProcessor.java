@@ -147,8 +147,7 @@ public class TourApiItemProcessor implements ItemProcessor<TourApiItemDto, Place
         }
 
         if (!isValidUrl(extracted)) {
-            throw new HomepageParsingException(
-                    HomepageParsingErrorType.INVALID_URL_FORMAT, extracted, homepage);
+            throw new HomepageParsingException(HomepageParsingErrorType.INVALID_URL_FORMAT, extracted, homepage);
         }
 
         return extracted;
