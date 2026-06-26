@@ -38,11 +38,17 @@
 
 ### 3.2 Technical Implementation (세부 구현)
 
-*   **Component:** `kr.bi.go_to.batch.writer.PlaceItemWriter` (`ItemWriter<Place>` 구현체)
+*   **Component:** `kr.bi.go_to.batch.writer.PlaceItemWriter` (`ItemWriter<PlaceProcessingResult>` 구현체)
 *   **Database Syntax:** PostgreSQL `INSERT ... ON CONFLICT (external_id, source) DO UPDATE SET ...`
 *   **Spatial Data Handling:** JTS `Point` 객체는 PostGIS의 `ST_GeomFromText(?, 4326)` 내장 함수를 호출하여 안전하게 WKT(Well-Known Text) 포맷에서 지오메트리 객체로 변환 및 적재됩니다.
+*   **Chunk-level Source Integrity (청크 단위 소스 무결성 검증)**:
+    *   배치 실행 성능 향상을 위해 1개의 청크 내에 입력되는 데이터들은 항상 동일한 데이터 소스(`source`)를 가져야만 합니다. `PlaceItemWriter` 진입 시 청크 내 모든 아이템의 소스가 동일한지 확인하며, 서로 다른 소스가 혼재해 있을 경우 `IllegalArgumentException`을 던져 데이터 꼬임을 방지합니다.
+*   **Dynamic Source Selection (동적 소스 바인딩)**:
+    *   기본 키 조회를 위한 Select 쿼리에서 하드코딩되었던 `source = 'TOUR_API'` 조건을 `:source` 동적 네임드 파라미터 바인딩으로 대체하였습니다.
+    *   이를 통해 `TOUR_API` 외에도 다양한 데이터 소스(예: `KAKAO_API`, `LOCAL_CSV` 등)를 하나의 공통 `PlaceItemWriter`를 통해 동일 트랜잭션 청크 내에서 유연하게 적재 및 업데이트할 수 있게 확장성을 확보했습니다.
 
 ```sql
+-- Place 벌크 Upsert 쿼리
 INSERT INTO places (external_id, source, category, name, sanitized_address, location_point, thumbnail_url, overview, homepage, tel, content_type_id, created_at, updated_at)
 VALUES (?, ?, ?, ?, ?, ST_GeomFromText(?, 4326), ?, ?, ?, ?, ?, NOW(), NOW())
 ON CONFLICT (external_id, source)
@@ -56,7 +62,10 @@ DO UPDATE SET
     homepage = EXCLUDED.homepage,
     tel = EXCLUDED.tel,
     content_type_id = EXCLUDED.content_type_id,
-    updated_at = NOW()
+    updated_at = NOW();
+
+-- ID 매핑 조회를 위한 동적 Source SQL
+SELECT id, external_id FROM places WHERE external_id IN (:externalIds) AND source = :source;
 ```
 
 ---
