@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import kr.bi.go_to.batch.dto.PlaceProcessingResult;
+import kr.bi.go_to.batch.exception.MixedSourceChunkException;
 import kr.bi.go_to.model.place.Place;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,37 +28,49 @@ public class PlaceItemWriter implements ItemWriter<PlaceProcessingResult> {
 
     private static final String UPSERT_SQL =
             """
-        INSERT INTO places (external_id, source, category, name, sanitized_address, location_point, thumbnail_url, overview, homepage, tel, content_type_id, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ST_GeomFromText(?, 4326), ?, ?, ?, ?, ?, NOW(), NOW())
-        ON CONFLICT (external_id, source)
-        DO UPDATE SET
-            category = EXCLUDED.category,
-            name = EXCLUDED.name,
-            sanitized_address = EXCLUDED.sanitized_address,
-            location_point = EXCLUDED.location_point,
-            thumbnail_url = EXCLUDED.thumbnail_url,
-            overview = EXCLUDED.overview,
-            homepage = EXCLUDED.homepage,
-            tel = EXCLUDED.tel,
-            content_type_id = EXCLUDED.content_type_id,
-            updated_at = NOW()
-        """;
+            INSERT INTO places (external_id, source, category, name, sanitized_address, location_point, thumbnail_url, overview, homepage, tel, content_type_id, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ST_GeomFromText(?, 4326), ?, ?, ?, ?, ?, NOW(), NOW())
+            ON CONFLICT (external_id, source)
+            DO UPDATE SET
+                category = EXCLUDED.category,
+                name = EXCLUDED.name,
+                sanitized_address = EXCLUDED.sanitized_address,
+                location_point = EXCLUDED.location_point,
+                thumbnail_url = EXCLUDED.thumbnail_url,
+                overview = EXCLUDED.overview,
+                homepage = EXCLUDED.homepage,
+                tel = EXCLUDED.tel,
+                content_type_id = EXCLUDED.content_type_id,
+                updated_at = NOW()
+            """;
 
     private static final String UPSERT_BF_INFO_SQL =
             """
-        INSERT INTO place_bf_info (place_id, bf_details, last_synced_at, created_at, updated_at)
-        VALUES (?, ?::jsonb, NOW(), NOW(), NOW())
-        ON CONFLICT (place_id)
-        DO UPDATE SET
-            bf_details = EXCLUDED.bf_details,
-            last_synced_at = EXCLUDED.last_synced_at,
-            updated_at = NOW()
-        """;
+            INSERT INTO place_bf_info (place_id, bf_details, last_synced_at, created_at, updated_at)
+            VALUES (?, ?::jsonb, NOW(), NOW(), NOW())
+            ON CONFLICT (place_id)
+            DO UPDATE SET
+                bf_details = EXCLUDED.bf_details,
+                last_synced_at = EXCLUDED.last_synced_at,
+                updated_at = NOW()
+            """;
 
     @Override
     public void write(Chunk<? extends PlaceProcessingResult> chunk) throws Exception {
         List<PlaceProcessingResult> results = new ArrayList<>(chunk.getItems());
         List<Place> items = results.stream().map(PlaceProcessingResult::place).collect(Collectors.toList());
+
+        if (items.isEmpty()) {
+            return;
+        }
+
+        // 하나의 job에서 etl step 각각에 대해서는 항상 chunk 별로 datasource가 동일해야합니다.
+        // 즉 하나의 작업에서는 하나의 datasource에서 온다는 뜻
+        String source = items.get(0).getSource();
+        boolean allSameSource = items.stream().allMatch(place -> source.equals(place.getSource()));
+        if (!allSameSource) {
+            throw new MixedSourceChunkException();
+        }
 
         jdbcTemplate.batchUpdate(UPSERT_SQL, items, items.size(), (PreparedStatement ps, Place place) -> {
             ps.setString(1, place.getExternalId());
@@ -87,9 +100,10 @@ public class PlaceItemWriter implements ItemWriter<PlaceProcessingResult> {
             NamedParameterJdbcTemplate namedJdbcTemplate = new NamedParameterJdbcTemplate(jdbcTemplate);
             MapSqlParameterSource parameters = new MapSqlParameterSource();
             parameters.addValue("externalIds", externalIds);
+            parameters.addValue("source", source);
 
             String selectSql =
-                    "SELECT id, external_id FROM places WHERE external_id IN (:externalIds) AND source = 'TOUR_API'";
+                    "SELECT id, external_id FROM places WHERE external_id IN (:externalIds) AND source = :source";
 
             Map<String, Long> externalIdToIdMap = namedJdbcTemplate.query(selectSql, parameters, rs -> {
                 Map<String, Long> map = new HashMap<>();
