@@ -8,6 +8,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import kr.bi.go_to.batch.dto.PlaceProcessingResult;
 import kr.bi.go_to.batch.dto.TourApiItemDto;
+import kr.bi.go_to.batch.exception.HomepageParsingErrorType;
+import kr.bi.go_to.batch.exception.HomepageParsingException;
 import kr.bi.go_to.enums.PlaceSource;
 import kr.bi.go_to.model.place.Place;
 import lombok.extern.slf4j.Slf4j;
@@ -116,7 +118,7 @@ public class TourApiItemProcessor implements ItemProcessor<TourApiItemDto, Place
         // 1. 2개 이상의 서로 다른 URL이 포함되어 있는지 검사
         int urlCount = countDistinctUrls(unescaped);
         if (urlCount > 1) {
-            throw new IllegalArgumentException("Multiple URLs found in homepage: " + homepage);
+            throw new HomepageParsingException(HomepageParsingErrorType.MULTIPLE_URLS, homepage);
         }
 
         // 2. URL 추출 시도
@@ -131,12 +133,12 @@ public class TourApiItemProcessor implements ItemProcessor<TourApiItemDto, Place
 
         // 3. 홈페이지 정보가 들어왔으나 유효한 URL로 정제되지 않은 경우 예외 처리
         if (!StringUtils.hasText(extracted)) {
-            throw new IllegalArgumentException("No valid URL could be extracted from homepage: " + homepage);
+            throw new HomepageParsingException(HomepageParsingErrorType.NO_EXTRACTED_URL, homepage);
         }
 
         if (!isValidUrl(extracted)) {
-            throw new IllegalArgumentException(
-                    "Invalid URL format extracted: " + extracted + " (original: " + homepage + ")");
+            throw new HomepageParsingException(
+                    HomepageParsingErrorType.INVALID_URL_FORMAT, extracted, homepage);
         }
 
         return extracted;

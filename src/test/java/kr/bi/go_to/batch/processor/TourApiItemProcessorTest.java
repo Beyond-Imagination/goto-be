@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import kr.bi.go_to.batch.dto.PlaceProcessingResult;
 import kr.bi.go_to.batch.dto.TourApiItemDto;
+import kr.bi.go_to.batch.exception.HomepageParsingErrorType;
+import kr.bi.go_to.batch.exception.HomepageParsingException;
 import kr.bi.go_to.enums.PlaceSource;
 import kr.bi.go_to.model.place.Place;
 import org.junit.jupiter.api.BeforeEach;
@@ -265,30 +267,33 @@ class TourApiItemProcessorTest {
     }
 
     @Test
-    @DisplayName("homepage에 2개 이상의 URL이 발견되면 IllegalArgumentException을 발생시킨다")
-    void process_homepageMultipleUrls_throwsIllegalArgumentException() {
+    @DisplayName("homepage에 2개 이상의 URL이 발견되면 HomepageParsingException(MULTIPLE_URLS)을 발생시킨다")
+    void process_homepageMultipleUrls_throwsHomepageParsingException() {
         TourApiItemDto dto =
                 createDtoWithHomepage("<a href=\"https://url1.com\"></a> <a href=\"https://url2.com\"></a>");
         assertThatThrownBy(() -> processor.process(dto))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Multiple URLs found in homepage");
+                .isInstanceOf(HomepageParsingException.class)
+                .extracting("errorType")
+                .isEqualTo(HomepageParsingErrorType.MULTIPLE_URLS);
     }
 
     @Test
-    @DisplayName("homepage에서 추출한 결과가 유효한 URL 형식이 아니면 IllegalArgumentException을 발생시킨다")
-    void process_homepageInvalidUrlFormat_throwsIllegalArgumentException() {
+    @DisplayName("homepage에서 추출한 결과가 유효한 URL 형식이 아니면 HomepageParsingException(INVALID_URL_FORMAT)을 발생시킨다")
+    void process_homepageInvalidUrlFormat_throwsHomepageParsingException() {
         TourApiItemDto dto = createDtoWithHomepage("<a>가경터미널시장 블로그</a>");
         assertThatThrownBy(() -> processor.process(dto))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Invalid URL format extracted");
+                .isInstanceOf(HomepageParsingException.class)
+                .extracting("errorType")
+                .isEqualTo(HomepageParsingErrorType.INVALID_URL_FORMAT);
     }
 
     @Test
-    @DisplayName("homepage가 들어왔으나 URL을 추출해낼 수 없으면 IllegalArgumentException을 발생시킨다")
-    void process_homepageNoExtractedUrl_throwsIllegalArgumentException() {
+    @DisplayName("homepage가 들어왔으나 URL을 추출해낼 수 없으면 HomepageParsingException(NO_EXTRACTED_URL)을 발생시킨다")
+    void process_homepageNoExtractedUrl_throwsHomepageParsingException() {
         TourApiItemDto dto = createDtoWithHomepage("<a></a>");
         assertThatThrownBy(() -> processor.process(dto))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("No valid URL could be extracted");
+                .isInstanceOf(HomepageParsingException.class)
+                .extracting("errorType")
+                .isEqualTo(HomepageParsingErrorType.NO_EXTRACTED_URL);
     }
 }
