@@ -2,11 +2,14 @@ package kr.bi.go_to.batch.processor;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 import kr.bi.go_to.batch.dto.PlaceProcessingResult;
 import kr.bi.go_to.batch.dto.TourApiItemDto;
 import kr.bi.go_to.batch.exception.HomepageParsingErrorType;
 import kr.bi.go_to.batch.exception.HomepageParsingException;
+import kr.bi.go_to.batch.listener.EtlFailureLogger;
 import kr.bi.go_to.enums.PlaceSource;
 import kr.bi.go_to.model.place.Place;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,10 +19,12 @@ import org.junit.jupiter.api.Test;
 class TourApiItemProcessorTest {
 
     private TourApiItemProcessor processor;
+    private EtlFailureLogger etlFailureLogger;
 
     @BeforeEach
     void setUp() {
-        processor = new TourApiItemProcessor();
+        etlFailureLogger = mock(EtlFailureLogger.class);
+        processor = new TourApiItemProcessor(etlFailureLogger);
     }
 
     private TourApiItemDto createDto(
@@ -138,6 +143,10 @@ class TourApiItemProcessorTest {
         Place place = result.place();
         assertThat(place).isNotNull();
         assertThat(place.getLocationPoint()).isNull();
+        verify(etlFailureLogger)
+                .logFailure(
+                        "12345",
+                        "[COORDINATE_OUT_OF_BOUNDS] Invalid coordinates range: mapx=200.0, mapy=100.0, --> contentId: 12345");
     }
 
     @Test
@@ -155,6 +164,10 @@ class TourApiItemProcessorTest {
         Place place = result.place();
         assertThat(place).isNotNull();
         assertThat(place.getLocationPoint()).isNull();
+        verify(etlFailureLogger)
+                .logFailure(
+                        "12345",
+                        "[COORDINATE_FORMAT_ERROR] Invalid coordinates format: mapx=invalid, mapy=invalid, --> contentId: 12345");
     }
 
     @Test

@@ -10,8 +10,10 @@ import kr.bi.go_to.batch.dto.PlaceProcessingResult;
 import kr.bi.go_to.batch.dto.TourApiItemDto;
 import kr.bi.go_to.batch.exception.HomepageParsingErrorType;
 import kr.bi.go_to.batch.exception.HomepageParsingException;
+import kr.bi.go_to.batch.listener.EtlFailureLogger;
 import kr.bi.go_to.enums.PlaceSource;
 import kr.bi.go_to.model.place.Place;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
@@ -24,6 +26,7 @@ import org.springframework.web.util.HtmlUtils;
 
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class TourApiItemProcessor implements ItemProcessor<TourApiItemDto, PlaceProcessingResult> {
 
     private static final Pattern HREF_PATTERN =
@@ -32,6 +35,15 @@ public class TourApiItemProcessor implements ItemProcessor<TourApiItemDto, Place
             Pattern.compile("https?://[^\\s<>\"']+|www\\.[^\\s<>\"']+", Pattern.CASE_INSENSITIVE);
 
     private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
+    private final EtlFailureLogger etlFailureLogger;
+
+    private static final String FAILURE_LOG_TEMPLATE = "[%s] %s, --> contentId: %s";
+
+    private void handleFailure(String prefix, String cause, String contentId) {
+        String msg = String.format(FAILURE_LOG_TEMPLATE, prefix, cause, contentId);
+        log.warn(msg);
+        etlFailureLogger.logFailure(contentId, msg);
+    }
 
     @Override
     public PlaceProcessingResult process(TourApiItemDto dto) throws Exception {
@@ -54,14 +66,12 @@ public class TourApiItemProcessor implements ItemProcessor<TourApiItemDto, Place
                 if (isLocationWithinValidBounds(lon, lat)) {
                     location = geometryFactory.createPoint(new Coordinate(lon, lat));
                 } else {
-                    log.warn("Invalid coordinates range for contentid {}: mapx={}, mapy={}", dto.contentid(), lon, lat);
+                    String cause = String.format("Invalid coordinates range: mapx=%s, mapy=%s", dto.mapx(), dto.mapy());
+                    handleFailure("COORDINATE_OUT_OF_BOUNDS", cause, dto.contentid());
                 }
             } catch (NumberFormatException e) {
-                log.warn(
-                        "Invalid coordinates format for contentid {}: mapx={}, mapy={}",
-                        dto.contentid(),
-                        dto.mapx(),
-                        dto.mapy());
+                String cause = String.format("Invalid coordinates format: mapx=%s, mapy=%s", dto.mapx(), dto.mapy());
+                handleFailure("COORDINATE_FORMAT_ERROR", cause, dto.contentid());
             }
         }
 
