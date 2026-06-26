@@ -147,18 +147,6 @@ public class TourApiBatchManualE2ETest {
                                 MediaType.APPLICATION_JSON));
             }
 
-            // detailImage2 API 모킹 (이미지 정보)
-            ClassPathResource detailImageResource = new ClassPathResource("mock-data/detailImage2.json");
-            if (detailImageResource.exists()) {
-                mockServer
-                        .expect(ExpectedCount.manyTimes(), requestTo(containsString("/detailImage2")))
-                        .andRespond(withSuccess(readResource(detailImageResource), MediaType.APPLICATION_JSON));
-            } else {
-                mockServer
-                        .expect(ExpectedCount.manyTimes(), requestTo(containsString("/detailImage2")))
-                        .andRespond(withSuccess(
-                                "{\"response\":{\"body\":{\"items\":{\"item\":[]}}}}", MediaType.APPLICATION_JSON));
-            }
         } else {
             System.out.println(">>> Mock data files NOT found. Requesting real Tour API server.");
         }
@@ -216,11 +204,6 @@ public class TourApiBatchManualE2ETest {
             mockServer
                     .expect(ExpectedCount.manyTimes(), requestTo(containsString("/detailIntro2")))
                     .andRespond(withSuccess(readResource(detailIntroResource), MediaType.APPLICATION_JSON));
-
-            ClassPathResource detailImageResource = new ClassPathResource("mock-data/detailImage2.json");
-            mockServer
-                    .expect(ExpectedCount.manyTimes(), requestTo(containsString("/detailImage2")))
-                    .andRespond(withSuccess(readResource(detailImageResource), MediaType.APPLICATION_JSON));
         }
 
         // 테스트 수행 전에 기존의 etl_failure_log 테이블을 비웁니다.

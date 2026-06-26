@@ -76,8 +76,6 @@ public class TourApiItemReader implements ItemReader<TourApiItemDto> {
         JsonNode intro2 = fetchDetail("detailIntro2", contentId, contentTypeId);
         String introDetails = intro2 != null ? intro2.toString() : null;
 
-        fetchDetail("detailImage2", contentId, null);
-
         return item.withDetails(overview, homepage, bfDetails, introDetails);
     }
 
