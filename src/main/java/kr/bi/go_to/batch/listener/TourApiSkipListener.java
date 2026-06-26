@@ -5,7 +5,6 @@ import kr.bi.go_to.batch.dto.TourApiItemDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.listener.SkipListener;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 @Slf4j
@@ -13,10 +12,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class TourApiSkipListener implements SkipListener<TourApiItemDto, PlaceProcessingResult> {
 
-    private final JdbcTemplate jdbcTemplate;
-
-    private static final String INSERT_FAILURE_LOG =
-            "INSERT INTO etl_failure_log (external_id, error_message, created_at) VALUES (?, ?, NOW())";
+    private final EtlFailureLogger failureLogger;
 
     @Override
     public void onSkipInRead(Throwable t) {
@@ -38,7 +34,7 @@ public class TourApiSkipListener implements SkipListener<TourApiItemDto, PlacePr
 
     private void logFailure(String externalId, String errorMessage) {
         try {
-            jdbcTemplate.update(INSERT_FAILURE_LOG, externalId, errorMessage);
+            failureLogger.logFailure(externalId, errorMessage);
         } catch (Exception e) {
             log.error("Failed to log error to etl_failure_log table", e);
         }
