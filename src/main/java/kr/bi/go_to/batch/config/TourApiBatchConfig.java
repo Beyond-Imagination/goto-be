@@ -37,9 +37,9 @@ public class TourApiBatchConfig {
 
     @Bean
     public ThreadPoolTaskExecutor tourApiDetailTaskExecutor(
-            @Value("${tour-api.detail-concurrency:10}") int detailConcurrency,
-            @Value("${tour-api.detail-queue-capacity:${tour-api.detail-quota:1000}}") int detailQueueCapacity,
-            @Value("${tour-api.detail-await-termination-seconds:30}") int awaitTerminationSeconds) {
+            @Value("${tour-api.detail-concurrency:1}") int detailConcurrency,
+            @Value("${tour-api.detail-queue-capacity:${tour-api.detail-quota:250}}") int detailQueueCapacity,
+            @Value("${tour-api.detail-await-termination-seconds:60}") int awaitTerminationSeconds) {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(detailConcurrency);
         executor.setMaxPoolSize(detailConcurrency);

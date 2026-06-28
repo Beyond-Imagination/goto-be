@@ -29,7 +29,7 @@ public class TourApiDetailItemReader implements ItemReader<TourApiItemDto> {
     private final Queue<TourApiItemDto> itemBuffer = new LinkedList<>();
     private boolean isInitialized = false;
 
-    @Value("${tour-api.detail-quota:1000}")
+    @Value("${tour-api.detail-quota:250}")
     private int detailQuota;
 
     public TourApiDetailItemReader(
