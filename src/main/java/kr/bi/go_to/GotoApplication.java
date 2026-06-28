@@ -27,8 +27,7 @@ public class GotoApplication {
                 "AWS_ACCESS_KEY_ID", "aws.accessKeyId",
                 "AWS_SECRET_ACCESS_KEY", "aws.secretAccessKey",
                 "AWS_SESSION_TOKEN", "aws.sessionToken",
-                "AWS_REGION", "aws.region"
-        );
+                "AWS_REGION", "aws.region");
 
         try {
             for (String line : Files.readAllLines(dotenvPath)) {
@@ -40,7 +39,9 @@ public class GotoApplication {
                 String[] parts = trimmed.split("=", 2);
                 String envName = parts[0].trim().replaceFirst("^export\\s+", "");
                 String propertyName = awsPropertyNames.get(envName);
-                if (propertyName == null || hasText(System.getProperty(propertyName)) || hasText(System.getenv(envName))) {
+                if (propertyName == null
+                        || hasText(System.getProperty(propertyName))
+                        || hasText(System.getenv(envName))) {
                     continue;
                 }
 
@@ -55,7 +56,7 @@ public class GotoApplication {
     }
 
     private static Path findDotenvPath() {
-        for (Path path : new Path[]{Path.of(".env"), Path.of("backend/.env")}) {
+        for (Path path : new Path[] {Path.of(".env"), Path.of("backend/.env")}) {
             if (Files.isRegularFile(path)) {
                 return path;
             }
@@ -68,11 +69,9 @@ public class GotoApplication {
     }
 
     private static String unquote(String value) {
-        if ((value.startsWith("\"") && value.endsWith("\""))
-                || (value.startsWith("'") && value.endsWith("'"))) {
+        if ((value.startsWith("\"") && value.endsWith("\"")) || (value.startsWith("'") && value.endsWith("'"))) {
             return value.substring(1, value.length() - 1);
         }
         return value;
     }
-
 }

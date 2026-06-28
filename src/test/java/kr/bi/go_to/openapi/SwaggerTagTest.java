@@ -10,8 +10,6 @@ class SwaggerTagTest {
 
     @Test
     void managesSwaggerTagsInAlphabeticalDisplayOrder() {
-        assertThat(SwaggerTag.openApiTags())
-                .extracting(Tag::getName)
-                .containsExactly("A. Auth");
+        assertThat(SwaggerTag.openApiTags()).extracting(Tag::getName).containsExactly("A. Auth");
     }
 }
