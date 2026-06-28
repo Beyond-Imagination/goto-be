@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.infrastructure.item.ItemReader;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -59,7 +60,7 @@ public class TourApiIncrementalItemReader implements ItemReader<TourApiItemDto> 
         try {
             this.lastSyncTime = jdbcTemplate.queryForObject(sql, String.class);
             log.info("Found last sync time: {}", lastSyncTime);
-        } catch (org.springframework.dao.EmptyResultDataAccessException e) {
+        } catch (EmptyResultDataAccessException e) {
             // 초기 적재 직후이거나 로그가 없을 경우 전일 데이터 기준으로 동기화
             this.lastSyncTime = LocalDate.now(KST).minusDays(1).format(DateTimeFormatter.ofPattern("yyyyMMdd"));
             log.warn("No successful sync log found. Defaulting lastSyncTime to {}", lastSyncTime);

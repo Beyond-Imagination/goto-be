@@ -1,13 +1,10 @@
 package kr.bi.go_to.batch.reader;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import jakarta.annotation.PreDestroy;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import kr.bi.go_to.batch.client.TourApiClient;
 import kr.bi.go_to.batch.dto.TourApiItemDto;
@@ -15,8 +12,10 @@ import kr.bi.go_to.model.place.Place;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.infrastructure.item.ItemReader;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 
 @Slf4j
@@ -26,8 +25,7 @@ public class TourApiDetailItemReader implements ItemReader<TourApiItemDto> {
 
     private final JdbcTemplate jdbcTemplate;
     private final TourApiClient tourApiClient;
-    private final ExecutorService executorService;
-    private final int detailConcurrency;
+    private final ThreadPoolTaskExecutor detailTaskExecutor;
     private final Queue<TourApiItemDto> itemBuffer = new LinkedList<>();
     private boolean isInitialized = false;
 
@@ -37,18 +35,10 @@ public class TourApiDetailItemReader implements ItemReader<TourApiItemDto> {
     public TourApiDetailItemReader(
             JdbcTemplate jdbcTemplate,
             TourApiClient tourApiClient,
-            @Value("${tour-api.detail-concurrency:10}") int detailConcurrency) {
+            @Qualifier("tourApiDetailTaskExecutor") ThreadPoolTaskExecutor detailTaskExecutor) {
         this.jdbcTemplate = jdbcTemplate;
         this.tourApiClient = tourApiClient;
-        this.detailConcurrency = detailConcurrency;
-        this.executorService = Executors.newFixedThreadPool(detailConcurrency);
-    }
-
-    @PreDestroy
-    public void destroy() {
-        if (executorService != null) {
-            executorService.shutdown();
-        }
+        this.detailTaskExecutor = detailTaskExecutor;
     }
 
     @Override
@@ -84,10 +74,13 @@ public class TourApiDetailItemReader implements ItemReader<TourApiItemDto> {
                 },
                 detailQuota);
 
-        log.info("상세 정보 보충이 필요한 장소 {}개를 발견했습니다. 동시성 {} 수준으로 비동기 수집을 시작합니다.", placesToEnrich.size(), detailConcurrency);
+        log.info(
+                "상세 정보 보충이 필요한 장소 {}개를 발견했습니다. 동시성 {} 수준으로 비동기 수집을 시작합니다.",
+                placesToEnrich.size(),
+                detailTaskExecutor.getCorePoolSize());
 
         List<CompletableFuture<TourApiItemDto>> futures = placesToEnrich.stream()
-                .map(place -> CompletableFuture.supplyAsync(() -> fetchDetailsForPlace(place), executorService))
+                .map(place -> CompletableFuture.supplyAsync(() -> fetchDetailsForPlace(place), detailTaskExecutor))
                 .collect(Collectors.toList());
 
         // Wait for all to complete

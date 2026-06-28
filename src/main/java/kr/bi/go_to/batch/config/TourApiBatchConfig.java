@@ -15,8 +15,10 @@ import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.Step;
 import org.springframework.batch.core.step.builder.StepBuilder;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.transaction.PlatformTransactionManager;
 
 @Configuration
@@ -35,6 +37,22 @@ public class TourApiBatchConfig {
 
     private final PlaceItemWriter itemWriter;
     private final TourApiSkipListener tourApiSkipListener;
+
+    @Bean
+    public ThreadPoolTaskExecutor tourApiDetailTaskExecutor(
+            @Value("${tour-api.detail-concurrency:10}") int detailConcurrency,
+            @Value("${tour-api.detail-queue-capacity:${tour-api.detail-quota:1000}}") int detailQueueCapacity,
+            @Value("${tour-api.detail-await-termination-seconds:30}") int awaitTerminationSeconds) {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(detailConcurrency);
+        executor.setMaxPoolSize(detailConcurrency);
+        executor.setQueueCapacity(detailQueueCapacity);
+        executor.setThreadNamePrefix("tour-api-detail-");
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(awaitTerminationSeconds);
+        executor.initialize();
+        return executor;
+    }
 
     @Bean
     public Job tourApiInitialLoadJob() {
