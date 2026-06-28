@@ -15,7 +15,9 @@ docs/
 │   ├── 0000_adr_data_modeling.md  # [adr] 데이터 모델링 구조 결정 및 PostGIS, JSONB 트레이드오프
 │   └── 0001_adr_etl_pipeline.md   # [adr] ETL 파이프라인 아키텍처 결정 사항 및 트레이드오프
 ├── context_map.md                 # 본 문서 (전체 지도 및 도메인 컨텍스트 맵)
-└── specs/                         # (추후 추가 예정) 상세 구현 스펙 및 상세 인터페이스 명세 경로
+└── specs/
+    ├── batch_upsert_strategy_spec.md # PLACE 배치 Upsert 상세 구현 전략
+    └── place_search_api_spec.md      # 위치 기반 장소 탐색 API 구현 명세
 ```
 
 ### 1.1. `adr` 카테고리 (Architecture Decision Records)
@@ -35,7 +37,9 @@ docs/
 
 ### 1.2. `specs` 카테고리 (Implementation Specs)
 * **목적**: 실제 코드 구현과 물리 데이터베이스 설계에 반영되어야 하는 세부 물리 규격, API 상세 페이로드 포맷, ERD 명세를 보관하는 카테고리입니다.
-* **해당 문서**: (현재 구현 스펙 확정 시 작성하여 본 폴더에 추가할 예정입니다.)
+* **해당 문서**:
+  * [batch_upsert_strategy_spec.md](specs/batch_upsert_strategy_spec.md): PostgreSQL Native Upsert와 Spring JDBC 기반 PLACE 배치 적재 전략.
+  * [place_search_api_spec.md](specs/place_search_api_spec.md): 현재 위치 기반 장소 검색, 카테고리 필터, 거리 정렬, Mock 데이터 공급 구조 및 API 계약.
 
 ---
 
@@ -145,6 +149,7 @@ flowchart TD
 | :--- | :--- | :--- | :--- |
 | **데이터베이스 스키마 및 엔티티 변경** | [0000_adr_data_modeling.md](backend/docs/adr/0000_adr_data_modeling.md) | N/A | 대리키 PK 원칙, JSONB 키 구조, PostGIS 공간 타입 및 pg_trgm 인덱스 규칙을 따라야 함. |
 | **ETL 배치 구현 및 수정** | [0001_adr_etl_pipeline.md](backend/docs/adr/0001_adr_etl_pipeline.md) | [0000_adr_data_modeling.md](backend/docs/adr/0000_adr_data_modeling.md) | 배치 프레임워크 규칙, API 에러 핸들링, 텍스트 파싱 정책(`is_available`) 및 DTO 규격을 준수해야 함. |
+| **위치 기반 장소 탐색 API 개발 및 수정** | [place_search_api_spec.md](specs/place_search_api_spec.md) | [0000_adr_data_modeling.md](backend/docs/adr/0000_adr_data_modeling.md) | 요청값 검증, Haversine 거리 정렬, category 및 k 처리, 서비스 인터페이스와 데이터 공급 구현 분리 규칙을 따라야 함. |
 | **장소 상세 및 무장애 정보 조회 API 개발 (웹 백엔드)** | [0000_adr_data_modeling.md](backend/docs/adr/0000_adr_data_modeling.md) | N/A | JSONB 내 `mobility`, `visual`, `hearing`, `infant_family` 등의 키 구조와 `is_available` 필드 속성을 확인해야 함. |
 | **실내 지도/도면 렌더링 개발 (프론트/백엔드)** | [0000_adr_data_modeling.md](backend/docs/adr/0000_adr_data_modeling.md) | N/A | `FLOOR_MAP.geojson_data` 및 `FACILITY_NODE.target_feature_id` 매핑 관계를 참고해야 함. |
 
