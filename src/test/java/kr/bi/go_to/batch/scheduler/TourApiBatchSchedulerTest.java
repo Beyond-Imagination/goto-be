@@ -1,11 +1,13 @@
 package kr.bi.go_to.batch.scheduler;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import java.lang.reflect.Method;
 import kr.bi.go_to.batch.support.TourApiInitialLoadStatus;
 import org.junit.jupiter.api.Test;
 import org.springframework.batch.core.job.Job;
@@ -13,6 +15,7 @@ import org.springframework.batch.core.job.JobExecution;
 import org.springframework.batch.core.job.JobInstance;
 import org.springframework.batch.core.job.parameters.JobParameters;
 import org.springframework.batch.core.launch.JobOperator;
+import org.springframework.scheduling.annotation.Scheduled;
 
 class TourApiBatchSchedulerTest {
 
@@ -39,6 +42,14 @@ class TourApiBatchSchedulerTest {
         scheduler.runTourApiSyncJob();
 
         verify(jobOperator).start(any(Job.class), any(JobParameters.class));
+    }
+
+    @Test
+    void scheduledSyncUsesKstZone() throws Exception {
+        Method method = TourApiBatchScheduler.class.getDeclaredMethod("runTourApiSyncJob");
+        Scheduled scheduled = method.getAnnotation(Scheduled.class);
+
+        assertThat(scheduled.zone()).isEqualTo("Asia/Seoul");
     }
 
     private JobExecution jobExecution() {

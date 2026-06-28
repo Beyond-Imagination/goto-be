@@ -2,6 +2,7 @@ package kr.bi.go_to.batch.reader;
 
 import java.net.URI;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedList;
 import java.util.Queue;
@@ -20,6 +21,8 @@ import org.springframework.web.util.UriComponentsBuilder;
 @Component
 @StepScope
 public class TourApiIncrementalItemReader implements ItemReader<TourApiItemDto> {
+
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
     private final RestClient restClient;
     private final JdbcTemplate jdbcTemplate;
@@ -58,7 +61,7 @@ public class TourApiIncrementalItemReader implements ItemReader<TourApiItemDto> 
             log.info("Found last sync time: {}", lastSyncTime);
         } catch (org.springframework.dao.EmptyResultDataAccessException e) {
             // 초기 적재 직후이거나 로그가 없을 경우 전일 데이터 기준으로 동기화
-            this.lastSyncTime = LocalDate.now().minusDays(1).format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+            this.lastSyncTime = LocalDate.now(KST).minusDays(1).format(DateTimeFormatter.ofPattern("yyyyMMdd"));
             log.warn("No successful sync log found. Defaulting lastSyncTime to {}", lastSyncTime);
         }
         isInitialized = true;
