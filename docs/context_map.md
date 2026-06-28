@@ -29,9 +29,14 @@ docs/
   status: Accepted | Proposed | Superseded
   ---
   ```
+  * **Status 상태 전이 규칙**: 
+    - `Proposed`: 제안 상태. 검토 대기 중.
+    - `Accepted`: 승인 및 적용됨.
+    - `Superseded`: 새로운 결정(다른 ADR)에 의해 대체되거나 폐기됨. 기존 문서의 상태를 `Superseded`로 변경하고, 어떤 ADR로 대체되었는지 본문 상단에 명확한 링크와 함께 명시해야 합니다.
 * **해당 문서**:
   * [0000_adr_data_modeling.md](backend/docs/adr/0000_adr_data_modeling.md): 데이터 대리키 분리, JSONB 무장애 상세 스펙, 실내 지도 도면/시설 노드 이중화 분리, PDR 센서 보정을 위한 스냅점 설계 및 PostGIS 공간/GIN 인덱싱 전략 등.
-  * [0001_adr_etl_pipeline.md](backend/docs/adr/0001_adr_etl_pipeline.md): HTTP RestClient 적용, Spring Batch 프레임워크 선택, 에러 핸들링(DLQ 테이블 패턴), 중복 처리(Upsert) 등 ETL 파이프라인 전반의 동작 방식을 기술함.
+  * [0001_adr_etl_pipeline.md](backend/docs/adr/0001_adr_etl_pipeline.md) **[Superseded]**: HTTP RestClient 적용, Spring Batch 프레임워크 선택, 에러 핸들링 등 초기 전체 데이터 적재 파이프라인의 동작 방식.
+  * [0002_adr_incremental_sync_pipeline.md](backend/docs/adr/0002_adr_incremental_sync_pipeline.md): 증분 동기화(Incremental Sync) 아키텍처, Eager-Lazy Fallback 전략, Soft Delete 및 커스텀 메타데이터 테이블 도입.
 
 ### 1.2. `specs` 카테고리 (Implementation Specs)
 * **목적**: 실제 코드 구현과 물리 데이터베이스 설계에 반영되어야 하는 세부 물리 규격, API 상세 페이로드 포맷, ERD 명세를 보관하는 카테고리입니다.

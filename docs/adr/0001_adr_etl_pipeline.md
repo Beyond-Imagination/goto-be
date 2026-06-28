@@ -1,12 +1,15 @@
 ---
 author: 강민준 (joonamin44@gmail.com)
 date: 2026-06-23
-status: Accepted
+status: Superseded
 ---
 
 # ADR-0001: ETL Pipeline Architecture Design for Barrier-Free Tourism Data
 
 ## Context
+
+> **Note**: 본 문서는 ETL 초기 파이프라인 설계에 대한 결정사항입니다. 증분 동기화 도입 및 Eager-Lazy Fallback 전략 변경에 따라 일부 내용(Scope, Scheduler, Detail 전략 등)이 [ADR-0002: Incremental Sync Pipeline and Eager-Lazy Fallback Strategy](0002_adr_incremental_sync_pipeline.md)로 대체(Superseded)되었습니다.
+> **기각(Superseded) 사유**: 전체 데이터를 대상으로 상세 정보를 Eager Fetch(즉시 조회)하는 기존 방식은 한국관광공사 API의 일일 요율 제한(Rate Limit, 개발 계정 기준 일 1,000건)을 필연적으로 초과하는 문제가 있었습니다. (예: 약 10,000개의 리스트 아이템 × 각 아이템당 3회의 상세 API 호출 = 30,000건 이상 발생). 이를 해결하기 위해 증분 동기화 및 Eager-Lazy Fallback 하이브리드 전략으로 아키텍처를 전면 수정하게 되었습니다.
 
 "함께가길" (goto) 프로젝트는 교통약자를 위한 무장애 관광 정보를 제공하기 위해 한국관광공사(KNTO)의 Open API 데이터를 수집하여 자체 데이터 모델(`PLACE`, `PLACE_BF_INFO` 등)로 정제 및 적재하는 ETL(Extract, Transform, Load) 파이프라인을 구축해야 합니다.
 이를 위해 데이터 소스의 제약 사항, API 요율 제한, 데이터 정합성, 시스템 복잡도, 유지보수 용이성 및 데이터 최신성 등을 고려하여 파이프라인의 전반적인 기술 스택과 상세 구현 방식을 결정해야 합니다.
