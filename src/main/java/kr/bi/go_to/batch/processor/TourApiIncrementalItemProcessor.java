@@ -1,6 +1,5 @@
 package kr.bi.go_to.batch.processor;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -25,6 +24,7 @@ import org.springframework.batch.infrastructure.item.ItemProcessor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.util.HtmlUtils;
+import tools.jackson.databind.JsonNode;
 
 @Slf4j
 @Component

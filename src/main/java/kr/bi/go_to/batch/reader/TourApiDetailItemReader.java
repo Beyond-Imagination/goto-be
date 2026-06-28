@@ -1,6 +1,5 @@
 package kr.bi.go_to.batch.reader;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
@@ -17,6 +16,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.JsonNode;
 
 @Slf4j
 @Component

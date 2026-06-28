@@ -1,12 +1,12 @@
 package kr.bi.go_to.batch.client;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import java.net.URI;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
+import tools.jackson.databind.JsonNode;
 
 @Slf4j
 @Component
@@ -62,7 +62,7 @@ public class TourApiClient {
         if (node != null) {
             JsonNode fieldNode = node.at("/" + fieldName);
             if (!fieldNode.isMissingNode() && !fieldNode.isNull()) {
-                String val = fieldNode.asText();
+                String val = fieldNode.asString();
                 return val.isEmpty() ? null : val;
             }
         }
