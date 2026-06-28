@@ -16,6 +16,7 @@ public class FloorMap extends BaseAuditEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // TODO: Place 엔티티 생성 후 @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "place_id") private Place place; 로 교체
     @Column(name = "place_id", nullable = false)
     private Long placeId;
 
