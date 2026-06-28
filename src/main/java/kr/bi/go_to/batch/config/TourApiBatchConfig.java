@@ -3,8 +3,11 @@ package kr.bi.go_to.batch.config;
 import kr.bi.go_to.batch.dto.PlaceProcessingResult;
 import kr.bi.go_to.batch.dto.TourApiItemDto;
 import kr.bi.go_to.batch.listener.TourApiSkipListener;
-import kr.bi.go_to.batch.processor.TourApiItemProcessor;
-import kr.bi.go_to.batch.reader.TourApiItemReader;
+import kr.bi.go_to.batch.processor.TourApiBaseItemProcessor;
+import kr.bi.go_to.batch.processor.TourApiIncrementalItemProcessor;
+import kr.bi.go_to.batch.reader.TourApiBaseItemReader;
+import kr.bi.go_to.batch.reader.TourApiDetailItemReader;
+import kr.bi.go_to.batch.reader.TourApiIncrementalItemReader;
 import kr.bi.go_to.batch.writer.PlaceItemWriter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.job.Job;
@@ -22,25 +25,70 @@ public class TourApiBatchConfig {
 
     private final JobRepository jobRepository;
     private final PlatformTransactionManager transactionManager;
-    private final TourApiItemReader itemReader;
-    private final TourApiItemProcessor itemProcessor;
+
+    private final TourApiBaseItemReader baseItemReader;
+    private final TourApiDetailItemReader detailItemReader;
+    private final TourApiIncrementalItemReader incrementalItemReader;
+
+    private final TourApiBaseItemProcessor baseItemProcessor;
+    private final TourApiIncrementalItemProcessor incrementalItemProcessor;
+
     private final PlaceItemWriter itemWriter;
     private final TourApiSkipListener tourApiSkipListener;
 
     @Bean
-    public Job tourApiSyncJob() {
-        return new JobBuilder("tourApiSyncJob", jobRepository)
-                .start(tourApiSyncStep())
+    public Job tourApiInitialLoadJob() {
+        return new JobBuilder("tourApiInitialLoadJob", jobRepository)
+                .start(tourApiBaseSyncStep())
+                .next(tourApiDetailSyncStep())
                 .build();
     }
 
     @Bean
-    public Step tourApiSyncStep() {
-        return new StepBuilder("tourApiSyncStep", jobRepository)
+    public Job tourApiIncrementalSyncJob() {
+        return new JobBuilder("tourApiIncrementalSyncJob", jobRepository)
+                .start(tourApiIncrementalBaseSyncStep())
+                .next(tourApiDetailSyncStep())
+                .build();
+    }
+
+    @Bean
+    public Step tourApiBaseSyncStep() {
+        return new StepBuilder("tourApiBaseSyncStep", jobRepository)
                 .<TourApiItemDto, PlaceProcessingResult>chunk(100)
                 .transactionManager(transactionManager)
-                .reader(itemReader)
-                .processor(itemProcessor)
+                .reader(baseItemReader)
+                .processor(baseItemProcessor)
+                .writer(itemWriter)
+                .faultTolerant()
+                .skip(Exception.class)
+                .skipLimit(100)
+                .listener(tourApiSkipListener)
+                .build();
+    }
+
+    @Bean
+    public Step tourApiIncrementalBaseSyncStep() {
+        return new StepBuilder("tourApiIncrementalBaseSyncStep", jobRepository)
+                .<TourApiItemDto, PlaceProcessingResult>chunk(100)
+                .transactionManager(transactionManager)
+                .reader(incrementalItemReader)
+                .processor(incrementalItemProcessor)
+                .writer(itemWriter)
+                .faultTolerant()
+                .skip(Exception.class)
+                .skipLimit(100)
+                .listener(tourApiSkipListener)
+                .build();
+    }
+
+    @Bean
+    public Step tourApiDetailSyncStep() {
+        return new StepBuilder("tourApiDetailSyncStep", jobRepository)
+                .<TourApiItemDto, PlaceProcessingResult>chunk(100)
+                .transactionManager(transactionManager)
+                .reader(detailItemReader)
+                .processor(baseItemProcessor)
                 .writer(itemWriter)
                 .faultTolerant()
                 .skip(Exception.class)

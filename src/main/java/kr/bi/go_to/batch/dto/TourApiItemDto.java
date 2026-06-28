@@ -24,7 +24,8 @@ public record TourApiItemDto(
         String overview,
         String homepage,
         String bfDetails,
-        String introDetails) {
+        String introDetails,
+        String showflag) {
     public TourApiItemDto withDetails(String overview, String homepage, String bfDetails, String introDetails) {
         return new TourApiItemDto(
                 this.contentid(),
@@ -47,6 +48,7 @@ public record TourApiItemDto(
                 overview,
                 homepage,
                 bfDetails,
-                introDetails);
+                introDetails,
+                this.showflag());
     }
 }
