@@ -1,6 +1,9 @@
 spring:
   application:
     name: Goto
+  batch:
+    job:
+      enabled: false
   cloud:
     aws:
       region:
@@ -35,3 +38,9 @@ springdoc:
     path: /swagger-ui.html
     operations-sorter: method
     tags-sorter: alpha
+
+tour-api:
+  base-url: "http://apis.data.go.kr/B551011/KorWithService2"
+  service-key: ${TOUR_API_SERVICE_KEY}
+  mobile-os: "ETC"
+  mobile-app: "Goto"

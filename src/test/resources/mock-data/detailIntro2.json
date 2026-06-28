@@ -1,0 +1,36 @@
+{
+  "response": {
+    "header": {
+      "resultCode": "0000",
+      "resultMsg": "OK"
+    },
+    "body": {
+      "items": {
+        "item": [
+          {
+            "contentid": "1433504",
+            "contenttypeid": "38",
+            "saleitem": "농산물 / 축산물 / 건어물 / 의류 / 잡화 등",
+            "saleitemcost": "",
+            "fairday": "",
+            "opendateshopping": "1994년",
+            "shopguide": "",
+            "culturecenter": "",
+            "restroom": "있음",
+            "infocentershopping": "043-232-1117",
+            "scaleshopping": "",
+            "restdateshopping": "※ 점포별 상이함",
+            "parkingshopping": "가능",
+            "chkbabycarriageshopping": "없음",
+            "chkpetshopping": "",
+            "chkcreditcardshopping": "가능",
+            "opentime": "※ 점포별 상이함"
+          }
+        ]
+      },
+      "numOfRows": 1,
+      "pageNo": 1,
+      "totalCount": 1
+    }
+  }
+}
