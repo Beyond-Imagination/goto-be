@@ -98,4 +98,11 @@ public class Place extends BaseAuditEntity {
      */
     @Column(name = "content_type_id", length = 50)
     private String contentTypeId;
+
+    /**
+     * 해당 장소의 삭제/비공개 여부 (Tour API 동기화 등에서 활용)
+     */
+    @Column(name = "is_deleted", nullable = false)
+    @Builder.Default
+    private boolean isDeleted = false;
 }
