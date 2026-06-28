@@ -46,7 +46,7 @@ import tools.jackson.databind.json.JsonMapper;
 @SpringBatchTest
 @SpringBootTest
 @ActiveProfiles("local-test")
-@Disabled("Manual E2E Test - Requires Local Test Database (docker-compose-test.yml) Running")
+@Disabled("Mock 기반 파이프라인 논리 검증 테스트 - Requires Local Test Database (docker-compose-test.yml) Running")
 public class TourApiBatchManualE2ETest {
 
     @TestConfiguration
@@ -75,7 +75,7 @@ public class TourApiBatchManualE2ETest {
     private JobOperatorTestUtils jobOperatorTestUtils;
 
     @Autowired
-    private Job tourApiSyncJob;
+    private Job tourApiIncrementalSyncJob;
 
     @Autowired
     private RestClient.Builder restClientBuilder;
@@ -150,7 +150,7 @@ public class TourApiBatchManualE2ETest {
         } else {
             System.out.println(">>> Mock data files NOT found. Requesting real Tour API server.");
         }
-        jobOperatorTestUtils.setJob(tourApiSyncJob);
+        jobOperatorTestUtils.setJob(tourApiIncrementalSyncJob);
     }
 
     @Test

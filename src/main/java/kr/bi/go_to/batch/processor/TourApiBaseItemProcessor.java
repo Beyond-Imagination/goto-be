@@ -27,7 +27,7 @@ import org.springframework.web.util.HtmlUtils;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class TourApiItemProcessor implements ItemProcessor<TourApiItemDto, PlaceProcessingResult> {
+public class TourApiBaseItemProcessor implements ItemProcessor<TourApiItemDto, PlaceProcessingResult> {
 
     private static final Pattern HREF_PATTERN =
             Pattern.compile("href\\s*=\\s*[\"']([^\"']+)[\"']", Pattern.CASE_INSENSITIVE);

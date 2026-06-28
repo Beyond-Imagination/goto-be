@@ -16,15 +16,15 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-class TourApiItemProcessorTest {
+class TourApiBaseItemProcessorTest {
 
-    private TourApiItemProcessor processor;
+    private TourApiBaseItemProcessor processor;
     private EtlFailureLogger etlFailureLogger;
 
     @BeforeEach
     void setUp() {
         etlFailureLogger = mock(EtlFailureLogger.class);
-        processor = new TourApiItemProcessor(etlFailureLogger);
+        processor = new TourApiBaseItemProcessor(etlFailureLogger);
     }
 
     private TourApiItemDto createDto(
@@ -60,7 +60,8 @@ class TourApiItemProcessorTest {
                 null, // overview
                 null, // homepage
                 null, // bfDetails
-                null // introDetails
+                null, // introDetails
+                "1" // showflag
                 );
     }
 
@@ -241,7 +242,8 @@ class TourApiItemProcessorTest {
                 null, // overview
                 homepage,
                 null, // bfDetails
-                null // introDetails
+                null, // introDetails
+                "1" // showflag
                 );
     }
 

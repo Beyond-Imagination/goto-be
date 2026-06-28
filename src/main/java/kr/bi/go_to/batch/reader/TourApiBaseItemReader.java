@@ -1,6 +1,5 @@
 package kr.bi.go_to.batch.reader;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import java.net.URI;
 import java.util.LinkedList;
 import java.util.Queue;
@@ -17,7 +16,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 @Slf4j
 @Component
 @StepScope
-public class TourApiItemReader implements ItemReader<TourApiItemDto> {
+public class TourApiBaseItemReader implements ItemReader<TourApiItemDto> {
 
     private final RestClient restClient;
 
@@ -39,7 +38,7 @@ public class TourApiItemReader implements ItemReader<TourApiItemDto> {
     private int totalCount = -1;
     private final Queue<TourApiItemDto> itemBuffer = new LinkedList<>();
 
-    public TourApiItemReader(RestClient.Builder restClientBuilder) {
+    public TourApiBaseItemReader(RestClient.Builder restClientBuilder) {
         this.restClient = restClientBuilder.build();
     }
 
@@ -58,64 +57,7 @@ public class TourApiItemReader implements ItemReader<TourApiItemDto> {
             return null;
         }
 
-        TourApiItemDto item = itemBuffer.poll();
-        return enrichWithDetails(item);
-    }
-
-    private TourApiItemDto enrichWithDetails(TourApiItemDto item) {
-        String contentId = item.contentid();
-        String contentTypeId = item.contenttypeid();
-
-        JsonNode common2 = fetchDetail("detailCommon2", contentId, null);
-        String overview = extractField(common2, "overview");
-        String homepage = extractField(common2, "homepage");
-
-        JsonNode withTour2 = fetchDetail("detailWithTour2", contentId, null);
-        String bfDetails = withTour2 != null ? withTour2.toString() : null;
-
-        JsonNode intro2 = fetchDetail("detailIntro2", contentId, contentTypeId);
-        String introDetails = intro2 != null ? intro2.toString() : null;
-
-        return item.withDetails(overview, homepage, bfDetails, introDetails);
-    }
-
-    private JsonNode fetchDetail(String apiName, String contentId, String contentTypeId) {
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(baseUrl + "/" + apiName)
-                .queryParam("serviceKey", serviceKey)
-                .queryParam("MobileOS", mobileOs)
-                .queryParam("MobileApp", mobileApp)
-                .queryParam("_type", "json")
-                .queryParam("contentId", contentId);
-
-        if (contentTypeId != null) {
-            builder.queryParam("contentTypeId", contentTypeId);
-        }
-
-        URI uri = builder.build(true).toUri();
-
-        try {
-            JsonNode response = restClient.get().uri(uri).retrieve().body(JsonNode.class);
-            if (response != null) {
-                JsonNode items = response.at("/response/body/items/item");
-                if (items.isArray() && items.size() > 0) {
-                    return items.get(0);
-                }
-            }
-        } catch (Exception e) {
-            log.warn("Failed to fetch detail API: {} for contentId: {}", apiName, contentId, e);
-        }
-        return null;
-    }
-
-    private String extractField(JsonNode node, String fieldName) {
-        if (node != null) {
-            JsonNode fieldNode = node.at("/" + fieldName);
-            if (!fieldNode.isMissingNode() && !fieldNode.isNull()) {
-                String val = fieldNode.asText();
-                return val.isEmpty() ? null : val;
-            }
-        }
-        return null;
+        return itemBuffer.poll();
     }
 
     private void fetchNextPage() {
