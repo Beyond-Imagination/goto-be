@@ -41,7 +41,6 @@ springdoc:
 
 tour-api:
   base-url: "http://apis.data.go.kr/B551011/KorWithService2"
-  service-key: ${TOUR_API_SERVICE_KEY}
   mobile-os: "ETC"
   mobile-app: "Goto"
 

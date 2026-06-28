@@ -25,9 +25,6 @@ import org.springframework.transaction.PlatformTransactionManager;
 @RequiredArgsConstructor
 public class TourApiBatchConfig {
 
-    private final JobRepository jobRepository;
-    private final PlatformTransactionManager transactionManager;
-
     private final TourApiBaseItemReader baseItemReader;
     private final TourApiDetailItemReader detailItemReader;
     private final TourApiIncrementalItemReader incrementalItemReader;
@@ -55,23 +52,25 @@ public class TourApiBatchConfig {
     }
 
     @Bean
-    public Job tourApiInitialLoadJob() {
+    public Job tourApiInitialLoadJob(
+            JobRepository jobRepository, Step tourApiBaseSyncStep, Step tourApiDetailSyncStep) {
         return new JobBuilder("tourApiInitialLoadJob", jobRepository)
-                .start(tourApiBaseSyncStep())
-                .next(tourApiDetailSyncStep())
+                .start(tourApiBaseSyncStep)
+                .next(tourApiDetailSyncStep)
                 .build();
     }
 
     @Bean
-    public Job tourApiIncrementalSyncJob() {
+    public Job tourApiIncrementalSyncJob(
+            JobRepository jobRepository, Step tourApiIncrementalBaseSyncStep, Step tourApiDetailSyncStep) {
         return new JobBuilder("tourApiIncrementalSyncJob", jobRepository)
-                .start(tourApiIncrementalBaseSyncStep())
-                .next(tourApiDetailSyncStep())
+                .start(tourApiIncrementalBaseSyncStep)
+                .next(tourApiDetailSyncStep)
                 .build();
     }
 
     @Bean
-    public Step tourApiBaseSyncStep() {
+    public Step tourApiBaseSyncStep(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
         return new StepBuilder("tourApiBaseSyncStep", jobRepository)
                 .<TourApiItemDto, PlaceProcessingResult>chunk(100)
                 .transactionManager(transactionManager)
@@ -86,7 +85,8 @@ public class TourApiBatchConfig {
     }
 
     @Bean
-    public Step tourApiIncrementalBaseSyncStep() {
+    public Step tourApiIncrementalBaseSyncStep(
+            JobRepository jobRepository, PlatformTransactionManager transactionManager) {
         return new StepBuilder("tourApiIncrementalBaseSyncStep", jobRepository)
                 .<TourApiItemDto, PlaceProcessingResult>chunk(100)
                 .transactionManager(transactionManager)
@@ -101,7 +101,7 @@ public class TourApiBatchConfig {
     }
 
     @Bean
-    public Step tourApiDetailSyncStep() {
+    public Step tourApiDetailSyncStep(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
         return new StepBuilder("tourApiDetailSyncStep", jobRepository)
                 .<TourApiItemDto, PlaceProcessingResult>chunk(100)
                 .transactionManager(transactionManager)
