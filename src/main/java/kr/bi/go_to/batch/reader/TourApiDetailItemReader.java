@@ -64,8 +64,9 @@ public class TourApiDetailItemReader implements ItemReader<TourApiItemDto> {
     private void initialize() {
         log.info("상세 정보 보충이 필요한 장소를 최대 {}개까지 조회합니다...", detailQuota);
 
-        String sql = "SELECT external_id, source, category, name, sanitized_address, location_point, thumbnail_url, content_type_id, tel "
-                + "FROM places WHERE overview IS NULL AND source = 'TOUR_API' LIMIT ?";
+        String sql =
+                "SELECT external_id, source, category, name, sanitized_address, location_point, thumbnail_url, content_type_id, tel "
+                        + "FROM places WHERE overview IS NULL AND source = 'TOUR_API' LIMIT ?";
 
         List<Place> placesToEnrich = jdbcTemplate.query(
                 sql,
@@ -83,10 +84,7 @@ public class TourApiDetailItemReader implements ItemReader<TourApiItemDto> {
                 },
                 detailQuota);
 
-        log.info(
-                "상세 정보 보충이 필요한 장소 {}개를 발견했습니다. 동시성 {} 수준으로 비동기 수집을 시작합니다.",
-                placesToEnrich.size(),
-                detailConcurrency);
+        log.info("상세 정보 보충이 필요한 장소 {}개를 발견했습니다. 동시성 {} 수준으로 비동기 수집을 시작합니다.", placesToEnrich.size(), detailConcurrency);
 
         List<CompletableFuture<TourApiItemDto>> futures = placesToEnrich.stream()
                 .map(place -> CompletableFuture.supplyAsync(() -> fetchDetailsForPlace(place), executorService))
