@@ -44,3 +44,8 @@ tour-api:
   service-key: ${TOUR_API_SERVICE_KEY}
   mobile-os: "ETC"
   mobile-app: "Goto"
+
+goto:
+  batch:
+    initial-load:
+      auto-run-enabled: true
