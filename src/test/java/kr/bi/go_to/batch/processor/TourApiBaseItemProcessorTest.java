@@ -256,6 +256,42 @@ class TourApiBaseItemProcessorTest {
     }
 
     @Test
+    @DisplayName("overview와 homepage가 빈 문자열이면 외부 API에서 값 없음이 확인된 상태로 보고 빈 문자열을 보존한다")
+    void process_emptyOverviewAndHomepage_preservesEmptyStrings() throws Exception {
+        TourApiItemDto dto = new TourApiItemDto(
+                "12345",
+                "12",
+                "Test Place",
+                "Seoul",
+                "Gangnam",
+                "127.0",
+                "37.0",
+                null,
+                null,
+                "A0101",
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                "",
+                "",
+                null,
+                null,
+                "1",
+                true,
+                false,
+                false);
+
+        PlaceProcessingResult result = processor.process(dto);
+
+        assertThat(result.place().getOverview()).isEmpty();
+        assertThat(result.place().getHomepage()).isEmpty();
+    }
+
+    @Test
     @DisplayName("homepage가 HTML a 태그 형식이면 URL만 추출하여 반환한다")
     void process_homepageHtmlTag_returnsUrl() throws Exception {
         TourApiItemDto dto = createDtoWithHomepage(
