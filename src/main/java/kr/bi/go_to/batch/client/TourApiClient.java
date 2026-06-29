@@ -38,7 +38,7 @@ public class TourApiClient {
                 .queryParam("_type", "json")
                 .queryParam("contentId", contentId);
 
-        if (contentTypeId != null) {
+        if (requiresContentTypeId(apiName) && contentTypeId != null) {
             builder.queryParam("contentTypeId", contentTypeId);
         }
 
@@ -63,6 +63,10 @@ public class TourApiClient {
             log.warn("Failed to fetch detail API: {} for contentId: {}", apiName, contentId, e);
         }
         return null;
+    }
+
+    private boolean requiresContentTypeId(String apiName) {
+        return "detailIntro2".equals(apiName);
     }
 
     private boolean hasNonOkResult(JsonNode response, String apiName, String contentId) {

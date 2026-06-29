@@ -136,6 +136,50 @@ class TourApiClientTest {
     }
 
     @Test
+    @DisplayName("detailCommon2 요청에는 contentTypeId를 포함하지 않는다")
+    void fetchDetailOmitsContentTypeIdForApisThatDoNotRequireIt() throws Exception {
+        AtomicReference<String> rawQuery = new AtomicReference<>();
+        HttpServer server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
+        server.createContext("/detailCommon2", exchange -> {
+            rawQuery.set(exchange.getRequestURI().getRawQuery());
+            byte[] response =
+                    """
+                    {"response":{"body":{"items":{"item":[{"contentid":"130376","overview":"ok"}]}}}}
+                    """
+                            .getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().add("Content-Type", MediaType.APPLICATION_JSON_VALUE);
+            exchange.sendResponseHeaders(200, response.length);
+            exchange.getResponseBody().write(response);
+            exchange.close();
+        });
+        server.start();
+
+        try {
+            TourApiClient client = new TourApiClient(RestClient.builder());
+            ReflectionTestUtils.setField(
+                    client,
+                    "baseUrl",
+                    "http://localhost:%d".formatted(server.getAddress().getPort()));
+            ReflectionTestUtils.setField(client, "serviceKey", "test-service-key");
+            ReflectionTestUtils.setField(client, "mobileOs", "ETC");
+            ReflectionTestUtils.setField(client, "mobileApp", "Goto");
+
+            JsonNode detail = client.fetchDetail("detailCommon2", "130376", "12");
+
+            assertThat(detail).isNotNull();
+            assertThat(rawQuery.get())
+                    .contains("serviceKey=test-service-key")
+                    .contains("MobileOS=ETC")
+                    .contains("MobileApp=Goto")
+                    .contains("_type=json")
+                    .contains("contentId=130376")
+                    .doesNotContain("contentTypeId=");
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
     @DisplayName("Tour API resultCode가 성공이 아니면 한국어 경고 로그를 남기고 상세 데이터를 누락 처리한다")
     void fetchDetailLogsKoreanMessageAndReturnsNullWhenTourApiResultIsNotOk(CapturedOutput output) throws Exception {
         HttpServer server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
