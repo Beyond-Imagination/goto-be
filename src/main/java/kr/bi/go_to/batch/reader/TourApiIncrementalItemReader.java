@@ -1,6 +1,7 @@
 package kr.bi.go_to.batch.reader;
 
 import java.net.URI;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -8,8 +9,11 @@ import java.util.LinkedList;
 import java.util.Queue;
 import kr.bi.go_to.batch.dto.TourApiItemDto;
 import kr.bi.go_to.batch.dto.TourApiResponseDto;
+import kr.bi.go_to.batch.support.TourApiIncrementalSyncContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.configuration.annotation.StepScope;
+import org.springframework.batch.core.listener.StepExecutionListener;
+import org.springframework.batch.core.step.StepExecution;
 import org.springframework.batch.infrastructure.item.ItemReader;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.EmptyResultDataAccessException;
@@ -21,12 +25,14 @@ import org.springframework.web.util.UriComponentsBuilder;
 @Slf4j
 @Component
 @StepScope
-public class TourApiIncrementalItemReader implements ItemReader<TourApiItemDto> {
+public class TourApiIncrementalItemReader implements ItemReader<TourApiItemDto>, StepExecutionListener {
 
     private static final ZoneId KST = ZoneId.of("Asia/Seoul");
+    private static final DateTimeFormatter TOUR_API_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd");
 
     private final RestClient restClient;
     private final JdbcTemplate jdbcTemplate;
+    private Clock clock = Clock.system(KST);
 
     @Value("${tour-api.service-key}")
     private String serviceKey;
@@ -46,8 +52,10 @@ public class TourApiIncrementalItemReader implements ItemReader<TourApiItemDto> 
     private int totalCount = -1;
     private final Queue<TourApiItemDto> itemBuffer = new LinkedList<>();
 
-    private String lastSyncTime;
+    private String requestDate;
+    private String targetDate;
     private boolean isInitialized = false;
+    private StepExecution stepExecution;
 
     public TourApiIncrementalItemReader(RestClient.Builder restClientBuilder, JdbcTemplate jdbcTemplate) {
         this.restClient = restClientBuilder.build();
@@ -55,17 +63,45 @@ public class TourApiIncrementalItemReader implements ItemReader<TourApiItemDto> 
     }
 
     private void initialize() {
+        requestDate = findLastSuccessfulTargetDate();
+        targetDate = LocalDate.now(clock).format(TOUR_API_DATE_FORMAT);
+        registerSyncDatesForWriteBack();
+        isInitialized = true;
+    }
+
+    private String findLastSuccessfulTargetDate() {
         String sql =
-                "SELECT target_date FROM batch_sync_log WHERE status = 'SUCCESS' AND job_name = 'tourApiIncrementalSyncJob' ORDER BY created_at DESC LIMIT 1";
+                "SELECT target_date FROM batch_sync_log WHERE status = 'SUCCESS' AND job_name = ? ORDER BY created_at DESC LIMIT 1";
         try {
-            this.lastSyncTime = jdbcTemplate.queryForObject(sql, String.class);
-            log.info("Found last sync time: {}", lastSyncTime);
+            String lastSuccessfulTargetDate =
+                    jdbcTemplate.queryForObject(sql, String.class, TourApiIncrementalSyncContext.JOB_NAME);
+            log.info("Found last successful incremental target date: {}", lastSuccessfulTargetDate);
+            return lastSuccessfulTargetDate;
         } catch (EmptyResultDataAccessException e) {
             // 초기 적재 직후이거나 로그가 없을 경우 전일 데이터 기준으로 동기화
-            this.lastSyncTime = LocalDate.now(KST).minusDays(1).format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-            log.warn("No successful sync log found. Defaulting lastSyncTime to {}", lastSyncTime);
+            String fallbackRequestDate = LocalDate.now(clock).minusDays(1).format(TOUR_API_DATE_FORMAT);
+            log.warn("No successful sync log found. Defaulting incremental request date to {}", fallbackRequestDate);
+            return fallbackRequestDate;
         }
-        isInitialized = true;
+    }
+
+    @Override
+    public void beforeStep(StepExecution stepExecution) {
+        this.stepExecution = stepExecution;
+    }
+
+    private void registerSyncDatesForWriteBack() {
+        if (stepExecution == null) {
+            return;
+        }
+        stepExecution
+                .getJobExecution()
+                .getExecutionContext()
+                .putString(TourApiIncrementalSyncContext.REQUEST_DATE_KEY, requestDate);
+        stepExecution
+                .getJobExecution()
+                .getExecutionContext()
+                .putString(TourApiIncrementalSyncContext.TARGET_DATE_KEY, targetDate);
     }
 
     @Override
@@ -102,7 +138,7 @@ public class TourApiIncrementalItemReader implements ItemReader<TourApiItemDto> 
                 .queryParam("numOfRows", numOfRows)
                 .queryParam("MobileOS", mobileOs)
                 .queryParam("MobileApp", mobileApp)
-                .queryParam("modifiedtime", lastSyncTime)
+                .queryParam("modifiedtime", requestDate)
                 .queryParam("_type", "json")
                 .build(true)
                 .toUri();

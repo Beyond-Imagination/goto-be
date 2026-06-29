@@ -2,12 +2,14 @@ package kr.bi.go_to.batch.config;
 
 import kr.bi.go_to.batch.dto.PlaceProcessingResult;
 import kr.bi.go_to.batch.dto.TourApiItemDto;
+import kr.bi.go_to.batch.listener.TourApiIncrementalSyncLogListener;
 import kr.bi.go_to.batch.listener.TourApiSkipListener;
 import kr.bi.go_to.batch.processor.TourApiBaseItemProcessor;
 import kr.bi.go_to.batch.processor.TourApiIncrementalItemProcessor;
 import kr.bi.go_to.batch.reader.TourApiBaseItemReader;
 import kr.bi.go_to.batch.reader.TourApiDetailItemReader;
 import kr.bi.go_to.batch.reader.TourApiIncrementalItemReader;
+import kr.bi.go_to.batch.support.TourApiIncrementalSyncContext;
 import kr.bi.go_to.batch.writer.PlaceItemWriter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.job.Job;
@@ -34,6 +36,7 @@ public class TourApiBatchConfig {
 
     private final PlaceItemWriter itemWriter;
     private final TourApiSkipListener tourApiSkipListener;
+    private final TourApiIncrementalSyncLogListener tourApiIncrementalSyncLogListener;
 
     @Bean
     public ThreadPoolTaskExecutor tourApiDetailTaskExecutor(
@@ -63,9 +66,10 @@ public class TourApiBatchConfig {
     @Bean
     public Job tourApiIncrementalSyncJob(
             JobRepository jobRepository, Step tourApiIncrementalBaseSyncStep, Step tourApiDetailSyncStep) {
-        return new JobBuilder("tourApiIncrementalSyncJob", jobRepository)
+        return new JobBuilder(TourApiIncrementalSyncContext.JOB_NAME, jobRepository)
                 .start(tourApiIncrementalBaseSyncStep)
                 .next(tourApiDetailSyncStep)
+                .listener(tourApiIncrementalSyncLogListener)
                 .build();
     }
 
@@ -87,7 +91,7 @@ public class TourApiBatchConfig {
     @Bean
     public Step tourApiIncrementalBaseSyncStep(
             JobRepository jobRepository, PlatformTransactionManager transactionManager) {
-        return new StepBuilder("tourApiIncrementalBaseSyncStep", jobRepository)
+        return new StepBuilder(TourApiIncrementalSyncContext.BASE_STEP_NAME, jobRepository)
                 .<TourApiItemDto, PlaceProcessingResult>chunk(100)
                 .transactionManager(transactionManager)
                 .reader(incrementalItemReader)
@@ -97,6 +101,7 @@ public class TourApiBatchConfig {
                 .skip(Exception.class)
                 .skipLimit(100)
                 .listener(tourApiSkipListener)
+                .listener(incrementalItemReader)
                 .build();
     }
 

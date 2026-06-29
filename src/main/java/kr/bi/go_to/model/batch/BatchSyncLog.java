@@ -40,7 +40,8 @@ public class BatchSyncLog {
     private String jobName;
 
     /**
-     * API에 요청한 동기화 기준일자 (예: YYYYMMDD)
+     * SUCCESS 이력에서는 다음 증분 실행의 modifiedtime 기준일,
+     * FAIL 이력에서는 실패 실행의 요청 기준일 (예: YYYYMMDD)
      */
     @Column(name = "target_date", nullable = false, length = 20)
     private String targetDate;
@@ -52,7 +53,7 @@ public class BatchSyncLog {
     private String status;
 
     /**
-     * 해당 일자에 성공적으로 처리된 증분 데이터 건수
+     * 증분 base step(tourApiIncrementalBaseSyncStep)의 write count
      */
     @Column(name = "processed_count", nullable = false)
     @Builder.Default
