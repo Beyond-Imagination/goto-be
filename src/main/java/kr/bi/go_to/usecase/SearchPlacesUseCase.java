@@ -24,10 +24,14 @@ public class SearchPlacesUseCase {
 
     public PlaceSearchResponse execute(PlaceSearchRequest request) {
         List<PlaceData> allPlaces = placeService.findAll();
-        List<String> categories =
-                allPlaces.stream().map(PlaceData::category).distinct().sorted().toList();
+        List<String> categories = allPlaces.stream()
+                .map(PlaceData::category)
+                .filter(category -> category != null && !category.isBlank())
+                .distinct()
+                .sorted()
+                .toList();
         List<PlaceSearchItemResponse> places = allPlaces.stream()
-                .filter(place -> request.category() == null || place.category().equals(request.category()))
+                .filter(place -> request.category() == null || request.category().equals(place.category()))
                 .map(place -> toResponse(place, request.lat(), request.lng()))
                 .sorted(Comparator.comparingDouble(PlaceSearchItemResponse::distanceMeters))
                 .limit(request.k())
