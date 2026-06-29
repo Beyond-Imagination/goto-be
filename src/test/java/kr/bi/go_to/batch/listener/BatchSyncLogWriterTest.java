@@ -4,6 +4,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
 
@@ -19,6 +20,7 @@ class BatchSyncLogWriterTest {
     }
 
     @Test
+    @DisplayName("동기화 정보를 write하면 batch_sync_log에 INSERT한다")
     void writesBatchSyncLog() {
         writer.write("tourApiIncrementalSyncJob", "20260628", "SUCCESS", 15);
 

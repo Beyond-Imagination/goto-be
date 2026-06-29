@@ -21,6 +21,7 @@ import tools.jackson.databind.json.JsonMapper;
 class TourApiClientTest {
 
     @Test
+    @DisplayName("Tour API가 배열 item JSON을 주면 fetchDetail은 첫 item을 JsonNode로 반환한다")
     void fetchDetailReadsJsonResponseIntoJackson3JsonNode() throws Exception {
         HttpServer server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
         server.createContext("/detailCommon2", exchange -> {
@@ -56,7 +57,7 @@ class TourApiClientTest {
     }
 
     @Test
-    @DisplayName("Tour API detail 응답의 item이 단일 객체여도 정상 상세 데이터로 처리한다")
+    @DisplayName("Tour API가 단일 객체 item JSON을 주면 fetchDetail은 해당 item을 JsonNode로 반환한다")
     void fetchDetailAcceptsSingleObjectItemResponse() throws Exception {
         HttpServer server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
         server.createContext("/detailCommon2", exchange -> {
@@ -92,7 +93,7 @@ class TourApiClientTest {
     }
 
     @Test
-    @DisplayName("contentTypeId가 있으면 Tour API 상세 요청 query parameter에 포함한다")
+    @DisplayName("contentTypeId가 있으면 detailIntro2 요청 query parameter에 contentTypeId를 포함한다")
     void fetchDetailIncludesContentTypeIdAndRequiredQueryParametersWhenContentTypeIdExists() throws Exception {
         AtomicReference<String> rawQuery = new AtomicReference<>();
         HttpServer server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
@@ -136,7 +137,7 @@ class TourApiClientTest {
     }
 
     @Test
-    @DisplayName("detailCommon2 요청에는 contentTypeId를 포함하지 않는다")
+    @DisplayName("contentTypeId가 있어도 detailCommon2 요청 query parameter에는 contentTypeId를 넣지 않는다")
     void fetchDetailOmitsContentTypeIdForApisThatDoNotRequireIt() throws Exception {
         AtomicReference<String> rawQuery = new AtomicReference<>();
         HttpServer server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
@@ -180,7 +181,7 @@ class TourApiClientTest {
     }
 
     @Test
-    @DisplayName("Tour API resultCode가 성공이 아니면 한국어 경고 로그를 남기고 상세 데이터를 누락 처리한다")
+    @DisplayName("Tour API resultCode가 성공이 아니면 fetchDetail은 한국어 경고 로그를 남기고 null을 반환한다")
     void fetchDetailLogsKoreanMessageAndReturnsNullWhenTourApiResultIsNotOk(CapturedOutput output) throws Exception {
         HttpServer server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
         server.createContext("/detailCommon2", exchange -> {
@@ -221,6 +222,7 @@ class TourApiClientTest {
     }
 
     @Test
+    @DisplayName("JsonNode 필드가 없거나 blank/null이면 extractFieldOrEmpty는 빈 문자열 또는 null을 반환한다")
     void extractFieldOrEmptyReturnsEmptyStringForMissingOrBlankFieldsWhenNodeExists() throws Exception {
         TourApiClient client = new TourApiClient(RestClient.builder());
         JsonNode node = JsonMapper.builder()

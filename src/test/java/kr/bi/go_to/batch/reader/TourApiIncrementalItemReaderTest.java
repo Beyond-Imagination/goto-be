@@ -16,6 +16,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import kr.bi.go_to.batch.support.TourApiIncrementalSyncContext;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.batch.core.job.JobExecution;
 import org.springframework.batch.core.job.JobInstance;
@@ -36,6 +37,7 @@ class TourApiIncrementalItemReaderTest {
             Clock.fixed(ZonedDateTime.of(2026, 6, 29, 3, 0, 0, 0, KST).toInstant(), KST);
 
     @Test
+    @DisplayName("성공한 동기화 로그가 없으면 read로 KST 기준 어제 날짜의 areaBasedSyncList1을 조회한다")
     void usesKstYesterdayWhenNoSuccessfulSyncLogExists() throws Exception {
         RestClient.Builder restClientBuilder = RestClient.builder();
         MockRestServiceServer mockServer =
@@ -71,6 +73,7 @@ class TourApiIncrementalItemReaderTest {
     }
 
     @Test
+    @DisplayName("마지막 성공 동기화 날짜가 있으면 read 후 requestDate와 nextTargetDate를 ExecutionContext에 넣는다")
     void registersRequestDateAndNextTargetDateForBatchSyncLogWriteBack() throws Exception {
         RestClient.Builder restClientBuilder = RestClient.builder();
         MockRestServiceServer mockServer =

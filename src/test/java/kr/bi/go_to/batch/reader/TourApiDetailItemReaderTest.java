@@ -51,7 +51,7 @@ class TourApiDetailItemReaderTest {
     }
 
     @Test
-    @DisplayName("삭제되지 않았고 detail API 중 하나라도 미완료인 장소만 Lazy Detail Fetch 대상으로 조회한다")
+    @DisplayName("상세 보강 대상 장소가 있으면 read로 미완료 detail API 조건의 Lazy Detail Fetch 대상을 조회한다")
     void selectsNotDeletedAndIncompleteDetailPlacesForLazyDetailEnrichment() throws Exception {
         reader.read();
 
@@ -65,7 +65,7 @@ class TourApiDetailItemReaderTest {
     }
 
     @Test
-    @DisplayName("detailCommon2가 성공했지만 overview/homepage 값이 없으면 빈 문자열로 매핑한다")
+    @DisplayName("detailCommon2는 성공했지만 overview/homepage가 없으면 read 결과를 빈 문자열로 매핑한다")
     void mapsMissingCommonDetailFieldsToEmptyStringsWhenCommonDetailSucceeds() throws Exception {
         jdbcTemplate.returnSinglePlaceRow();
         JsonNode common2 = mock(JsonNode.class);

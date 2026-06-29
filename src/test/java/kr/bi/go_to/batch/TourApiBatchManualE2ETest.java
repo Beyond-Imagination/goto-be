@@ -15,6 +15,7 @@ import kr.bi.go_to.model.place.Place;
 import kr.bi.go_to.repository.PlaceRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.job.Job;
@@ -154,6 +155,7 @@ public class TourApiBatchManualE2ETest {
     }
 
     @Test
+    @DisplayName("Mock Tour API 응답으로 증분 동기화 Job을 돌리면 homepage가 정제된 장소가 DB에 저장된다")
     void testTourApiSyncJob() throws Exception {
         // given
         JobParameters jobParameters = new JobParametersBuilder()
@@ -177,6 +179,7 @@ public class TourApiBatchManualE2ETest {
     }
 
     @Test
+    @DisplayName("homepage에 복수 URL이 있는 Mock 응답으로 Job을 돌리면 COMPLETED로 끝나고 etl_failure_log에 기록된다")
     void testTourApiSyncJob_InvalidHomepage_LogsToEtlFailureLog() throws Exception {
         if (mockServer != null) {
             mockServer.reset();

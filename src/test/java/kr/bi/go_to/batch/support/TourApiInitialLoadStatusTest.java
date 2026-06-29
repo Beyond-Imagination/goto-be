@@ -5,6 +5,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.job.JobExecution;
@@ -18,6 +19,7 @@ class TourApiInitialLoadStatusTest {
     private final TourApiInitialLoadStatus status = new TourApiInitialLoadStatus(jobRepository);
 
     @Test
+    @DisplayName("완료된 실행이 하나라도 있으면 hasCompletedInitialLoad()는 true를 반환한다")
     void hasCompletedInitialLoadReturnsTrueWhenAnyExecutionCompleted() {
         JobInstance jobInstance = new JobInstance(1L, TourApiInitialLoadStatus.INITIAL_LOAD_JOB_NAME);
         JobExecution failedExecution = jobExecution(1L, jobInstance, BatchStatus.FAILED);
@@ -31,6 +33,7 @@ class TourApiInitialLoadStatusTest {
     }
 
     @Test
+    @DisplayName("완료된 실행이 없으면 hasCompletedInitialLoad()는 false를 반환한다")
     void hasCompletedInitialLoadReturnsFalseWhenThereAreNoCompletedExecutions() {
         JobInstance jobInstance = new JobInstance(1L, TourApiInitialLoadStatus.INITIAL_LOAD_JOB_NAME);
         JobExecution failedExecution = jobExecution(1L, jobInstance, BatchStatus.FAILED);
@@ -43,6 +46,7 @@ class TourApiInitialLoadStatusTest {
     }
 
     @Test
+    @DisplayName("실행 중인 Job이 있으면 hasRunningInitialLoad()는 true를 반환한다")
     void hasRunningInitialLoadReturnsTrueWhenAnyExecutionIsRunning() {
         JobInstance jobInstance = new JobInstance(1L, TourApiInitialLoadStatus.INITIAL_LOAD_JOB_NAME);
         JobExecution runningExecution = jobExecution(1L, jobInstance, BatchStatus.STARTED);

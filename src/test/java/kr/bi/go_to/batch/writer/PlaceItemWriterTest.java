@@ -26,7 +26,7 @@ class PlaceItemWriterTest {
     }
 
     @Test
-    @DisplayName("Chunk가 비어있으면 아무 작업도 하지 않고 정상 종료된다")
+    @DisplayName("빈 Chunk에 write하면 DB 작업 없이 정상 종료된다")
     void testWrite_WithEmptyChunk_ShouldReturnImmediately() throws Exception {
         // given
         Chunk<PlaceProcessingResult> chunk = new Chunk<>(Collections.emptyList());
@@ -39,7 +39,7 @@ class PlaceItemWriterTest {
     }
 
     @Test
-    @DisplayName("Chunk에 포함된 모든 item들의 source가 동일하면 정상적으로 처리가 진행된다")
+    @DisplayName("Chunk item source가 모두 같으면 write로 batchUpdate가 정상 수행된다")
     void testWrite_WithSameSource_ShouldSucceed() throws Exception {
         // given
         Place place1 = Place.builder()
@@ -64,7 +64,7 @@ class PlaceItemWriterTest {
     }
 
     @Test
-    @DisplayName("Chunk에 포함된 item들의 source가 다르면 MixedSourceChunkException이 발생한다")
+    @DisplayName("Chunk item source가 서로 다르면 write 시 MixedSourceChunkException이 발생한다")
     void testWrite_WithDifferentSources_ShouldThrowException() {
         // given
         Place place1 = Place.builder()

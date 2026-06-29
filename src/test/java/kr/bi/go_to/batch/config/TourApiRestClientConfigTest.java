@@ -7,12 +7,14 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.client.RestClient;
 
 class TourApiRestClientConfigTest {
 
     @Test
+    @DisplayName("Tour API RestClient customizer가 적용된 상태에서 GET 요청을 보내면 HTTP/2 Upgrade 헤더를 넣지 않는다")
     void restClientDoesNotSendHttp2UpgradeHeaders() throws Exception {
         AtomicReference<List<String>> upgradeHeaders = new AtomicReference<>(List.of());
         AtomicReference<List<String>> http2SettingsHeaders = new AtomicReference<>(List.of());

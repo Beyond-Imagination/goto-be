@@ -53,7 +53,7 @@ class TourApiRealApiMappingLocalE2ETest {
     private Environment environment;
 
     @Test
-    @DisplayName("실제 Tour API 목록에서 1건을 골라 세 상세 API 보강 후 processor와 writer 매핑을 검증한다")
+    @DisplayName("실제 Tour API 목록 항목을 세 상세 API로 보강한 뒤 processor와 writer를 돌리면 DB 매핑이 일치한다")
     void realTourApiListItemCanBeDetailedProcessedAndLoaded() throws Exception {
         assertThat(environment.getProperty("goto.batch.initial-load.auto-run-enabled", Boolean.class))
                 .isFalse();

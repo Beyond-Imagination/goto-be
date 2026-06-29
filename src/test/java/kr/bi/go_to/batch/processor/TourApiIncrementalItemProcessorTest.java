@@ -35,7 +35,7 @@ class TourApiIncrementalItemProcessorTest {
     }
 
     @Test
-    @DisplayName("showflag=0이면 Tour API에서 삭제/비공개 처리된 장소로 보고 isDeleted=true로 변환한다")
+    @DisplayName("showflag=0인 DTO를 process하면 isDeleted=true로 변환한다")
     void marksPlaceDeletedWhenShowflagIsZero() throws Exception {
         PlaceProcessingResult result = processor.process(createDto("0"));
 
@@ -44,7 +44,7 @@ class TourApiIncrementalItemProcessorTest {
     }
 
     @Test
-    @DisplayName("showflag=1이면 공개 중인 장소로 보고 기존 삭제 상태를 복구할 수 있도록 isDeleted=false로 변환한다")
+    @DisplayName("showflag=1인 DTO를 process하면 isDeleted=false로 변환한다")
     void restoresPlaceWhenShowflagIsOne() throws Exception {
         PlaceProcessingResult result = processor.process(createDto("1"));
 
@@ -53,7 +53,7 @@ class TourApiIncrementalItemProcessorTest {
     }
 
     @Test
-    @DisplayName("detailCommon2, detailWithTour2, detailIntro2가 모두 성공해야 상세 보강 완료 상태가 된다")
+    @DisplayName("세 detail API가 모두 성공하면 process 결과를 상세 보강 완료 상태로 표시한다")
     void marksDetailCompleteOnlyWhenAllDetailApisSucceed() throws Exception {
         JsonNode common2 = mock(JsonNode.class);
         JsonNode withTour2 = mock(JsonNode.class);
@@ -76,7 +76,7 @@ class TourApiIncrementalItemProcessorTest {
     }
 
     @Test
-    @DisplayName("detailCommon2가 성공했지만 overview/homepage 값이 없으면 빈 문자열로 기존 값을 지울 수 있게 한다")
+    @DisplayName("detailCommon2는 성공했지만 overview/homepage가 없으면 process 결과를 빈 문자열로 매핑한다")
     void mapsMissingCommonDetailFieldsToEmptyStringsWhenDetailCommonSucceeds() throws Exception {
         JsonNode common2 = mock(JsonNode.class);
         when(tourApiClient.fetchDetail(eq("detailCommon2"), anyString(), nullable(String.class)))
@@ -92,7 +92,7 @@ class TourApiIncrementalItemProcessorTest {
     }
 
     @Test
-    @DisplayName("detail API 중 하나라도 실패하면 상세 보강 미완료 상태를 유지한다")
+    @DisplayName("detail API 중 하나라도 실패하면 process 결과 상세 보강 미완료 상태를 유지한다")
     void leavesDetailIncompleteWhenAnyDetailApiFails() throws Exception {
         JsonNode common2 = mock(JsonNode.class);
         JsonNode intro2 = mock(JsonNode.class);

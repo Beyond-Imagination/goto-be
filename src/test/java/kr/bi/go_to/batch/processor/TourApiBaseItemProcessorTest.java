@@ -66,7 +66,7 @@ class TourApiBaseItemProcessorTest {
     }
 
     @Test
-    @DisplayName("정상적인 DTO가 주어지면 Place 엔티티로 변환된다")
+    @DisplayName("정상 DTO를 process하면 Place 엔티티로 변환한다")
     void process_validDto_returnsPlace() throws Exception {
         // given
         TourApiItemDto dto = createDto(
@@ -104,7 +104,7 @@ class TourApiBaseItemProcessorTest {
     }
 
     @Test
-    @DisplayName("contentid가 없으면 null을 반환한다")
+    @DisplayName("contentid가 없으면 process하면 null을 반환한다")
     void process_emptyContentId_returnsNull() throws Exception {
         // given
         TourApiItemDto dto = createDto("", "Test Place", null, null, null, null, null, null, null, null, null);
@@ -117,7 +117,7 @@ class TourApiBaseItemProcessorTest {
     }
 
     @Test
-    @DisplayName("title이 없으면 null을 반환한다")
+    @DisplayName("title이 없으면 process하면 null을 반환한다")
     void process_emptyTitle_returnsNull() throws Exception {
         // given
         TourApiItemDto dto = createDto("12345", "", null, null, null, null, null, null, null, null, null);
@@ -130,7 +130,7 @@ class TourApiBaseItemProcessorTest {
     }
 
     @Test
-    @DisplayName("유효하지 않은 좌표 범위면 locationPoint가 null이다")
+    @DisplayName("좌표가 유효 범위를 벗어나면 process하면 locationPoint는 null이고 ETL 실패 로그를 기록한다")
     void process_invalidCoordinateRange_locationPointIsNull() throws Exception {
         // given
         TourApiItemDto dto =
@@ -151,7 +151,7 @@ class TourApiBaseItemProcessorTest {
     }
 
     @Test
-    @DisplayName("좌표 포맷 에러 시 locationPoint가 null이다")
+    @DisplayName("좌표 포맷이 잘못됐으면 process하면 locationPoint는 null이고 ETL 실패 로그를 기록한다")
     void process_invalidCoordinateFormat_locationPointIsNull() throws Exception {
         // given
         TourApiItemDto dto =
@@ -172,7 +172,7 @@ class TourApiBaseItemProcessorTest {
     }
 
     @Test
-    @DisplayName("firstimage가 없으면 firstimage2를 썸네일로 사용한다")
+    @DisplayName("firstimage가 없고 firstimage2만 있으면 process하면 firstimage2를 썸네일로 사용한다")
     void process_fallbackImage() throws Exception {
         // given
         TourApiItemDto dto =
@@ -189,7 +189,7 @@ class TourApiBaseItemProcessorTest {
     }
 
     @Test
-    @DisplayName("둘 다 없으면 썸네일은 null이다")
+    @DisplayName("firstimage와 firstimage2가 모두 없으면 process하면 썸네일은 null이다")
     void process_noImage_returnsNullThumbnail() throws Exception {
         // given
         TourApiItemDto dto = createDto("12345", "Test Place", null, null, null, null, "", "   ", null, null, null);
@@ -205,7 +205,7 @@ class TourApiBaseItemProcessorTest {
     }
 
     @Test
-    @DisplayName("주소가 한 개만 있으면 쉼표 없이 해당 주소만 저장된다")
+    @DisplayName("주소가 하나뿐이면 process하면 쉼표 없이 해당 주소만 저장한다")
     void process_singleAddress() throws Exception {
         // given
         TourApiItemDto dto = createDto("12345", "Test Place", "Seoul", "", null, null, null, null, null, null, null);
@@ -248,7 +248,7 @@ class TourApiBaseItemProcessorTest {
     }
 
     @Test
-    @DisplayName("homepage가 일반 URL이면 그대로 반환한다")
+    @DisplayName("homepage가 일반 URL이면 process하면 그대로 반환한다")
     void process_homepagePlainUrl_returnsPlainUrl() throws Exception {
         TourApiItemDto dto = createDtoWithHomepage("https://blog.naver.com/kktm2021");
         PlaceProcessingResult result = processor.process(dto);
@@ -256,7 +256,7 @@ class TourApiBaseItemProcessorTest {
     }
 
     @Test
-    @DisplayName("overview와 homepage가 빈 문자열이면 외부 API에서 값 없음이 확인된 상태로 보고 빈 문자열을 보존한다")
+    @DisplayName("overview와 homepage가 빈 문자열이면 process하면 외부 API 값 없음 상태로 빈 문자열을 보존한다")
     void process_emptyOverviewAndHomepage_preservesEmptyStrings() throws Exception {
         TourApiItemDto dto = new TourApiItemDto(
                 "12345",
@@ -292,7 +292,7 @@ class TourApiBaseItemProcessorTest {
     }
 
     @Test
-    @DisplayName("homepage가 HTML a 태그 형식이면 URL만 추출하여 반환한다")
+    @DisplayName("homepage가 HTML a 태그 형식이면 process하면 URL만 추출해 반환한다")
     void process_homepageHtmlTag_returnsUrl() throws Exception {
         TourApiItemDto dto = createDtoWithHomepage(
                 "<a href=\"https://blog.naver.com/kktm2021\" target=\"_blank\" title=\"새창\">https://blog.naver.com/kktm2021</a>");
@@ -301,7 +301,7 @@ class TourApiBaseItemProcessorTest {
     }
 
     @Test
-    @DisplayName("homepage가 HTML 엔티티를 포함한 a 태그 형식이면 URL만 추출하여 반환한다")
+    @DisplayName("homepage가 HTML 엔티티 a 태그 형식이면 process하면 URL만 추출해 반환한다")
     void process_homepageHtmlEntity_returnsUrl() throws Exception {
         TourApiItemDto dto = createDtoWithHomepage(
                 "&lt;a href=&quot;https://blog.naver.com/kktm2021&quot; target=&quot;_blank&quot;&gt;블로그&lt;/a&gt;");
@@ -310,7 +310,7 @@ class TourApiBaseItemProcessorTest {
     }
 
     @Test
-    @DisplayName("homepage가 href 속성이 없는 a 태그 형태이면 내부 텍스트에서 태그를 지우고 반환한다")
+    @DisplayName("homepage가 href 없는 a 태그 형식이면 process하면 내부 텍스트에서 URL을 추출한다")
     void process_homepageHtmlNoHref_returnsText() throws Exception {
         TourApiItemDto dto = createDtoWithHomepage("<a>https://blog.naver.com/kktm2021</a>");
         PlaceProcessingResult result = processor.process(dto);
@@ -318,7 +318,7 @@ class TourApiBaseItemProcessorTest {
     }
 
     @Test
-    @DisplayName("homepage에 2개 이상의 URL이 발견되면 HomepageParsingException(MULTIPLE_URLS)을 발생시킨다")
+    @DisplayName("homepage에 URL이 2개 이상이면 process하면 HomepageParsingException(MULTIPLE_URLS)이 난다")
     void process_homepageMultipleUrls_throwsHomepageParsingException() {
         TourApiItemDto dto =
                 createDtoWithHomepage("<a href=\"https://url1.com\"></a> <a href=\"https://url2.com\"></a>");
@@ -329,7 +329,7 @@ class TourApiBaseItemProcessorTest {
     }
 
     @Test
-    @DisplayName("homepage에서 추출한 결과가 유효한 URL 형식이 아니면 HomepageParsingException(INVALID_URL_FORMAT)을 발생시킨다")
+    @DisplayName("homepage에서 추출한 값이 유효한 URL이 아니면 process하면 HomepageParsingException(INVALID_URL_FORMAT)이 난다")
     void process_homepageInvalidUrlFormat_throwsHomepageParsingException() {
         TourApiItemDto dto = createDtoWithHomepage("<a>가경터미널시장 블로그</a>");
         assertThatThrownBy(() -> processor.process(dto))
@@ -339,7 +339,7 @@ class TourApiBaseItemProcessorTest {
     }
 
     @Test
-    @DisplayName("homepage가 들어왔으나 URL을 추출해낼 수 없으면 HomepageParsingException(NO_EXTRACTED_URL)을 발생시킨다")
+    @DisplayName("homepage에서 URL을 추출할 수 없으면 process하면 HomepageParsingException(NO_EXTRACTED_URL)이 난다")
     void process_homepageNoExtractedUrl_throwsHomepageParsingException() {
         TourApiItemDto dto = createDtoWithHomepage("<a></a>");
         assertThatThrownBy(() -> processor.process(dto))

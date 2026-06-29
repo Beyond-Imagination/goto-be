@@ -40,7 +40,7 @@ class BatchSyncLogWriterIntegrationTest {
     }
 
     @Test
-    @DisplayName("외부 트랜잭션이 롤백되어도 REQUIRES_NEW인 BatchSyncLogWriter의 동기화 로그는 저장되어야 한다")
+    @DisplayName("외부 트랜잭션이 롤백된 뒤 BatchSyncLogWriter.write를 호출하면 REQUIRES_NEW로 동기화 로그만 커밋된다")
     void write_runsInNewTransaction_isNotRolledBackWhenOuterTransactionRollsBack() {
         String jobName = TourApiIncrementalSyncContext.JOB_NAME;
         String targetDate = "20260629";

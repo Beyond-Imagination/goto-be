@@ -9,6 +9,7 @@ import kr.bi.go_to.repository.PlaceRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.job.Job;
@@ -47,6 +48,7 @@ public class TourApiInitialDataLoadManualE2ETest {
     }
 
     @Test
+    @DisplayName("빈 DB에서 초기 적재 Job을 돌리면 COMPLETED 상태로 장소 데이터가 적재된다")
     void testRealTourApiSyncJob() throws Exception {
         // given: DB 초기화 (전체 삭제 후 시작)
         jdbcTemplate.update("DELETE FROM etl_failure_log");

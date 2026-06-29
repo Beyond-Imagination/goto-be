@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 
 import kr.bi.go_to.batch.support.TourApiIncrementalSyncContext;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.job.JobExecution;
@@ -26,6 +27,7 @@ class TourApiIncrementalSyncLogListenerTest {
     }
 
     @Test
+    @DisplayName("증분 Job이 COMPLETED이면 afterJob에서 base step write count로 SUCCESS 로그를 남긴다")
     void writesSuccessLogWithIncrementalBaseStepWriteCount() {
         JobExecution jobExecution = jobExecution(BatchStatus.COMPLETED, "20260628", "20260629");
         jobExecution.addStepExecution(stepExecution(TourApiIncrementalSyncContext.BASE_STEP_NAME, jobExecution, 12));
@@ -37,6 +39,7 @@ class TourApiIncrementalSyncLogListenerTest {
     }
 
     @Test
+    @DisplayName("증분 Job이 FAILED이면 afterJob에서 requestDate와 FAIL 상태로 로그를 남긴다")
     void writesFailLogWithRequestDateWhenJobDoesNotComplete() {
         JobExecution jobExecution = jobExecution(BatchStatus.FAILED, "20260628", "20260629");
         jobExecution.addStepExecution(stepExecution(TourApiIncrementalSyncContext.BASE_STEP_NAME, jobExecution, 3));
@@ -47,6 +50,7 @@ class TourApiIncrementalSyncLogListenerTest {
     }
 
     @Test
+    @DisplayName("COMPLETED Job에 targetDate가 없으면 afterJob에서 IllegalStateException이 난다")
     void throwsWhenCompletedJobHasNoTargetDate() {
         JobExecution jobExecution =
                 new JobExecution(1L, new JobInstance(1L, TourApiIncrementalSyncContext.JOB_NAME), new JobParameters());
@@ -60,6 +64,7 @@ class TourApiIncrementalSyncLogListenerTest {
     }
 
     @Test
+    @DisplayName("FAILED Job에 targetDate가 없으면 afterJob은 로그 기록을 건너뛴다")
     void skipsFailedLogWhenTargetDateIsMissing() {
         JobExecution jobExecution =
                 new JobExecution(1L, new JobInstance(1L, TourApiIncrementalSyncContext.JOB_NAME), new JobParameters());
