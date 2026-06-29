@@ -28,26 +28,30 @@ public class PlaceItemWriter implements ItemWriter<PlaceProcessingResult> {
 
     private static final String UPSERT_SQL =
             """
-            INSERT INTO places (external_id, source, category, name, sanitized_address, location_point, thumbnail_url, overview, homepage, tel, content_type_id, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ST_GeomFromText(?, 4326), ?, ?, ?, ?, ?, NOW(), NOW())
+            INSERT INTO places (external_id, source, category, name, sanitized_address, location_point, thumbnail_url, overview, homepage, tel, content_type_id, is_deleted, detail_common_synced, detail_with_tour_synced, detail_intro_synced, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ST_GeomFromText(?, 4326), ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
             ON CONFLICT (external_id, source)
             DO UPDATE SET
-                category = EXCLUDED.category,
-                name = EXCLUDED.name,
-                sanitized_address = EXCLUDED.sanitized_address,
-                location_point = EXCLUDED.location_point,
-                thumbnail_url = EXCLUDED.thumbnail_url,
-                overview = EXCLUDED.overview,
-                homepage = EXCLUDED.homepage,
-                tel = EXCLUDED.tel,
-                content_type_id = EXCLUDED.content_type_id,
+                category = COALESCE(EXCLUDED.category, places.category),
+                name = COALESCE(EXCLUDED.name, places.name),
+                sanitized_address = COALESCE(EXCLUDED.sanitized_address, places.sanitized_address),
+                location_point = COALESCE(EXCLUDED.location_point, places.location_point),
+                thumbnail_url = COALESCE(EXCLUDED.thumbnail_url, places.thumbnail_url),
+                overview = COALESCE(EXCLUDED.overview, places.overview),
+                homepage = COALESCE(EXCLUDED.homepage, places.homepage),
+                tel = COALESCE(EXCLUDED.tel, places.tel),
+                content_type_id = COALESCE(EXCLUDED.content_type_id, places.content_type_id),
+                is_deleted = EXCLUDED.is_deleted,
+                detail_common_synced = EXCLUDED.detail_common_synced,
+                detail_with_tour_synced = EXCLUDED.detail_with_tour_synced,
+                detail_intro_synced = EXCLUDED.detail_intro_synced,
                 updated_at = NOW()
             """;
 
     private static final String UPSERT_BF_INFO_SQL =
             """
             INSERT INTO place_bf_info (place_id, bf_details, last_synced_at, created_at, updated_at)
-            VALUES (?, ?::jsonb, NOW(), NOW(), NOW())
+            VALUES (?, (?::jsonb || jsonb_build_object('intro', ?::jsonb)), NOW(), NOW(), NOW())
             ON CONFLICT (place_id)
             DO UPDATE SET
                 bf_details = EXCLUDED.bf_details,
@@ -90,49 +94,62 @@ public class PlaceItemWriter implements ItemWriter<PlaceProcessingResult> {
             ps.setString(9, place.getHomepage());
             ps.setString(10, place.getTel());
             ps.setString(11, place.getContentTypeId());
+            ps.setBoolean(12, place.isDeleted());
+            ps.setBoolean(13, place.isDetailCommonSynced());
+            ps.setBoolean(14, place.isDetailWithTourSynced());
+            ps.setBoolean(15, place.isDetailIntroSynced());
         });
 
         log.info("Saved/Updated {} places to database using Native Upsert.", chunk.size());
 
         List<String> externalIds = items.stream().map(Place::getExternalId).collect(Collectors.toList());
 
-        if (!externalIds.isEmpty()) {
-            NamedParameterJdbcTemplate namedJdbcTemplate = new NamedParameterJdbcTemplate(jdbcTemplate);
-            MapSqlParameterSource parameters = new MapSqlParameterSource();
-            parameters.addValue("externalIds", externalIds);
-            parameters.addValue("source", source);
-
-            String selectSql =
-                    "SELECT id, external_id FROM places WHERE external_id IN (:externalIds) AND source = :source";
-
-            Map<String, Long> externalIdToIdMap = namedJdbcTemplate.query(selectSql, parameters, rs -> {
-                Map<String, Long> map = new HashMap<>();
-                while (rs.next()) {
-                    map.put(rs.getString("external_id"), rs.getLong("id"));
-                }
-                return map;
-            });
-
-            if (externalIdToIdMap != null) {
-                List<PlaceProcessingResult> resultsWithBfInfo = results.stream()
-                        .filter(r -> r.bfDetails() != null
-                                && externalIdToIdMap.containsKey(r.place().getExternalId()))
-                        .collect(Collectors.toList());
-
-                if (!resultsWithBfInfo.isEmpty()) {
-                    jdbcTemplate.batchUpdate(
-                            UPSERT_BF_INFO_SQL,
-                            resultsWithBfInfo,
-                            resultsWithBfInfo.size(),
-                            (PreparedStatement ps, PlaceProcessingResult result) -> {
-                                Long placeId =
-                                        externalIdToIdMap.get(result.place().getExternalId());
-                                ps.setLong(1, placeId);
-                                ps.setString(2, result.bfDetails());
-                            });
-                    log.info("Saved/Updated {} place_bf_info records to database.", resultsWithBfInfo.size());
-                }
-            }
+        if (externalIds.isEmpty()) {
+            return;
         }
+
+        NamedParameterJdbcTemplate namedJdbcTemplate = new NamedParameterJdbcTemplate(jdbcTemplate);
+        MapSqlParameterSource parameters = new MapSqlParameterSource();
+        parameters.addValue("externalIds", externalIds);
+        parameters.addValue("source", source);
+
+        String selectSql =
+                "SELECT id, external_id FROM places WHERE external_id IN (:externalIds) AND source = :source";
+
+        Map<String, Long> externalIdToIdMap = namedJdbcTemplate.query(selectSql, parameters, rs -> {
+            Map<String, Long> map = new HashMap<>();
+            while (rs.next()) {
+                map.put(rs.getString("external_id"), rs.getLong("id"));
+            }
+            return map;
+        });
+
+        if (externalIdToIdMap == null) {
+            return;
+        }
+
+        List<PlaceProcessingResult> resultsWithBfInfo = results.stream()
+                .filter(r -> !r.place().isDeleted())
+                .filter(r -> r.detailWithTourSynced() && r.detailIntroSynced())
+                .filter(r -> r.bfDetails() != null
+                        && r.introDetails() != null
+                        && externalIdToIdMap.containsKey(r.place().getExternalId()))
+                .collect(Collectors.toList());
+
+        if (resultsWithBfInfo.isEmpty()) {
+            return;
+        }
+
+        jdbcTemplate.batchUpdate(
+                UPSERT_BF_INFO_SQL,
+                resultsWithBfInfo,
+                resultsWithBfInfo.size(),
+                (PreparedStatement ps, PlaceProcessingResult result) -> {
+                    Long placeId = externalIdToIdMap.get(result.place().getExternalId());
+                    ps.setLong(1, placeId);
+                    ps.setString(2, result.bfDetails());
+                    ps.setString(3, result.introDetails());
+                });
+        log.info("Saved/Updated {} place_bf_info records to database.", resultsWithBfInfo.size());
     }
 }

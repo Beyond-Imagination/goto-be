@@ -15,6 +15,7 @@ import kr.bi.go_to.model.place.Place;
 import kr.bi.go_to.repository.PlaceRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.job.Job;
@@ -46,7 +47,7 @@ import tools.jackson.databind.json.JsonMapper;
 @SpringBatchTest
 @SpringBootTest
 @ActiveProfiles("local-test")
-@Disabled("Manual E2E Test - Requires Local Test Database (docker-compose-test.yml) Running")
+@Disabled("Mock 기반 파이프라인 논리 검증 테스트 - Requires Local Test Database (docker-compose-test.yml) Running")
 public class TourApiBatchManualE2ETest {
 
     @TestConfiguration
@@ -75,7 +76,7 @@ public class TourApiBatchManualE2ETest {
     private JobOperatorTestUtils jobOperatorTestUtils;
 
     @Autowired
-    private Job tourApiSyncJob;
+    private Job tourApiIncrementalSyncJob;
 
     @Autowired
     private RestClient.Builder restClientBuilder;
@@ -150,10 +151,11 @@ public class TourApiBatchManualE2ETest {
         } else {
             System.out.println(">>> Mock data files NOT found. Requesting real Tour API server.");
         }
-        jobOperatorTestUtils.setJob(tourApiSyncJob);
+        jobOperatorTestUtils.setJob(tourApiIncrementalSyncJob);
     }
 
     @Test
+    @DisplayName("Mock Tour API 응답으로 증분 동기화 Job을 돌리면 homepage가 정제된 장소가 DB에 저장된다")
     void testTourApiSyncJob() throws Exception {
         // given
         JobParameters jobParameters = new JobParametersBuilder()
@@ -177,6 +179,7 @@ public class TourApiBatchManualE2ETest {
     }
 
     @Test
+    @DisplayName("homepage에 복수 URL이 있는 Mock 응답으로 Job을 돌리면 COMPLETED로 끝나고 etl_failure_log에 기록된다")
     void testTourApiSyncJob_InvalidHomepage_LogsToEtlFailureLog() throws Exception {
         if (mockServer != null) {
             mockServer.reset();
