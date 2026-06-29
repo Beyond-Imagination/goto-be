@@ -80,7 +80,7 @@ public class TourApiBaseItemProcessor implements ItemProcessor<TourApiItemDto, P
                 ? dto.firstimage()
                 : (StringUtils.hasText(dto.firstimage2()) ? dto.firstimage2() : null);
 
-        String overview = StringUtils.hasText(dto.overview()) ? dto.overview() : null;
+        String overview = normalizeKnownEmptyText(dto.overview());
         String homepage = sanitizeHomepage(dto.homepage());
         String tel = StringUtils.hasText(dto.tel()) ? dto.tel() : null;
 
@@ -96,9 +96,18 @@ public class TourApiBaseItemProcessor implements ItemProcessor<TourApiItemDto, P
                 .homepage(homepage)
                 .contentTypeId(dto.contenttypeid())
                 .category(dto.cat3())
+                .detailCommonSynced(dto.detailCommonSynced())
+                .detailWithTourSynced(dto.detailWithTourSynced())
+                .detailIntroSynced(dto.detailIntroSynced())
                 .build();
 
-        return new PlaceProcessingResult(place, dto.bfDetails(), dto.introDetails());
+        return new PlaceProcessingResult(
+                place,
+                dto.bfDetails(),
+                dto.introDetails(),
+                dto.detailCommonSynced(),
+                dto.detailWithTourSynced(),
+                dto.detailIntroSynced());
     }
 
     private String constructAddress(String addr1, String addr2) {
@@ -112,14 +121,25 @@ public class TourApiBaseItemProcessor implements ItemProcessor<TourApiItemDto, P
         return parts.isEmpty() ? null : String.join(", ", parts);
     }
 
+    private String normalizeKnownEmptyText(String value) {
+        if (value == null) {
+            return null;
+        }
+        return StringUtils.hasText(value) ? value : "";
+    }
+
     private boolean isLocationWithinValidBounds(double lon, double lat) {
         // 대한민국 영토 및 영해(독도, 이어도 등 포함)를 커버하는 넉넉한 바운딩 박스
         return lon >= 124.0 && lon <= 132.0 && lat >= 32.0 && lat <= 43.5;
     }
 
     private String sanitizeHomepage(String homepage) {
-        if (!StringUtils.hasText(homepage)) {
+        if (homepage == null) {
             return null;
+        }
+
+        if (!StringUtils.hasText(homepage)) {
+            return "";
         }
 
         // HTML 엔티티 디코딩 (예: &lt; -> <)

@@ -105,4 +105,25 @@ public class Place extends BaseAuditEntity {
     @Column(name = "is_deleted", nullable = false)
     @Builder.Default
     private boolean isDeleted = false;
+
+    /**
+     * Tour API detailCommon2 상세 보강 성공 여부
+     */
+    @Column(name = "detail_common_synced", nullable = false)
+    @Builder.Default
+    private boolean detailCommonSynced = false;
+
+    /**
+     * Tour API detailWithTour2 상세 보강 성공 여부
+     */
+    @Column(name = "detail_with_tour_synced", nullable = false)
+    @Builder.Default
+    private boolean detailWithTourSynced = false;
+
+    /**
+     * Tour API detailIntro2 상세 보강 성공 여부
+     */
+    @Column(name = "detail_intro_synced", nullable = false)
+    @Builder.Default
+    private boolean detailIntroSynced = false;
 }

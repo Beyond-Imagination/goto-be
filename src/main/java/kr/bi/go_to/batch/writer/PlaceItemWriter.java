@@ -28,8 +28,8 @@ public class PlaceItemWriter implements ItemWriter<PlaceProcessingResult> {
 
     private static final String UPSERT_SQL =
             """
-            INSERT INTO places (external_id, source, category, name, sanitized_address, location_point, thumbnail_url, overview, homepage, tel, content_type_id, is_deleted, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ST_GeomFromText(?, 4326), ?, ?, ?, ?, ?, ?, NOW(), NOW())
+            INSERT INTO places (external_id, source, category, name, sanitized_address, location_point, thumbnail_url, overview, homepage, tel, content_type_id, is_deleted, detail_common_synced, detail_with_tour_synced, detail_intro_synced, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ST_GeomFromText(?, 4326), ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
             ON CONFLICT (external_id, source)
             DO UPDATE SET
                 category = COALESCE(EXCLUDED.category, places.category),
@@ -42,13 +42,16 @@ public class PlaceItemWriter implements ItemWriter<PlaceProcessingResult> {
                 tel = COALESCE(EXCLUDED.tel, places.tel),
                 content_type_id = COALESCE(EXCLUDED.content_type_id, places.content_type_id),
                 is_deleted = EXCLUDED.is_deleted,
+                detail_common_synced = EXCLUDED.detail_common_synced,
+                detail_with_tour_synced = EXCLUDED.detail_with_tour_synced,
+                detail_intro_synced = EXCLUDED.detail_intro_synced,
                 updated_at = NOW()
             """;
 
     private static final String UPSERT_BF_INFO_SQL =
             """
             INSERT INTO place_bf_info (place_id, bf_details, last_synced_at, created_at, updated_at)
-            VALUES (?, ?::jsonb, NOW(), NOW(), NOW())
+            VALUES (?, (?::jsonb || jsonb_build_object('intro', ?::jsonb)), NOW(), NOW(), NOW())
             ON CONFLICT (place_id)
             DO UPDATE SET
                 bf_details = EXCLUDED.bf_details,
@@ -92,6 +95,9 @@ public class PlaceItemWriter implements ItemWriter<PlaceProcessingResult> {
             ps.setString(10, place.getTel());
             ps.setString(11, place.getContentTypeId());
             ps.setBoolean(12, place.isDeleted());
+            ps.setBoolean(13, place.isDetailCommonSynced());
+            ps.setBoolean(14, place.isDetailWithTourSynced());
+            ps.setBoolean(15, place.isDetailIntroSynced());
         });
 
         log.info("Saved/Updated {} places to database using Native Upsert.", chunk.size());
@@ -124,7 +130,9 @@ public class PlaceItemWriter implements ItemWriter<PlaceProcessingResult> {
 
         List<PlaceProcessingResult> resultsWithBfInfo = results.stream()
                 .filter(r -> !r.place().isDeleted())
+                .filter(r -> r.detailWithTourSynced() && r.detailIntroSynced())
                 .filter(r -> r.bfDetails() != null
+                        && r.introDetails() != null
                         && externalIdToIdMap.containsKey(r.place().getExternalId()))
                 .collect(Collectors.toList());
 
@@ -140,6 +148,7 @@ public class PlaceItemWriter implements ItemWriter<PlaceProcessingResult> {
                     Long placeId = externalIdToIdMap.get(result.place().getExternalId());
                     ps.setLong(1, placeId);
                     ps.setString(2, result.bfDetails());
+                    ps.setString(3, result.introDetails());
                 });
         log.info("Saved/Updated {} place_bf_info records to database.", resultsWithBfInfo.size());
     }

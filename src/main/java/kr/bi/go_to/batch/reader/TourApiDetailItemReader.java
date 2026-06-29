@@ -56,7 +56,9 @@ public class TourApiDetailItemReader implements ItemReader<TourApiItemDto> {
 
         String sql =
                 "SELECT external_id, source, category, name, sanitized_address, location_point, thumbnail_url, content_type_id, tel "
-                        + "FROM places WHERE overview IS NULL AND source = 'TOUR_API' LIMIT ?";
+                        + "FROM places WHERE source = 'TOUR_API' AND is_deleted = false "
+                        + "AND (detail_common_synced = false OR detail_with_tour_synced = false OR detail_intro_synced = false) "
+                        + "LIMIT ?";
 
         List<Place> placesToEnrich = jdbcTemplate.query(
                 sql,
@@ -104,13 +106,16 @@ public class TourApiDetailItemReader implements ItemReader<TourApiItemDto> {
         String contentTypeId = place.getContentTypeId();
 
         JsonNode common2 = tourApiClient.fetchDetail("detailCommon2", contentId, null);
-        String overview = tourApiClient.extractField(common2, "overview");
-        String homepage = tourApiClient.extractField(common2, "homepage");
+        boolean detailCommonSynced = common2 != null;
+        String overview = detailCommonSynced ? tourApiClient.extractFieldOrEmpty(common2, "overview") : null;
+        String homepage = detailCommonSynced ? tourApiClient.extractFieldOrEmpty(common2, "homepage") : null;
 
         JsonNode withTour2 = tourApiClient.fetchDetail("detailWithTour2", contentId, null);
+        boolean detailWithTourSynced = withTour2 != null;
         String bfDetails = withTour2 != null ? withTour2.toString() : null;
 
         JsonNode intro2 = tourApiClient.fetchDetail("detailIntro2", contentId, contentTypeId);
+        boolean detailIntroSynced = intro2 != null;
         String introDetails = intro2 != null ? intro2.toString() : null;
 
         return new TourApiItemDto(
@@ -135,6 +140,9 @@ public class TourApiDetailItemReader implements ItemReader<TourApiItemDto> {
                 homepage,
                 bfDetails,
                 introDetails,
-                "1");
+                "1",
+                detailCommonSynced,
+                detailWithTourSynced,
+                detailIntroSynced);
     }
 }

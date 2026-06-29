@@ -47,9 +47,16 @@ public class TourApiClient {
         try {
             JsonNode response = restClient.get().uri(uri).retrieve().body(JsonNode.class);
             if (response != null) {
-                JsonNode items = response.at("/response/body/items/item");
-                if (items.isArray() && items.size() > 0) {
-                    return items.get(0);
+                if (hasNonOkResult(response, apiName, contentId)) {
+                    return null;
+                }
+
+                JsonNode item = response.at("/response/body/items/item");
+                if (item.isArray() && !item.isEmpty()) {
+                    return item.get(0);
+                }
+                if (item.isObject()) {
+                    return item;
                 }
             }
         } catch (Exception e) {
@@ -58,14 +65,38 @@ public class TourApiClient {
         return null;
     }
 
-    public String extractField(JsonNode node, String fieldName) {
-        if (node != null) {
-            JsonNode fieldNode = node.at("/" + fieldName);
-            if (!fieldNode.isMissingNode() && !fieldNode.isNull()) {
-                String val = fieldNode.asString();
-                return val.isEmpty() ? null : val;
-            }
+    private boolean hasNonOkResult(JsonNode response, String apiName, String contentId) {
+        JsonNode resultCodeNode = response.at("/response/header/resultCode");
+        if (resultCodeNode.isMissingNode() || resultCodeNode.isNull()) {
+            return false;
         }
-        return null;
+
+        String resultCode = resultCodeNode.asString();
+        if (resultCode.isBlank() || "0000".equals(resultCode)) {
+            return false;
+        }
+
+        String resultMsg = response.at("/response/header/resultMsg").asString();
+        log.warn(
+                "Tour API 상세 조회 실패 응답입니다. apiName={}, contentId={}, resultCode={}, resultMsg={}",
+                apiName,
+                contentId,
+                resultCode,
+                resultMsg);
+        return true;
+    }
+
+    public String extractFieldOrEmpty(JsonNode node, String fieldName) {
+        if (node == null) {
+            return null;
+        }
+
+        JsonNode fieldNode = node.at("/" + fieldName);
+        if (fieldNode.isMissingNode() || fieldNode.isNull()) {
+            return "";
+        }
+
+        String val = fieldNode.asString();
+        return val == null ? "" : val;
     }
 }
