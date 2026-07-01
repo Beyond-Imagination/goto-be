@@ -166,12 +166,15 @@ status: Superseded
 
 ### Decision
 
-* `PLACE_BF_INFO` 테이블의 **`bf_details` (JSONB) 컬럼 내에 "intro" 또는 "visit_info" 등의 새로운 JSON 카테고리를 할당하여 통합 저장**합니다.
+* `PLACE_BF_INFO` 테이블의 **`bf_details` (JSONB) 컬럼 내에 `intro` JSON 카테고리를 할당하여 저장**합니다.
+* `intro`는 앱에서 바로 사용할 현재 projection입니다. `detailIntro2` 원본은 재처리와 디버깅을 위해 `bf_details.sources.tour_api.detailIntro` 아래에도 보존합니다.
+* `detailWithTour2` 원본은 `bf_details` root에 flat field로 저장하지 않고, `PlaceBfDetails` JSON schema의 `mobility`, `visual`, `hearing`, `infant_family` 카테고리로 정규화합니다. 원본 응답은 `bf_details.sources.tour_api.detailWithTour` 아래에 보존합니다.
 
 ### Consequences
 
 * 복잡하고 가변적인 소개 정보 속성들을 유연하게 수집 및 변경할 수 있음.
 * JSONB 인덱스를 활용하여 필요시 빠르게 조회 가능.
+* 조회 경로에서는 정규화된 `PlaceBfDetails` schema를 기준으로 동작하고, 원천 응답 확인이나 재정규화가 필요할 때는 `sources.tour_api`에 보존된 원문을 사용할 수 있음.
 
 ---
 
@@ -335,18 +338,21 @@ Spring Batch 프레임워크는 Job과 Step의 상태 관리를 위해 자체적
 ### Context & Alternatives
 
 `detailWithTour2` API에서 응답받은 텍스트 필드는 구조화되지 않은 자연어 텍스트 형태가 많습니다. (예: "장애인 주차 구역이 있음", "휠체어 대여 불가", "단차 없음", "" 등)
-이로부터 해당 시설이 휠체어 전용 시설을 이용할 수 있는지 여부인 `is_available` (Boolean) 값을 정밀하게 도출해야 합니다.
+이로부터 해당 시설이 휠체어 전용 시설을 이용할 수 있는지 여부인 `is_available` (Boolean) 값을 도출해야 합니다. 다만 현재 Tour API 응답의 빈 문자열은 "시설 없음"이 아니라 "외부 데이터만으로 판별 불가"로 해석합니다.
 
 ### Decision
 
-* 다음과 같은 **3단계 파싱/추출 규칙**을 개발 및 적용합니다.
-  1. 빈 문자열(Null/Empty)이거나 공백만 존재하면 -> `false`
-  2. 텍스트 내에 부정적인 표현("없음", "불가", "미설치", "어려움")이 직접 명시되어 있으면 -> `false`
-  3. 그 외 구체적인 묘사나 설명("있음", "설치", "대여 가능" 등)이 있거나 유의미한 내용이 기재되어 있으면 -> `true`
+* 현재 배치 구현은 `TourApiBfDetailsNormalizer`를 통해 다음 규칙을 적용합니다.
+  1. 빈 문자열(Null/Empty)이거나 공백만 존재하면 -> `is_available=null`, `count=null`, `details=null`
+  2. 유의미한 설명이 있으면 -> `is_available=true`, `details=원문 설명`
+  3. `count`는 원문 괄호 안 숫자(예: `(9대)`)를 추출할 수 있을 때만 저장
+* `is_available=false`는 외부 데이터가 명시적으로 이용 불가를 표현할 수 있을 때만 사용합니다. 현재 Tour API 응답만으로는 false를 만들지 않습니다.
 
 ### Consequences
 
-* 텍스트에 기반한 휴리스틱 판정 로직이 적용되므로 예외 케이스(예: "휠체어 동반자가 없으면 불가")에 대한 정밀한 유닛 테스트 검증이 중요함.
+* Tour API의 빈 문자열을 "없음"으로 오판하지 않아 데이터 품질을 보수적으로 유지할 수 있음.
+* 향후 SSIS 등 추가 원천을 병합할 때도 기존 null 값을 보강하는 방식으로 확장할 수 있음.
+* 텍스트에 기반한 판정 로직이 적용되므로 예외 케이스(예: "휠체어 동반자가 없으면 불가")에 대한 정밀한 유닛 테스트 검증이 중요함.
 
 ---
 

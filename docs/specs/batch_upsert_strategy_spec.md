@@ -54,7 +54,74 @@
 *   **Detail Completion Flags (상세 보강 완료 상태)**:
     *   상세 보강 완료는 `detailCommon2`, `detailWithTour2`, `detailIntro2` 세 API가 모두 성공했을 때만 성립합니다.
     *   `places.detail_common_synced`, `places.detail_with_tour_synced`, `places.detail_intro_synced`는 각 API의 성공 여부를 저장합니다.
-    *   `detailWithTour2`와 `detailIntro2`가 모두 성공한 경우에만 `place_bf_info.bf_details`를 갱신합니다. `detailWithTour2` 응답은 JSON root에 유지하고, `detailIntro2` 응답은 `intro` key에 통합합니다.
+    *   `detailWithTour2`와 `detailIntro2`가 모두 성공한 경우에만 `place_bf_info.bf_details`를 갱신합니다. `detailWithTour2` 응답은 `TourApiBfDetailsNormalizer`를 통해 `PlaceBfDetails` 스키마로 정규화하고, `detailIntro2` 응답은 앱에서 바로 쓰는 `intro` projection으로 저장합니다. 두 원천의 원문은 `sources.tour_api.detailWithTour`, `sources.tour_api.detailIntro`에도 보존합니다.
+*   **Barrier-free JSON Schema (bf_details 저장 스키마)**:
+    *   `bf_details`의 최상위 key는 항상 `mobility`, `visual`, `hearing`, `infant_family`, `intro`, `sources`입니다.
+    *   `mobility`, `visual`, `hearing`, `infant_family` 내부에는 현재 Tour API에서 매핑 대상으로 삼는 알려진 편의시설 field를 모두 생성합니다. 원본 응답에 값이 비어 있더라도 field 자체는 생략하지 않습니다.
+    *   각 편의시설 field의 값은 `{ "is_available": Boolean|null, "count": Integer|null, "details": String|null }` 형태입니다.
+    *   원본 설명이 있는 경우에만 `is_available=true`로 저장합니다. `count`는 원문 괄호 안 숫자(예: `(9대)`)를 추출할 수 있을 때만 저장하고, `details`는 원문 설명을 저장합니다.
+    *   원본 값이 없거나 빈 문자열이면 `is_available`, `count`, `details`를 모두 `null`로 둡니다. 이는 "없음"이 아니라 "외부 데이터만으로 판별 불가"를 의미합니다. 현재 Tour API 응답만으로는 명시적인 `false`를 만들지 않습니다.
+    *   `parking`, `exit`, `restroom` 같은 Tour API raw field는 `bf_details` top-level에 저장하지 않습니다.
+    *   `intro`는 앱에서 바로 쓰는 현재 projection입니다. Tour API 원문은 `sources.tour_api.detailWithTour`, `sources.tour_api.detailIntro` 아래에도 보존하여 재처리와 디버깅 근거로 사용합니다.
+
+```json
+{
+  "mobility": {
+    "parking": {
+      "is_available": true,
+      "count": 9,
+      "details": "장애인 전용 주차구역 있음(9대)_무장애 편의시설"
+    },
+    "elevator": {
+      "is_available": null,
+      "count": null,
+      "details": null
+    }
+  },
+  "visual": {
+    "braileblock": {
+      "is_available": null,
+      "count": null,
+      "details": null
+    }
+  },
+  "hearing": {
+    "signguide": {
+      "is_available": null,
+      "count": null,
+      "details": null
+    }
+  },
+  "infant_family": {
+    "lactationroom": {
+      "is_available": true,
+      "count": null,
+      "details": "수유실 있음(관리사무실)"
+    }
+  },
+  "intro": {
+    "contentid": "1067369",
+    "usetime": "09:00~18:00"
+  },
+  "sources": {
+    "tour_api": {
+      "externalId": "1067369",
+      "externalSubId": null,
+      "evalInfo": null,
+      "syncedAt": "2026-07-01T00:00:00Z",
+      "detailWithTour": {
+        "contentid": "1067369",
+        "parking": "장애인 전용 주차구역 있음(9대)_무장애 편의시설",
+        "elevator": ""
+      },
+      "detailIntro": {
+        "contentid": "1067369",
+        "usetime": "09:00~18:00"
+      }
+    }
+  }
+}
+```
 *   **Null-preserving Update (부분 상세 보강 안전성)**:
     *   상세 보강 Step은 일부 필드를 `null`로 전달할 수 있으므로, `places` 갱신 시 대부분의 일반 필드는 `COALESCE(EXCLUDED.column, places.column)`으로 기존 값을 보존합니다. 단, `is_deleted`는 삭제 상태가 명시적으로 반영되어야 하므로 기존 값을 보존하지 않습니다.
     *   배치 계층에서 `null`은 "이번 처리 경로에서는 이 필드를 아직 모른다/갱신하지 않는다"는 의미입니다. DB의 기존 값은 유지됩니다.
@@ -100,7 +167,7 @@ LIMIT ?;
 
 -- 무장애 상세 정보 Upsert 쿼리
 INSERT INTO place_bf_info (place_id, bf_details, last_synced_at, created_at, updated_at)
-VALUES (?, (?::jsonb || jsonb_build_object('intro', ?::jsonb)), NOW(), NOW(), NOW())
+VALUES (?, ?::jsonb, NOW(), NOW(), NOW())
 ON CONFLICT (place_id)
 DO UPDATE SET
     bf_details = EXCLUDED.bf_details,

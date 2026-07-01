@@ -39,7 +39,8 @@ status: Accepted
 - `is_deleted=true`가 잘못 저장된 장소는 Lazy Detail Fetch로는 복구되지 않습니다. 해당 장소의 복구는 이후 `areaBasedSyncList1`에서 `showflag=1` 또는 비삭제 상태로 다시 내려와 증분 동기화가 처리해야 합니다.
 - 삭제 후 복구 이벤트를 놓치면 `is_deleted=true` 상태가 오래 유지될 수 있습니다. `TourApiIncrementalSyncLogListener`가 성공 이력을 `batch_sync_log`에 기록하므로 정상 실행 간 catch-up 기준은 유지되지만, 로그 기록 자체가 실패하거나 수동으로 이력을 수정하면 증분 기준일이 틀어질 수 있습니다.
 - 향후 관리자 화면, 감사 로그, 데이터 품질 분석처럼 삭제된 장소의 상세 정보를 계속 최신화해야 하는 요구가 생기면, 현재 정책과 충돌합니다. 이 경우 앱 노출용 상세 보강과 삭제 row 감사용 상세 수집을 별도 step 또는 별도 저장소로 분리해야 합니다.
-- `detailWithTour2`와 `detailIntro2`는 `place_bf_info.bf_details` JSONB에 통합 저장합니다. `detailWithTour2`의 원본 JSON 필드는 기존처럼 root에 두고, `detailIntro2` 응답은 `intro` key 아래에 포함합니다. 둘 중 하나라도 누락되면 `place_bf_info`를 완성 상태로 갱신하지 않고, 다음 Lazy Detail Fetch 대상에 남깁니다.
+- `detailWithTour2`와 `detailIntro2`는 둘 다 성공했을 때만 `place_bf_info.bf_details` JSONB에 반영합니다. `detailWithTour2` 원본 JSON 필드는 root에 직접 저장하지 않고 `PlaceBfDetails` JSON schema의 `mobility`, `visual`, `hearing`, `infant_family` 카테고리로 정규화합니다. `detailIntro2` 응답은 앱에서 바로 쓰는 `intro` projection으로 저장합니다. 두 원천의 원문은 재처리와 디버깅을 위해 `sources.tour_api.detailWithTour`, `sources.tour_api.detailIntro` 아래에도 보존합니다. 둘 중 하나라도 누락되면 `place_bf_info`를 완성 상태로 갱신하지 않고, 다음 Lazy Detail Fetch 대상에 남깁니다.
+- `TourApiBfDetailsNormalizer`는 Tour API의 빈 문자열을 "없음"으로 추론하지 않습니다. 원문 설명이 있는 항목만 `is_available=true`로 저장하고, 판별할 수 없는 항목은 `is_available`, `count`, `details`를 모두 `null`로 둡니다. `is_available=false`는 외부 원천이 명시적으로 이용 불가를 표현할 수 있을 때만 사용합니다.
 - `places`의 일반 필드는 writer에서 `COALESCE(EXCLUDED.column, places.column)`으로 갱신하므로, 배치 계층에서 `null`은 "이번 처리 경로에서는 아직 모름/갱신하지 않음"을 뜻합니다. 반대로 외부 detail API가 성공했지만 특정 필드 값이 누락된 경우에는 빈 문자열(`""`)을 저장해 오래된 값을 명시적으로 제거합니다. UI는 `""`을 "제공된 정보 없음", `null`을 "현재 데이터 갱신중"과 같이 구분해 표현할 수 있습니다.
 
 ---
