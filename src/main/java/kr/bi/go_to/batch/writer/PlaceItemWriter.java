@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import kr.bi.go_to.batch.dto.PlaceProcessingResult;
 import kr.bi.go_to.batch.exception.MixedSourceChunkException;
+import kr.bi.go_to.batch.mapper.TourApiBfDetailsNormalizer;
 import kr.bi.go_to.model.place.Place;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +26,7 @@ import org.springframework.stereotype.Component;
 public class PlaceItemWriter implements ItemWriter<PlaceProcessingResult> {
 
     private final JdbcTemplate jdbcTemplate;
+    private final TourApiBfDetailsNormalizer bfDetailsNormalizer;
 
     private static final String UPSERT_SQL =
             """
@@ -51,7 +53,7 @@ public class PlaceItemWriter implements ItemWriter<PlaceProcessingResult> {
     private static final String UPSERT_BF_INFO_SQL =
             """
             INSERT INTO place_bf_info (place_id, bf_details, last_synced_at, created_at, updated_at)
-            VALUES (?, (?::jsonb || jsonb_build_object('intro', ?::jsonb)), NOW(), NOW(), NOW())
+            VALUES (?, ?::jsonb, NOW(), NOW(), NOW())
             ON CONFLICT (place_id)
             DO UPDATE SET
                 bf_details = EXCLUDED.bf_details,
@@ -146,9 +148,10 @@ public class PlaceItemWriter implements ItemWriter<PlaceProcessingResult> {
                 resultsWithBfInfo.size(),
                 (PreparedStatement ps, PlaceProcessingResult result) -> {
                     Long placeId = externalIdToIdMap.get(result.place().getExternalId());
+                    String normalizedBfDetails =
+                            bfDetailsNormalizer.normalize(result.bfDetails(), result.introDetails());
                     ps.setLong(1, placeId);
-                    ps.setString(2, result.bfDetails());
-                    ps.setString(3, result.introDetails());
+                    ps.setString(2, normalizedBfDetails);
                 });
         log.info("Saved/Updated {} place_bf_info records to database.", resultsWithBfInfo.size());
     }

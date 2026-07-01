@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.List;
 import kr.bi.go_to.batch.dto.PlaceProcessingResult;
 import kr.bi.go_to.batch.exception.MixedSourceChunkException;
+import kr.bi.go_to.batch.mapper.TourApiBfDetailsNormalizer;
 import kr.bi.go_to.model.place.Place;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -17,12 +18,14 @@ import org.springframework.jdbc.core.JdbcTemplate;
 class PlaceItemWriterTest {
 
     private JdbcTemplate jdbcTemplate;
+    private TourApiBfDetailsNormalizer bfDetailsNormalizer;
     private PlaceItemWriter writer;
 
     @BeforeEach
     void setUp() {
         jdbcTemplate = mock(JdbcTemplate.class);
-        writer = new PlaceItemWriter(jdbcTemplate);
+        bfDetailsNormalizer = mock(TourApiBfDetailsNormalizer.class);
+        writer = new PlaceItemWriter(jdbcTemplate, bfDetailsNormalizer);
     }
 
     @Test
