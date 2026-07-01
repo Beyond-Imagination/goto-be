@@ -4,15 +4,21 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Stream;
 import kr.bi.go_to.batch.client.TourApiClient;
 import kr.bi.go_to.batch.dto.PlaceProcessingResult;
 import kr.bi.go_to.batch.dto.TourApiItemDto;
 import kr.bi.go_to.batch.exception.HomepageParsingException;
+import kr.bi.go_to.batch.mapper.TourApiBfDetailsNormalizer;
 import kr.bi.go_to.batch.processor.TourApiBaseItemProcessor;
 import kr.bi.go_to.batch.reader.TourApiBaseItemReader;
 import kr.bi.go_to.batch.writer.PlaceItemWriter;
 import kr.bi.go_to.enums.PlaceSource;
+import kr.bi.go_to.model.place.PlaceBfDetails;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
@@ -26,13 +32,47 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
 import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 @SpringBootTest
 @ActiveProfiles("local-test")
 @EnabledIfEnvironmentVariable(named = "TOUR_API_REAL_E2E_ENABLED", matches = "true")
+@Slf4j
 class TourApiRealApiMappingLocalE2ETest {
 
     private static final int MAX_CANDIDATES = 10;
+    private static final Set<String> BF_DETAILS_SCHEMA_TOP_LEVEL_KEYS =
+            Set.of("mobility", "visual", "hearing", "infant_family", "intro", "sources");
+    private static final Set<String> TOUR_API_RAW_BF_DETAIL_KEYS = Set.of(
+            "contentid",
+            "parking",
+            "route",
+            "publictransport",
+            "ticketoffice",
+            "promotion",
+            "wheelchair",
+            "exit",
+            "elevator",
+            "restroom",
+            "auditorium",
+            "room",
+            "handicapetc",
+            "braileblock",
+            "helpdog",
+            "guidehuman",
+            "audioguide",
+            "bigprint",
+            "brailepromotion",
+            "guidesystem",
+            "blindhandicapetc",
+            "signguide",
+            "videoguide",
+            "hearingroom",
+            "hearinghandicapetc",
+            "stroller",
+            "lactationroom",
+            "babysparechair",
+            "infantsfamilyetc");
 
     @Autowired
     private RestClient.Builder restClientBuilder;
@@ -47,13 +87,19 @@ class TourApiRealApiMappingLocalE2ETest {
     private PlaceItemWriter writer;
 
     @Autowired
+    private TourApiBfDetailsNormalizer bfDetailsNormalizer;
+
+    @Autowired
     private JdbcTemplate jdbcTemplate;
 
     @Autowired
     private Environment environment;
 
+    @Autowired
+    private ObjectMapper objectMapper;
+
     @Test
-    @DisplayName("실제 Tour API 목록 항목을 세 상세 API로 보강한 뒤 processor와 writer를 돌리면 DB 매핑이 일치한다")
+    @DisplayName("실제 Tour API 목록 항목을 세 상세 API로 보강한 뒤 저장하면 DB 매핑과 bf_details 스키마가 일치한다")
     void realTourApiListItemCanBeDetailedProcessedAndLoaded() throws Exception {
         assertThat(environment.getProperty("goto.batch.initial-load.auto-run-enabled", Boolean.class))
                 .isFalse();
@@ -63,9 +109,7 @@ class TourApiRealApiMappingLocalE2ETest {
         Optional<DetailedCandidate> candidate = readFirstFullyDetailedCandidate(reader);
 
         assertThat(candidate)
-                .as(
-                        "areaBasedList2의 첫 %d개 후보 중 detailCommon2/detailWithTour2/detailIntro2가 모두 조회되고 processor를 통과하는 항목이 있어야 한다",
-                        MAX_CANDIDATES)
+                .as("areaBasedList2의 첫 %d개 후보 중 세 상세 API가 모두 조회되고 bf_details 스키마 검증 가능한 항목이 있어야 한다", MAX_CANDIDATES)
                 .isPresent();
 
         DetailedCandidate selected = candidate.orElseThrow();
@@ -98,19 +142,7 @@ class TourApiRealApiMappingLocalE2ETest {
         assertThat(placeRow.get("detail_intro_synced")).isEqualTo(true);
 
         Long placeId = ((Number) placeRow.get("id")).longValue();
-        Map<String, Object> bfInfoRow = jdbcTemplate.queryForMap(
-                """
-                SELECT (bf_details - 'intro') = CAST(? AS jsonb) AS bf_details_matches,
-                       bf_details -> 'intro' = CAST(? AS jsonb) AS intro_details_matches
-                FROM place_bf_info
-                WHERE place_id = ?
-                """,
-                result.bfDetails(),
-                result.introDetails(),
-                placeId);
-
-        assertThat(bfInfoRow.get("bf_details_matches")).isEqualTo(true);
-        assertThat(bfInfoRow.get("intro_details_matches")).isEqualTo(true);
+        assertStoredBfDetailsMatchesDataModelSchema(placeId, selected);
     }
 
     private TourApiBaseItemReader createRealApiBaseReader() {
@@ -148,7 +180,7 @@ class TourApiRealApiMappingLocalE2ETest {
 
             try {
                 PlaceProcessingResult result = processor.process(detailedItem.get());
-                if (result != null) {
+                if (result != null && hasAnyAvailableBarrierFreeDetail(result)) {
                     return Optional.of(new DetailedCandidate(baseItem, result));
                 }
             } catch (HomepageParsingException ignored) {
@@ -182,6 +214,166 @@ class TourApiRealApiMappingLocalE2ETest {
                 true,
                 true,
                 true));
+    }
+
+    private boolean hasAnyAvailableBarrierFreeDetail(PlaceProcessingResult result) {
+        String normalizedBfDetails = bfDetailsNormalizer.normalize(
+                result.place().getExternalId(), result.bfDetails(), result.introDetails());
+        try {
+            PlaceBfDetails bfDetails = objectMapper.readValue(normalizedBfDetails, PlaceBfDetails.class);
+            return Stream.of(
+                            bfDetails.getMobility(),
+                            bfDetails.getVisual(),
+                            bfDetails.getHearing(),
+                            bfDetails.getInfantFamily())
+                    .filter(Objects::nonNull)
+                    .flatMap(details -> details.values().stream())
+                    .anyMatch(item -> Boolean.TRUE.equals(item.getIsAvailable()));
+        } catch (RuntimeException e) {
+            return false;
+        }
+    }
+
+    private void assertStoredBfDetailsMatchesDataModelSchema(Long placeId, DetailedCandidate selected)
+            throws Exception {
+        String storedBfDetailsJson = jdbcTemplate.queryForObject(
+                "SELECT bf_details::text FROM place_bf_info WHERE place_id = ?", String.class, placeId);
+        PlaceBfDetails storedBfDetails = objectMapper.readValue(storedBfDetailsJson, PlaceBfDetails.class);
+
+        List<String> topLevelKeys = jdbcTemplate.queryForList(
+                "SELECT jsonb_object_keys(bf_details) FROM place_bf_info WHERE place_id = ?", String.class, placeId);
+
+        logBfDetailsSchemaMapping(selected, storedBfDetailsJson, storedBfDetails, topLevelKeys);
+
+        assertThat(topLevelKeys).containsExactlyInAnyOrderElementsOf(BF_DETAILS_SCHEMA_TOP_LEVEL_KEYS);
+        assertThat(topLevelKeys).doesNotContainAnyElementsOf(TOUR_API_RAW_BF_DETAIL_KEYS);
+
+        assertThat(storedBfDetails.getIntro()).isNotNull();
+        assertThat(storedBfDetails.getIntro())
+                .containsEntry("contentid", selected.baseItem().contentid());
+        assertThat(storedBfDetails.getMobility()).isNotNull();
+        assertThat(storedBfDetails.getVisual()).isNotNull();
+        assertThat(storedBfDetails.getHearing()).isNotNull();
+        assertThat(storedBfDetails.getInfantFamily()).isNotNull();
+        assertThat(storedBfDetails.getSources()).isNotNull().containsKey("tour_api");
+
+        assertBfItemMapMatchesDataModelSchema(storedBfDetails.getMobility());
+        assertBfItemMapMatchesDataModelSchema(storedBfDetails.getVisual());
+        assertBfItemMapMatchesDataModelSchema(storedBfDetails.getHearing());
+        assertBfItemMapMatchesDataModelSchema(storedBfDetails.getInfantFamily());
+
+        boolean hasAnyBarrierFreeDetail = Stream.of(
+                        storedBfDetails.getMobility(),
+                        storedBfDetails.getVisual(),
+                        storedBfDetails.getHearing(),
+                        storedBfDetails.getInfantFamily())
+                .filter(Objects::nonNull)
+                .flatMap(details -> details.values().stream())
+                .anyMatch(item -> Boolean.TRUE.equals(item.getIsAvailable()));
+        assertThat(hasAnyBarrierFreeDetail).isTrue();
+
+        assertThat(storedBfDetails.getHearing()).containsKey("signguide");
+        PlaceBfDetails.BfItem unknownSignGuide = storedBfDetails.getHearing().get("signguide");
+        assertThat(unknownSignGuide.getIsAvailable()).isNull();
+        assertThat(unknownSignGuide.getCount()).isNull();
+        assertThat(unknownSignGuide.getDetails()).isNull();
+
+        PlaceBfDetails.SourceProvenance tourApiSource =
+                storedBfDetails.getSources().get("tour_api");
+        assertThat(tourApiSource.getExternalId()).isEqualTo(selected.baseItem().contentid());
+        assertThat(tourApiSource.getExternalSubId()).isNull();
+        assertThat(tourApiSource.getEvalInfo()).isNull();
+        assertThat(tourApiSource.getSyncedAt()).isNotNull();
+        assertThat(tourApiSource.getDetailWithTour())
+                .isNotNull()
+                .containsEntry("contentid", selected.baseItem().contentid());
+        assertThat(tourApiSource.getDetailIntro())
+                .isNotNull()
+                .containsEntry("contentid", selected.baseItem().contentid());
+    }
+
+    private void logBfDetailsSchemaMapping(
+            DetailedCandidate selected,
+            String storedBfDetailsJson,
+            PlaceBfDetails storedBfDetails,
+            List<String> topLevelKeys) {
+        log.info(
+                """
+
+                [TourApiRealApiMappingLocalE2ETest] bf_details JSON schema manual verification
+                GIVEN place:
+                  contentId = {}
+                  contentTypeId = {}
+                  title = {}
+                GIVEN detailWithTour2 raw JSON:
+                {}
+                GIVEN detailIntro2 raw JSON:
+                {}
+                THEN stored place_bf_info.bf_details:
+                {}
+                THEN schema top-level keys:
+                  actual = {}
+                  allowed = {}
+                THEN category field summary:
+                  mobility = {}
+                  visual = {}
+                  hearing = {}
+                  infant_family = {}
+                  intro keys = {}
+                """,
+                selected.baseItem().contentid(),
+                selected.baseItem().contenttypeid(),
+                selected.baseItem().title(),
+                selected.result().bfDetails(),
+                selected.result().introDetails(),
+                storedBfDetailsJson,
+                topLevelKeys,
+                BF_DETAILS_SCHEMA_TOP_LEVEL_KEYS,
+                summarizeBfItemMap(storedBfDetails.getMobility()),
+                summarizeBfItemMap(storedBfDetails.getVisual()),
+                summarizeBfItemMap(storedBfDetails.getHearing()),
+                summarizeBfItemMap(storedBfDetails.getInfantFamily()),
+                storedBfDetails.getIntro() == null
+                        ? List.of()
+                        : storedBfDetails.getIntro().keySet());
+    }
+
+    private Map<String, String> summarizeBfItemMap(Map<String, PlaceBfDetails.BfItem> items) {
+        if (items == null || items.isEmpty()) {
+            return Map.of();
+        }
+
+        return items.entrySet().stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        Map.Entry::getKey,
+                        entry -> "is_available=%s, count=%s, details=%s"
+                                .formatted(
+                                        entry.getValue().getIsAvailable(),
+                                        entry.getValue().getCount(),
+                                        entry.getValue().getDetails()),
+                        (left, right) -> left,
+                        java.util.LinkedHashMap::new));
+    }
+
+    private void assertBfItemMapMatchesDataModelSchema(Map<String, PlaceBfDetails.BfItem> items) {
+        if (items == null) {
+            return;
+        }
+
+        assertThat(items).allSatisfy((fieldName, item) -> {
+            assertThat(fieldName).isNotBlank();
+            assertThat(item).isNotNull();
+            assertThat(item.getIsAvailable()).isIn(true, null);
+            if (Boolean.TRUE.equals(item.getIsAvailable())) {
+                assertThat(item.getDetails()).isNotBlank();
+            } else {
+                assertThat(item.getCount()).isNull();
+                assertThat(item.getDetails()).isNull();
+            }
+            if (item.getCount() != null) {
+                assertThat(item.getCount()).isGreaterThanOrEqualTo(0);
+            }
+        });
     }
 
     private record DetailedCandidate(TourApiItemDto baseItem, PlaceProcessingResult result) {}

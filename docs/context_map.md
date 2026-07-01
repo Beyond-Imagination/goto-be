@@ -155,7 +155,7 @@ flowchart TD
     IncrementalProcessor -->|Error Detected| DlqTbl
     
     Writer -->|Upsert: INSERT ON CONFLICT| PlaceTbl
-    Writer -->|Upsert: bf_details JSONB with intro| BfInfoTbl
+    Writer -->|Upsert: PlaceBfDetails JSONB with sources.tour_api| BfInfoTbl
     IncrementalReader -.->|Read last successful target_date as requestDate| SyncLog
     IncrementalReader -.->|Register requestDate and next targetDate| IncrementalSyncLogListener
     IncrementalSyncLogListener -->|Write SUCCESS/FAIL result| SyncLog
