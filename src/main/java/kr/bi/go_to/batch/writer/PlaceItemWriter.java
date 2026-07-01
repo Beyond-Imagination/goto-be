@@ -148,8 +148,8 @@ public class PlaceItemWriter implements ItemWriter<PlaceProcessingResult> {
                 resultsWithBfInfo.size(),
                 (PreparedStatement ps, PlaceProcessingResult result) -> {
                     Long placeId = externalIdToIdMap.get(result.place().getExternalId());
-                    String normalizedBfDetails =
-                            bfDetailsNormalizer.normalize(result.bfDetails(), result.introDetails());
+                    String normalizedBfDetails = bfDetailsNormalizer.normalize(
+                            result.place().getExternalId(), result.bfDetails(), result.introDetails());
                     ps.setLong(1, placeId);
                     ps.setString(2, normalizedBfDetails);
                 });

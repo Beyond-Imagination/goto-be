@@ -217,7 +217,8 @@ class TourApiRealApiMappingLocalE2ETest {
     }
 
     private boolean hasAnyAvailableBarrierFreeDetail(PlaceProcessingResult result) {
-        String normalizedBfDetails = bfDetailsNormalizer.normalize(result.bfDetails(), result.introDetails());
+        String normalizedBfDetails = bfDetailsNormalizer.normalize(
+                result.place().getExternalId(), result.bfDetails(), result.introDetails());
         try {
             PlaceBfDetails bfDetails = objectMapper.readValue(normalizedBfDetails, PlaceBfDetails.class);
             return Stream.of(

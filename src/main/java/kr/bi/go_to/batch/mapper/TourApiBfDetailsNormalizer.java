@@ -89,11 +89,16 @@ public class TourApiBfDetailsNormalizer {
     /**
      * detailWithTour2 원본과 detailIntro2 원본을 PlaceBfDetails 스키마 JSON 문자열로 변환한다.
      *
+     * @param externalId Tour API contentid에서 온 장소 외부 식별자
      * @param bfDetailsJson detailWithTour2 item JSON. parking, route 같은 flat field를 가진다.
      * @param introDetailsJson detailIntro2 item JSON. intro 아래 원문 그대로 보존한다.
      * @return place_bf_info.bf_details에 저장할 정규화 JSON 문자열
      */
-    public String normalize(String bfDetailsJson, String introDetailsJson) {
+    public String normalize(String externalId, String bfDetailsJson, String introDetailsJson) {
+        if (!StringUtils.hasText(externalId)) {
+            throw new IllegalArgumentException("externalId is required to normalize barrier-free details");
+        }
+
         Map<String, Object> bfDetails = readJsonObject(bfDetailsJson);
         Map<String, Object> normalized = new LinkedHashMap<>();
 
@@ -104,7 +109,7 @@ public class TourApiBfDetailsNormalizer {
 
         Map<String, Object> introDetails = readJsonObject(introDetailsJson);
         normalized.put("intro", introDetails);
-        normalized.put("sources", createTourApiSources(bfDetails, introDetails));
+        normalized.put("sources", createTourApiSources(externalId.trim(), bfDetails, introDetails));
 
         try {
             return objectMapper.writeValueAsString(normalized);
@@ -113,9 +118,10 @@ public class TourApiBfDetailsNormalizer {
         }
     }
 
-    private Map<String, Object> createTourApiSources(Map<String, Object> bfDetails, Map<String, Object> introDetails) {
+    private Map<String, Object> createTourApiSources(
+            String externalId, Map<String, Object> bfDetails, Map<String, Object> introDetails) {
         Map<String, Object> tourApi = new LinkedHashMap<>();
-        tourApi.put("externalId", findExternalId(bfDetails, introDetails));
+        tourApi.put("externalId", externalId);
         tourApi.put("externalSubId", null);
         tourApi.put("evalInfo", null);
         tourApi.put("syncedAt", Instant.now(clock));
@@ -125,14 +131,6 @@ public class TourApiBfDetailsNormalizer {
         Map<String, Object> sources = new LinkedHashMap<>();
         sources.put("tour_api", tourApi);
         return sources;
-    }
-
-    private String findExternalId(Map<String, Object> bfDetails, Map<String, Object> introDetails) {
-        String bfContentId = asNonBlankString(bfDetails.get("contentid"));
-        if (bfContentId != null) {
-            return bfContentId;
-        }
-        return asNonBlankString(introDetails.get("contentid"));
     }
 
     private Map<String, Object> readJsonObject(String json) {
