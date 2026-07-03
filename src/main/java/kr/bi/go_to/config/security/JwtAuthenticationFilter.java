@@ -33,9 +33,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 && SecurityContextHolder.getContext().getAuthentication() == null) {
             String token = authorization.substring(7);
             jwtService.parseAndValidate(token, TokenType.ACCESS).ifPresent(claims -> {
-                var authentication = new UsernamePasswordAuthenticationToken(
-                        claims.subject(), null, List.of(new SimpleGrantedAuthority("ROLE_USER")));
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                try {
+                    var principal = new AuthenticatedMember(Long.parseLong(claims.subject()));
+                    var authentication = new UsernamePasswordAuthenticationToken(
+                            principal, null, List.of(new SimpleGrantedAuthority("ROLE_USER")));
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                } catch (NumberFormatException ignored) {
+                    SecurityContextHolder.clearContext();
+                }
             });
         }
 

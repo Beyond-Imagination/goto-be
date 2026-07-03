@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.Map;
+import kr.bi.go_to.model.member.MemberRepository;
 import kr.bi.go_to.model.refreshToken.RefreshTokenRepository;
 import kr.bi.go_to.support.TestcontainersConfiguration;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,9 +38,13 @@ class AuthControllerIntegrationTest {
     @Autowired
     RefreshTokenRepository refreshTokenRepository;
 
+    @Autowired
+    MemberRepository memberRepository;
+
     @BeforeEach
     void setUp() {
         refreshTokenRepository.deleteAll();
+        memberRepository.deleteAll();
     }
 
     @Test
@@ -50,7 +55,7 @@ class AuthControllerIntegrationTest {
                                 .content(
                                         """
                         {
-                          "username": "tester",
+                          "nickname": "tester",
                           "password": "password"
                         }
                         """))
@@ -67,6 +72,7 @@ class AuthControllerIntegrationTest {
         assertThat((String) response.get("accessToken")).contains(".");
         assertThat((String) response.get("refreshToken")).contains(".");
         assertThat(refreshTokenRepository.count()).isEqualTo(1);
+        assertThat(memberRepository.findByNickname("tester")).isPresent();
     }
 
     @Test
@@ -77,7 +83,7 @@ class AuthControllerIntegrationTest {
                                 .content(
                                         """
                         {
-                          "username": "tester",
+                          "nickname": "tester",
                           "password": "password"
                         }
                         """))

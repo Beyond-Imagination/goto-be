@@ -6,12 +6,15 @@ import java.util.Comparator;
 import java.util.List;
 
 public enum SwaggerTag {
-    AUTH("A. Auth", "인증 API")
+    AUTH("A. Auth", "인증 API"),
+    HELP_REQUEST("B. Help Request", "도움 요청 API")
 // USER("B. User", "사용자 API")
 ;
 
     public static final String AUTH_NAME = "A. Auth";
     public static final String AUTH_DESCRIPTION = "인증 API";
+    public static final String HELP_REQUEST_NAME = "B. Help Request";
+    public static final String HELP_REQUEST_DESCRIPTION = "도움 요청 API";
 
     private final String tagName;
     private final String description;

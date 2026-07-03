@@ -2,6 +2,8 @@ package kr.bi.go_to.model.help;
 
 import jakarta.persistence.*;
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.UUID;
 import kr.bi.go_to.model.common.BaseAuditEntity;
 import kr.bi.go_to.model.member.Member;
 import kr.bi.go_to.model.place.Place;
@@ -28,10 +30,16 @@ public class HelpMatchingLog extends BaseAuditEntity {
     private Long id;
 
     /**
+     * 실시간 도움 요청 엔티티와 연결되는 식별자
+     */
+    @Column(name = "help_request_id", unique = true)
+    private UUID helpRequestId;
+
+    /**
      * 도움이 발생한 장소 엔티티 (N:1 관계)
      */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "place_id", nullable = false)
+    @JoinColumn(name = "place_id")
     private Place place;
 
     /**
@@ -66,4 +74,24 @@ public class HelpMatchingLog extends BaseAuditEntity {
      */
     @Column(name = "completed_at")
     private Instant completedAt;
+
+    public HelpMatchingLog(HelpRequest helpRequest) {
+        this.helpRequestId = helpRequest.getId();
+        this.place = helpRequest.getPlace();
+        this.requester = helpRequest.getRequester();
+        this.helper = helpRequest.getHelper();
+        this.lastKnownLocation = new LastKnownLocation(
+                helpRequest.getFloorLevel(),
+                helpRequest.getLatitude().doubleValue(),
+                helpRequest.getLongitude().doubleValue(),
+                null,
+                "USER_REQUEST",
+                new HashMap<>());
+        this.requestedAt = helpRequest.getRequestedAt();
+        this.completedAt = null;
+    }
+
+    public void complete(Instant completedAt) {
+        this.completedAt = completedAt;
+    }
 }

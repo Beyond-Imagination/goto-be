@@ -33,7 +33,7 @@ public class Member extends BaseAuditEntity {
     /**
      * 멤버의 닉네임
      */
-    @Column(nullable = false, length = 100)
+    @Column(nullable = false, unique = true, length = 100)
     private String nickname;
 
     public Member(Role role, String nickname) {

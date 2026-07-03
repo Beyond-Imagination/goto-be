@@ -38,7 +38,7 @@ class RefreshTokenRepositoryTest {
         assertThat(refreshTokenRepository.findById(saved.getId()))
                 .isPresent()
                 .get()
-                .extracting(RefreshToken::getUsername)
+                .extracting(RefreshToken::getSubject)
                 .isEqualTo("tester");
         assertThat(saved.getCreatedAt()).isNotNull();
         assertThat(saved.getUpdatedAt()).isNotNull();

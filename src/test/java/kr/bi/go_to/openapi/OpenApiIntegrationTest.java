@@ -33,12 +33,21 @@ class OpenApiIntegrationTest {
                 .andExpect(jsonPath("$.tags[0].name").value("A. Auth"))
                 .andExpect(jsonPath("$.paths['/api/v1/auth/login']").exists())
                 .andExpect(jsonPath("$.paths['/api/v1/auth/refresh']").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/help-requests']").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/help-requests/nearby']").exists())
                 .andExpect(
                         jsonPath("$.paths['/api/v1/auth/login'].post.tags[0]").value("A. Auth"))
+                .andExpect(jsonPath("$.paths['/api/v1/help-requests'].post.tags[0]")
+                        .value("B. Help Request"))
                 .andExpect(jsonPath("$.components.schemas.LoginRequest").exists())
                 .andExpect(jsonPath("$.components.schemas.LoginResponse").exists())
                 .andExpect(jsonPath("$.components.schemas.RefreshRequest").exists())
                 .andExpect(jsonPath("$.components.schemas.AccessTokenResponse").exists())
+                .andExpect(jsonPath("$.components.schemas.CreateHelpRequestRequest")
+                        .exists())
+                .andExpect(jsonPath("$.components.schemas.HelpRequestResponse").exists())
+                .andExpect(jsonPath("$.components.schemas.NearbyHelpRequestResponse")
+                        .exists())
                 .andExpect(jsonPath("$.components.securitySchemes.bearerAuth.scheme")
                         .value("bearer"));
     }
