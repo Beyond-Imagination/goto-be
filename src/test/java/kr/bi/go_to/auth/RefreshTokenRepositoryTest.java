@@ -7,7 +7,7 @@ import java.util.UUID;
 import kr.bi.go_to.config.ClockConfig;
 import kr.bi.go_to.config.JpaAuditConfig;
 import kr.bi.go_to.model.refreshToken.RefreshToken;
-import kr.bi.go_to.model.refreshToken.RefreshTokenRepository;
+import kr.bi.go_to.repository.RefreshTokenRepository;
 import kr.bi.go_to.support.TestcontainersConfiguration;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

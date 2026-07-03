@@ -13,7 +13,7 @@ import kr.bi.go_to.exception.BusinessException;
 import kr.bi.go_to.exception.ErrorCode;
 import kr.bi.go_to.model.member.Member;
 import kr.bi.go_to.model.refreshToken.RefreshToken;
-import kr.bi.go_to.model.refreshToken.RefreshTokenRepository;
+import kr.bi.go_to.repository.RefreshTokenRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

@@ -1,9 +1,12 @@
-package kr.bi.go_to.model.help;
+package kr.bi.go_to.repository;
 
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+
+import kr.bi.go_to.model.help.HelpRequest;
+import kr.bi.go_to.model.help.HelpRequestStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;

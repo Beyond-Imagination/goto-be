@@ -4,7 +4,7 @@ import kr.bi.go_to.enums.Role;
 import kr.bi.go_to.exception.BusinessException;
 import kr.bi.go_to.exception.ErrorCode;
 import kr.bi.go_to.model.member.Member;
-import kr.bi.go_to.model.member.MemberRepository;
+import kr.bi.go_to.repository.MemberRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

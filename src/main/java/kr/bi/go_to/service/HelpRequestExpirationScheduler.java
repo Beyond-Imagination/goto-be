@@ -2,7 +2,7 @@ package kr.bi.go_to.service;
 
 import java.time.Clock;
 import java.time.Instant;
-import kr.bi.go_to.model.help.HelpRequestRepository;
+import kr.bi.go_to.repository.HelpRequestRepository;
 import kr.bi.go_to.model.help.HelpRequestStatus;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
