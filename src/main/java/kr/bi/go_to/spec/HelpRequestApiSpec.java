@@ -19,6 +19,7 @@ import kr.bi.go_to.controller.help.request.CreateHelpRequestRequest;
 import kr.bi.go_to.controller.help.response.HelpRequestResponse;
 import kr.bi.go_to.controller.help.response.NearbyHelpRequestResponse;
 import kr.bi.go_to.enums.SwaggerTag;
+import kr.bi.go_to.exception.ErrorResponse;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -31,8 +32,14 @@ public interface HelpRequestApiSpec {
                 responseCode = "201",
                 description = "도움 요청 생성 성공",
                 content = @Content(schema = @Schema(implementation = HelpRequestResponse.class))),
-        @ApiResponse(responseCode = "400", description = "요청 값 검증 실패", content = @Content),
-        @ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
+        @ApiResponse(
+                responseCode = "400",
+                description = "요청 값 검증 실패",
+                content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+        @ApiResponse(
+                responseCode = "401",
+                description = "인증 필요",
+                content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     HelpRequestResponse create(AuthenticatedMember member, @Valid @RequestBody CreateHelpRequestRequest request);
 

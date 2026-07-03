@@ -41,7 +41,7 @@ public class LastKnownLocation {
     /**
      * 위치 제공자 (예: GPS, PDR_ENGINE, NETWORK 등)
      */
-    private String provider;
+    private LocationProvider provider;
 
     /**
      * 그 외 명시되지 않은 동적 메타데이터 보관

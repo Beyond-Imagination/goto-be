@@ -66,7 +66,7 @@ class HelpRequestControllerIntegrationTest {
     }
 
     @Test
-    void createsRoadsideHelpRequestWithoutPlaceAndHidesExactLocationUntilAccepted() throws Exception {
+    void 장소_없이_길_위_도움_요청을_만들고_수락_전에는_정확한_위치를_숨긴다() throws Exception {
         String requesterToken = login("requester");
         String helperToken = login("helper");
         String strangerToken = login("stranger");
@@ -112,7 +112,9 @@ class HelpRequestControllerIntegrationTest {
 
         mockMvc.perform(get("/api/v1/help-requests/{id}", helpRequestId)
                         .header(HttpHeaders.AUTHORIZATION, bearer(strangerToken)))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.errorCode").value("FORBIDDEN"))
+                .andExpect(jsonPath("$.errorMessage").value("접근 권한이 없습니다."));
 
         mockMvc.perform(post("/api/v1/help-requests/{id}/accept", helpRequestId)
                         .header(HttpHeaders.AUTHORIZATION, bearer(helperToken)))
@@ -137,7 +139,7 @@ class HelpRequestControllerIntegrationTest {
     }
 
     @Test
-    void rejectedRequestIsHiddenFromRejectingUser() throws Exception {
+    void 거절한_도움_요청은_해당_사용자_주변_목록에서_보이지_않는다() throws Exception {
         String requesterToken = login("requester");
         String helperToken = login("helper");
 

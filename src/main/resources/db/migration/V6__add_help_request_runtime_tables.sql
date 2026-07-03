@@ -1,5 +1,10 @@
+CREATE EXTENSION IF NOT EXISTS postgis;
+
 ALTER TABLE members
     ADD CONSTRAINT uk_members_nickname UNIQUE (nickname);
+
+ALTER TABLE refresh_tokens
+    RENAME COLUMN username TO subject;
 
 ALTER TABLE help_matching_logs
     ALTER COLUMN place_id DROP NOT NULL;
@@ -33,22 +38,27 @@ CREATE TABLE help_requests
 
 CREATE TABLE help_request_rejections
 (
+    id              BIGSERIAL PRIMARY KEY,
     help_request_id UUID        NOT NULL REFERENCES help_requests (id) ON DELETE CASCADE,
     member_id       BIGINT      NOT NULL REFERENCES members (id) ON DELETE CASCADE,
     rejected_at     TIMESTAMPTZ NOT NULL,
-    PRIMARY KEY (help_request_id, member_id)
+    CONSTRAINT uk_help_request_rejections_request_member UNIQUE (help_request_id, member_id)
 );
 
 CREATE INDEX idx_help_requests_status_expires_at ON help_requests (status, expires_at);
 CREATE INDEX idx_help_requests_requester_id_requested_at ON help_requests (requester_id, requested_at DESC);
 CREATE INDEX idx_help_requests_helper_id_requested_at ON help_requests (helper_id, requested_at DESC);
 CREATE INDEX idx_help_requests_latitude_longitude ON help_requests (latitude, longitude);
+CREATE INDEX idx_help_requests_location_geography ON help_requests
+    USING GIST ((ST_SetSRID(ST_MakePoint(longitude::double precision, latitude::double precision), 4326)::geography));
 
 ALTER TABLE help_matching_logs
     ADD CONSTRAINT fk_help_matching_logs_help_request
         FOREIGN KEY (help_request_id) REFERENCES help_requests (id) ON DELETE SET NULL;
 
-COMMENT ON COLUMN members.nickname IS '사용자 표시명이며 현재 임시 로그인/JWT subject와 연결되는 식별자';
+COMMENT ON COLUMN members.nickname IS '사용자 표시명이며 현재 임시 로그인에서 사용하는 닉네임';
+
+COMMENT ON COLUMN refresh_tokens.subject IS 'JWT subject와 연결되는 사용자 ID 문자열';
 
 COMMENT ON TABLE help_requests IS '실시간 도움 요청 상태를 관리하는 엔티티';
 COMMENT ON COLUMN help_requests.id IS '실시간 도움 요청 고유 식별자';
@@ -70,6 +80,7 @@ COMMENT ON COLUMN help_requests.created_at IS '엔티티 최초 생성 일시';
 COMMENT ON COLUMN help_requests.updated_at IS '엔티티 최종 수정 일시';
 
 COMMENT ON TABLE help_request_rejections IS '사용자별 도움 요청 거절 기록';
+COMMENT ON COLUMN help_request_rejections.id IS '도움 요청 거절 기록 고유 식별자';
 COMMENT ON COLUMN help_request_rejections.help_request_id IS '거절한 도움 요청 ID';
 COMMENT ON COLUMN help_request_rejections.member_id IS '도움 요청을 거절한 사용자 ID';
 COMMENT ON COLUMN help_request_rejections.rejected_at IS '사용자가 도움 요청을 거절한 시각';

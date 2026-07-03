@@ -48,7 +48,7 @@ class AuthControllerIntegrationTest {
     }
 
     @Test
-    void loginIssuesAccessAndRefreshTokens() throws Exception {
+    void 임시_로그인하면_액세스_토큰과_리프레시_토큰을_발급한다() throws Exception {
         String responseBody = mockMvc.perform(
                         post("/api/v1/auth/login")
                                 .contentType(MediaType.APPLICATION_JSON)
@@ -76,7 +76,7 @@ class AuthControllerIntegrationTest {
     }
 
     @Test
-    void refreshIssuesNewAccessTokenWithRefreshToken() throws Exception {
+    void 유효한_리프레시_토큰으로_새_액세스_토큰을_발급한다() throws Exception {
         String loginBody = mockMvc.perform(
                         post("/api/v1/auth/login")
                                 .contentType(MediaType.APPLICATION_JSON)
@@ -105,7 +105,7 @@ class AuthControllerIntegrationTest {
     }
 
     @Test
-    void refreshRejectsInvalidRefreshToken() throws Exception {
+    void 유효하지_않은_리프레시_토큰은_표준_에러_응답으로_거절한다() throws Exception {
         mockMvc.perform(
                         post("/api/v1/auth/refresh")
                                 .contentType(MediaType.APPLICATION_JSON)
@@ -115,6 +115,8 @@ class AuthControllerIntegrationTest {
                           "refreshToken": "not-a-jwt"
                         }
                         """))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.errorCode").value("INVALID_REFRESH_TOKEN"))
+                .andExpect(jsonPath("$.errorMessage").value("유효하지 않은 리프레시 토큰입니다."));
     }
 }

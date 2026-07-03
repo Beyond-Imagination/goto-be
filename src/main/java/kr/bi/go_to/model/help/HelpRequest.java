@@ -13,6 +13,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 import kr.bi.go_to.model.common.BaseAuditEntity;
+import kr.bi.go_to.model.common.UuidV7;
 import kr.bi.go_to.model.member.Member;
 import kr.bi.go_to.model.place.Place;
 import lombok.AccessLevel;
@@ -28,7 +29,7 @@ public class HelpRequest extends BaseAuditEntity {
     @Id
     private UUID id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "place_id")
     private Place place;
 
@@ -40,7 +41,7 @@ public class HelpRequest extends BaseAuditEntity {
     @JoinColumn(name = "helper_id")
     private Member helper;
 
-    @Column(name = "location_label", nullable = false, length = 255)
+    @Column(nullable = false, length = 255)
     private String locationLabel;
 
     @Column(nullable = false, precision = 10, scale = 7)
@@ -49,7 +50,6 @@ public class HelpRequest extends BaseAuditEntity {
     @Column(nullable = false, precision = 10, scale = 7)
     private BigDecimal longitude;
 
-    @Column(name = "floor_level")
     private Integer floorLevel;
 
     @Column(length = 500)
@@ -59,19 +59,16 @@ public class HelpRequest extends BaseAuditEntity {
     @Column(nullable = false, length = 20)
     private HelpRequestStatus status;
 
-    @Column(name = "requested_at", nullable = false)
+    @Column(nullable = false)
     private Instant requestedAt;
 
-    @Column(name = "expires_at", nullable = false)
+    @Column(nullable = false)
     private Instant expiresAt;
 
-    @Column(name = "accepted_at")
     private Instant acceptedAt;
 
-    @Column(name = "completed_at")
     private Instant completedAt;
 
-    @Column(name = "canceled_at")
     private Instant canceledAt;
 
     public HelpRequest(
@@ -84,7 +81,7 @@ public class HelpRequest extends BaseAuditEntity {
             String message,
             Instant requestedAt,
             Instant expiresAt) {
-        this.id = UUID.randomUUID();
+        this.id = UuidV7.generate();
         this.place = place;
         this.requester = requester;
         this.locationLabel = locationLabel;

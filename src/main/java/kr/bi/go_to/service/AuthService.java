@@ -9,13 +9,13 @@ import kr.bi.go_to.controller.auth.request.RefreshRequest;
 import kr.bi.go_to.controller.auth.response.AccessTokenResponse;
 import kr.bi.go_to.controller.auth.response.LoginResponse;
 import kr.bi.go_to.enums.TokenType;
+import kr.bi.go_to.exception.BusinessException;
+import kr.bi.go_to.exception.ErrorCode;
 import kr.bi.go_to.model.member.Member;
 import kr.bi.go_to.model.refreshToken.RefreshToken;
 import kr.bi.go_to.model.refreshToken.RefreshTokenRepository;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class AuthService {
@@ -57,16 +57,16 @@ public class AuthService {
     public AccessTokenResponse refresh(RefreshRequest request) {
         JwtClaims claims = jwtService
                 .parseAndValidate(request.refreshToken(), TokenType.REFRESH)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid refresh token"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_REFRESH_TOKEN));
 
         RefreshToken refreshToken = refreshTokenRepository
                 .findById(claims.tokenId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unknown refresh token"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.UNKNOWN_REFRESH_TOKEN));
 
         if (refreshToken.isRevoked()
                 || refreshToken.getExpiresAt().isBefore(Instant.now(clock))
                 || !refreshToken.getSubject().equals(claims.subject())) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Expired or revoked refresh token");
+            throw new BusinessException(ErrorCode.EXPIRED_OR_REVOKED_REFRESH_TOKEN);
         }
 
         return new AccessTokenResponse(

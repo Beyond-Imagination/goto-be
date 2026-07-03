@@ -30,7 +30,7 @@ class RefreshTokenRepositoryTest {
     RefreshTokenRepository refreshTokenRepository;
 
     @Test
-    void storesRefreshTokenInPostgresContainer() {
+    void 리프레시_토큰_subject를_PostgreSQL에_저장하고_조회한다() {
         UUID tokenId = UUID.randomUUID();
         RefreshToken saved = refreshTokenRepository.save(
                 new RefreshToken(tokenId, "tester", Instant.now().plusSeconds(600)));

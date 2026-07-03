@@ -9,6 +9,8 @@ import java.util.UUID;
 import kr.bi.go_to.controller.help.request.CreateHelpRequestRequest;
 import kr.bi.go_to.controller.help.response.HelpRequestResponse;
 import kr.bi.go_to.controller.help.response.NearbyHelpRequestResponse;
+import kr.bi.go_to.exception.BusinessException;
+import kr.bi.go_to.exception.ErrorCode;
 import kr.bi.go_to.model.help.HelpMatchingLog;
 import kr.bi.go_to.model.help.HelpMatchingLogRepository;
 import kr.bi.go_to.model.help.HelpRequest;
@@ -19,10 +21,8 @@ import kr.bi.go_to.model.help.HelpRequestStatus;
 import kr.bi.go_to.model.member.Member;
 import kr.bi.go_to.model.place.Place;
 import kr.bi.go_to.repository.PlaceRepository;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class HelpRequestService {
@@ -70,7 +70,7 @@ public class HelpRequestService {
                 now,
                 now.plus(Duration.ofMinutes(expiresInMinutes))));
 
-        return toResponse(helpRequest);
+        return HelpRequestResponse.from(helpRequest);
     }
 
     @Transactional(readOnly = true)
@@ -80,14 +80,11 @@ public class HelpRequestService {
         Instant now = Instant.now(clock);
 
         return helpRequestRepository
-                .findByStatusAndExpiresAtAfterOrderByRequestedAtDesc(HelpRequestStatus.REQUESTED, now)
+                .findNearbyOpenRequests(
+                        member.getId(), HelpRequestStatus.REQUESTED.name(), latitude, longitude, radiusMeters, now)
                 .stream()
-                .filter(request -> !request.isRequester(member))
-                .filter(request ->
-                        !rejectionRepository.existsByHelpRequestIdAndMemberId(request.getId(), member.getId()))
-                .map(request -> toNearbyResponse(
+                .map(request -> NearbyHelpRequestResponse.of(
                         request, distanceMeters(latitude, longitude, request.getLatitude(), request.getLongitude())))
-                .filter(response -> response.distanceMeters() <= radiusMeters)
                 .toList();
     }
 
@@ -97,7 +94,7 @@ public class HelpRequestService {
         return helpRequestRepository
                 .findByRequesterIdOrHelperIdOrderByRequestedAtDesc(member.getId(), member.getId())
                 .stream()
-                .map(this::toResponse)
+                .map(HelpRequestResponse::from)
                 .toList();
     }
 
@@ -106,8 +103,7 @@ public class HelpRequestService {
         Member member = memberService.getUser(memberId);
         HelpRequest helpRequest = findExisting(id);
         ensureParticipant(helpRequest, member);
-        expireIfNeeded(helpRequest);
-        return toResponse(helpRequest);
+        return HelpRequestResponse.from(helpRequest);
     }
 
     @Transactional
@@ -117,15 +113,15 @@ public class HelpRequestService {
         ensureRequestedAndNotExpired(helpRequest);
 
         if (helpRequest.isRequester(helper)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Requester cannot accept own help request");
+            throw new BusinessException(ErrorCode.CANNOT_ACCEPT_OWN_HELP_REQUEST);
         }
         if (rejectionRepository.existsByHelpRequestIdAndMemberId(helpRequest.getId(), helper.getId())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Help request was already rejected by this member");
+            throw new BusinessException(ErrorCode.HELP_REQUEST_ALREADY_REJECTED);
         }
 
         helpRequest.accept(helper, Instant.now(clock));
         matchingLogRepository.save(new HelpMatchingLog(helpRequest));
-        return toResponse(helpRequest);
+        return HelpRequestResponse.from(helpRequest);
     }
 
     @Transactional
@@ -135,7 +131,7 @@ public class HelpRequestService {
         ensureRequestedAndNotExpired(helpRequest);
 
         if (helpRequest.isRequester(member)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Requester cannot reject own help request");
+            throw new BusinessException(ErrorCode.CANNOT_REJECT_OWN_HELP_REQUEST);
         }
         if (!rejectionRepository.existsByHelpRequestIdAndMemberId(helpRequest.getId(), member.getId())) {
             rejectionRepository.save(new HelpRequestRejection(helpRequest, member, Instant.now(clock)));
@@ -149,13 +145,13 @@ public class HelpRequestService {
         ensureParticipant(helpRequest, member);
 
         if (helpRequest.getStatus() != HelpRequestStatus.ACCEPTED) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Only accepted help requests can be completed");
+            throw new BusinessException(ErrorCode.HELP_REQUEST_NOT_ACCEPTED);
         }
 
         Instant now = Instant.now(clock);
         helpRequest.complete(now);
         matchingLogRepository.findByHelpRequestId(helpRequest.getId()).ifPresent(log -> log.complete(now));
-        return toResponse(helpRequest);
+        return HelpRequestResponse.from(helpRequest);
     }
 
     @Transactional
@@ -164,81 +160,36 @@ public class HelpRequestService {
         HelpRequest helpRequest = findExisting(id);
 
         if (!helpRequest.isRequester(member)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only requester can cancel help request");
+            throw new BusinessException(ErrorCode.ONLY_REQUESTER_CAN_CANCEL);
         }
         if (helpRequest.getStatus() != HelpRequestStatus.REQUESTED
                 && helpRequest.getStatus() != HelpRequestStatus.ACCEPTED) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Help request cannot be canceled");
+            throw new BusinessException(ErrorCode.HELP_REQUEST_CANNOT_BE_CANCELED);
         }
 
         helpRequest.cancel(Instant.now(clock));
-        return toResponse(helpRequest);
+        return HelpRequestResponse.from(helpRequest);
     }
 
     private HelpRequest findExisting(UUID id) {
         return helpRequestRepository
                 .findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Help request not found"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.HELP_REQUEST_NOT_FOUND));
     }
 
     private void ensureRequestedAndNotExpired(HelpRequest helpRequest) {
-        expireIfNeeded(helpRequest);
-        if (helpRequest.getStatus() == HelpRequestStatus.EXPIRED) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Help request expired");
+        if (helpRequest.isExpired(Instant.now(clock)) || helpRequest.getStatus() == HelpRequestStatus.EXPIRED) {
+            throw new BusinessException(ErrorCode.HELP_REQUEST_EXPIRED);
         }
         if (helpRequest.getStatus() != HelpRequestStatus.REQUESTED) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Help request is not open");
+            throw new BusinessException(ErrorCode.HELP_REQUEST_NOT_OPEN);
         }
-    }
-
-    private void expireIfNeeded(HelpRequest helpRequest) {
-        helpRequest.expire(Instant.now(clock));
     }
 
     private void ensureParticipant(HelpRequest helpRequest, Member member) {
         if (!helpRequest.isRequester(member) && !helpRequest.isHelper(member)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN, "Help request detail is only visible to participants");
+            throw new BusinessException(ErrorCode.FORBIDDEN);
         }
-    }
-
-    private HelpRequestResponse toResponse(HelpRequest helpRequest) {
-        return new HelpRequestResponse(
-                helpRequest.getId(),
-                helpRequest.getStatus().name(),
-                helpRequest.getPlace() == null ? null : helpRequest.getPlace().getId(),
-                helpRequest.getPlace() == null ? null : helpRequest.getPlace().getName(),
-                helpRequest.getLocationLabel(),
-                helpRequest.getLatitude(),
-                helpRequest.getLongitude(),
-                helpRequest.getFloorLevel(),
-                helpRequest.getMessage(),
-                helpRequest.getRequester().getNickname(),
-                helpRequest.getHelper() == null ? null : helpRequest.getHelper().getNickname(),
-                helpRequest.getRequestedAt(),
-                helpRequest.getExpiresAt(),
-                helpRequest.getAcceptedAt(),
-                helpRequest.getCompletedAt(),
-                helpRequest.getCanceledAt(),
-                shareMessage(helpRequest),
-                true);
-    }
-
-    private NearbyHelpRequestResponse toNearbyResponse(HelpRequest helpRequest, long distanceMeters) {
-        return new NearbyHelpRequestResponse(
-                helpRequest.getId(),
-                helpRequest.getPlace() == null ? null : helpRequest.getPlace().getId(),
-                helpRequest.getPlace() == null ? null : helpRequest.getPlace().getName(),
-                helpRequest.getLocationLabel(),
-                helpRequest.getMessage(),
-                distanceMeters,
-                helpRequest.getRequestedAt(),
-                helpRequest.getExpiresAt());
-    }
-
-    private String shareMessage(HelpRequest helpRequest) {
-        String floor = helpRequest.getFloorLevel() == null ? "" : " " + helpRequest.getFloorLevel() + "층";
-        return "현재 " + helpRequest.getLocationLabel() + floor + " 근처에서 이동 도움이 필요합니다.";
     }
 
     private String trimToNull(String value) {
@@ -252,9 +203,7 @@ public class HelpRequestService {
         if (placeId == null) {
             return null;
         }
-        return placeRepository
-                .findById(placeId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Place not found"));
+        return placeRepository.findById(placeId).orElseThrow(() -> new BusinessException(ErrorCode.PLACE_NOT_FOUND));
     }
 
     private long distanceMeters(

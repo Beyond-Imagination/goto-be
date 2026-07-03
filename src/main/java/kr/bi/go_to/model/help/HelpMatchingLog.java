@@ -85,7 +85,7 @@ public class HelpMatchingLog extends BaseAuditEntity {
                 helpRequest.getLatitude().doubleValue(),
                 helpRequest.getLongitude().doubleValue(),
                 null,
-                "USER_REQUEST",
+                LocationProvider.USER_REQUEST,
                 new HashMap<>());
         this.requestedAt = helpRequest.getRequestedAt();
         this.completedAt = null;

@@ -1,12 +1,12 @@
 package kr.bi.go_to.service;
 
 import kr.bi.go_to.enums.Role;
+import kr.bi.go_to.exception.BusinessException;
+import kr.bi.go_to.exception.ErrorCode;
 import kr.bi.go_to.model.member.Member;
 import kr.bi.go_to.model.member.MemberRepository;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class MemberService {
@@ -27,8 +27,6 @@ public class MemberService {
 
     @Transactional(readOnly = true)
     public Member getUser(Long memberId) {
-        return memberRepository
-                .findById(memberId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Member not found"));
+        return memberRepository.findById(memberId).orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
     }
 }
