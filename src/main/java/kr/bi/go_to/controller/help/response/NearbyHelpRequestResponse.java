@@ -16,7 +16,7 @@ public record NearbyHelpRequestResponse(
         @Schema(description = "요청 생성 시각") Instant requestedAt,
         @Schema(description = "요청 만료 시각") Instant expiresAt) {
 
-    public static NearbyHelpRequestResponse of(HelpRequest helpRequest, long distanceMeters) {
+    public static NearbyHelpRequestResponse from(HelpRequest helpRequest, long distanceMeters) {
         return new NearbyHelpRequestResponse(
                 helpRequest.getId(),
                 helpRequest.getPlace() == null ? null : helpRequest.getPlace().getId(),

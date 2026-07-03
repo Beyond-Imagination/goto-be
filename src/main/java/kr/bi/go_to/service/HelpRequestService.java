@@ -83,7 +83,7 @@ public class HelpRequestService {
                 .findNearbyOpenRequests(
                         member.getId(), HelpRequestStatus.REQUESTED.name(), latitude, longitude, radiusMeters, now)
                 .stream()
-                .map(request -> NearbyHelpRequestResponse.of(
+                .map(request -> NearbyHelpRequestResponse.from(
                         request, distanceMeters(latitude, longitude, request.getLatitude(), request.getLongitude())))
                 .toList();
     }

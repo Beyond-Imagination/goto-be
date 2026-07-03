@@ -43,7 +43,7 @@ public interface HelpRequestRepository extends JpaRepository<HelpRequest, UUID> 
 
     List<HelpRequest> findByRequesterIdOrHelperIdOrderByRequestedAtDesc(Long requesterId, Long helperId);
 
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query(
             """
             UPDATE HelpRequest h
@@ -51,7 +51,7 @@ public interface HelpRequestRepository extends JpaRepository<HelpRequest, UUID> 
             WHERE h.status = :requestedStatus
               AND h.expiresAt <= :now
             """)
-    void expireRequestedRequests(
+    int expireRequestedRequests(
             @Param("requestedStatus") HelpRequestStatus requestedStatus,
             @Param("expiredStatus") HelpRequestStatus expiredStatus,
             @Param("now") Instant now);
