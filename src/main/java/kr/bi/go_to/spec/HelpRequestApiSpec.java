@@ -26,7 +26,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 @Tag(name = SwaggerTag.HELP_REQUEST_NAME, description = SwaggerTag.HELP_REQUEST_DESCRIPTION)
 public interface HelpRequestApiSpec {
 
-    @Operation(tags = SwaggerTag.HELP_REQUEST_NAME, summary = "도움 요청 생성")
+    @Operation(
+            tags = SwaggerTag.HELP_REQUEST_NAME,
+            summary = "도움 요청 생성",
+            description =
+                    "이동 도움이 필요한 사용자가 현재 위치에서 도움 요청을 생성할 때 호출합니다. 특정 장소에 묶이지 않은 길 위 요청도 생성할 수 있으므로 placeId는 선택값입니다.")
     @ApiResponses({
         @ApiResponse(
                 responseCode = "201",
@@ -62,16 +66,28 @@ public interface HelpRequestApiSpec {
             description = "요청자 또는 수락한 도우미만 정확 위치를 포함한 상세 정보를 조회합니다.")
     HelpRequestResponse get(AuthenticatedMember member, UUID id);
 
-    @Operation(tags = SwaggerTag.HELP_REQUEST_NAME, summary = "도움 요청 수락")
+    @Operation(
+            tags = SwaggerTag.HELP_REQUEST_NAME,
+            summary = "도움 요청 수락",
+            description = "도움을 제공하려는 사용자가 주변 도움 요청을 수락할 때 호출합니다. 요청자 본인은 자신의 도움 요청을 수락할 수 없습니다.")
     HelpRequestResponse accept(AuthenticatedMember member, UUID id);
 
-    @Operation(tags = SwaggerTag.HELP_REQUEST_NAME, summary = "도움 요청 거절")
+    @Operation(
+            tags = SwaggerTag.HELP_REQUEST_NAME,
+            summary = "도움 요청 거절",
+            description = "도움을 제공하고 싶지 않은 사용자가 해당 도움 요청을 자신의 주변 목록에서 숨길 때 호출합니다. 도움을 받는 요청자가 도우미 후보를 거절하는 API가 아닙니다.")
     @ApiResponse(responseCode = "204", description = "거절 처리 성공")
     void reject(AuthenticatedMember member, UUID id);
 
-    @Operation(tags = SwaggerTag.HELP_REQUEST_NAME, summary = "도움 완료")
+    @Operation(
+            tags = SwaggerTag.HELP_REQUEST_NAME,
+            summary = "도움 완료",
+            description = "요청자 또는 수락한 도우미가 실제 도움이 끝났을 때 호출합니다. 수락된 도움 요청만 완료할 수 있습니다.")
     HelpRequestResponse complete(AuthenticatedMember member, UUID id);
 
-    @Operation(tags = SwaggerTag.HELP_REQUEST_NAME, summary = "도움 요청 취소")
+    @Operation(
+            tags = SwaggerTag.HELP_REQUEST_NAME,
+            summary = "도움 요청 취소",
+            description = "도움을 요청한 사용자 본인이 아직 진행 중인 도움 요청을 취소할 때 호출합니다. 도우미는 요청을 취소할 수 없습니다.")
     HelpRequestResponse cancel(AuthenticatedMember member, UUID id);
 }
