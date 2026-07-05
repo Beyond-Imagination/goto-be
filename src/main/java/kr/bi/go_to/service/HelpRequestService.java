@@ -12,14 +12,14 @@ import kr.bi.go_to.controller.help.response.NearbyHelpRequestResponse;
 import kr.bi.go_to.exception.BusinessException;
 import kr.bi.go_to.exception.ErrorCode;
 import kr.bi.go_to.model.help.HelpMatchingLog;
-import kr.bi.go_to.repository.HelpMatchingLogRepository;
 import kr.bi.go_to.model.help.HelpRequest;
 import kr.bi.go_to.model.help.HelpRequestRejection;
-import kr.bi.go_to.repository.HelpRequestRejectionRepository;
-import kr.bi.go_to.repository.HelpRequestRepository;
 import kr.bi.go_to.model.help.HelpRequestStatus;
 import kr.bi.go_to.model.member.Member;
 import kr.bi.go_to.model.place.Place;
+import kr.bi.go_to.repository.HelpMatchingLogRepository;
+import kr.bi.go_to.repository.HelpRequestRejectionRepository;
+import kr.bi.go_to.repository.HelpRequestRepository;
 import kr.bi.go_to.repository.PlaceRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -109,7 +109,7 @@ public class HelpRequestService {
     @Transactional
     public HelpRequestResponse accept(Long memberId, UUID id) {
         Member helper = memberService.getUser(memberId);
-        HelpRequest helpRequest = findExisting(id);
+        HelpRequest helpRequest = findExistingForUpdate(id);
         ensureRequestedAndNotExpired(helpRequest);
 
         if (helpRequest.isRequester(helper)) {
@@ -127,7 +127,7 @@ public class HelpRequestService {
     @Transactional
     public void reject(Long memberId, UUID id) {
         Member member = memberService.getUser(memberId);
-        HelpRequest helpRequest = findExisting(id);
+        HelpRequest helpRequest = findExistingForUpdate(id);
         ensureRequestedAndNotExpired(helpRequest);
 
         if (helpRequest.isRequester(member)) {
@@ -141,7 +141,7 @@ public class HelpRequestService {
     @Transactional
     public HelpRequestResponse complete(Long memberId, UUID id) {
         Member member = memberService.getUser(memberId);
-        HelpRequest helpRequest = findExisting(id);
+        HelpRequest helpRequest = findExistingForUpdate(id);
         ensureParticipant(helpRequest, member);
 
         if (helpRequest.getStatus() != HelpRequestStatus.ACCEPTED) {
@@ -157,7 +157,7 @@ public class HelpRequestService {
     @Transactional
     public HelpRequestResponse cancel(Long memberId, UUID id) {
         Member member = memberService.getUser(memberId);
-        HelpRequest helpRequest = findExisting(id);
+        HelpRequest helpRequest = findExistingForUpdate(id);
 
         if (!helpRequest.isRequester(member)) {
             throw new BusinessException(ErrorCode.ONLY_REQUESTER_CAN_CANCEL);
@@ -174,6 +174,12 @@ public class HelpRequestService {
     private HelpRequest findExisting(UUID id) {
         return helpRequestRepository
                 .findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.HELP_REQUEST_NOT_FOUND));
+    }
+
+    private HelpRequest findExistingForUpdate(UUID id) {
+        return helpRequestRepository
+                .findByIdForUpdate(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.HELP_REQUEST_NOT_FOUND));
     }
 
@@ -212,11 +218,14 @@ public class HelpRequestService {
             BigDecimal targetLatitude,
             BigDecimal targetLongitude) {
         double earthRadiusMeters = 6_371_000;
-        double lat1 = Math.toRadians(originLatitude.doubleValue());
-        double lat2 = Math.toRadians(targetLatitude.doubleValue());
-        double deltaLat = Math.toRadians(targetLatitude.subtract(originLatitude).doubleValue());
-        double deltaLng =
-                Math.toRadians(targetLongitude.subtract(originLongitude).doubleValue());
+        double originLatitudeValue = originLatitude.doubleValue();
+        double originLongitudeValue = originLongitude.doubleValue();
+        double targetLatitudeValue = targetLatitude.doubleValue();
+        double targetLongitudeValue = targetLongitude.doubleValue();
+        double lat1 = Math.toRadians(originLatitudeValue);
+        double lat2 = Math.toRadians(targetLatitudeValue);
+        double deltaLat = Math.toRadians(targetLatitudeValue - originLatitudeValue);
+        double deltaLng = Math.toRadians(targetLongitudeValue - originLongitudeValue);
 
         double a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2)
                 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(deltaLng / 2) * Math.sin(deltaLng / 2);

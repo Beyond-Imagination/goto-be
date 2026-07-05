@@ -91,6 +91,7 @@ class HelpRequestControllerIntegrationTest {
                 .andExpect(jsonPath("$.placeId").doesNotExist())
                 .andExpect(jsonPath("$.latitude").value(35.8294371))
                 .andExpect(jsonPath("$.longitude").value(129.2286552))
+                .andExpect(jsonPath("$.emergencyCallRecommended").value(false))
                 .andExpect(jsonPath("$.shareMessage").value("현재 국립경주박물관 앞 보도 0층 근처에서 이동 도움이 필요합니다."))
                 .andReturn()
                 .getResponse()

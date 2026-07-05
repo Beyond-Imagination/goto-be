@@ -55,7 +55,7 @@ public interface HelpRequestApiSpec {
             AuthenticatedMember member,
             @RequestParam @DecimalMin("-90.0") @DecimalMax("90.0") BigDecimal latitude,
             @RequestParam @DecimalMin("-180.0") @DecimalMax("180.0") BigDecimal longitude,
-            @RequestParam @Min(1) @Max(5000) int radiusMeters);
+            @RequestParam(defaultValue = "1000") @Min(1) @Max(5000) int radiusMeters);
 
     @Operation(tags = SwaggerTag.HELP_REQUEST_NAME, summary = "내 도움 요청 조회")
     List<HelpRequestResponse> findMine(AuthenticatedMember member);

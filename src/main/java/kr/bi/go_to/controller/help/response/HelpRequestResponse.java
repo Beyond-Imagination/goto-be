@@ -25,7 +25,7 @@ public record HelpRequestResponse(
         @Schema(description = "도움 완료 시각", nullable = true) Instant completedAt,
         @Schema(description = "요청 취소 시각", nullable = true) Instant canceledAt,
         @Schema(description = "공유용 도움 요청 메시지", example = "현재 국립경주박물관 앞 보도 근처에서 이동 도움이 필요합니다.") String shareMessage,
-        @Schema(description = "긴급 신고 권고 여부", example = "true") boolean emergencyCallRecommended) {
+        @Schema(description = "긴급 신고 권고 여부", example = "false") boolean emergencyCallRecommended) {
 
     public static HelpRequestResponse from(HelpRequest helpRequest) {
         return new HelpRequestResponse(
@@ -46,7 +46,7 @@ public record HelpRequestResponse(
                 helpRequest.getCompletedAt(),
                 helpRequest.getCanceledAt(),
                 shareMessage(helpRequest),
-                true);
+                false);
     }
 
     private static String shareMessage(HelpRequest helpRequest) {
