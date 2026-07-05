@@ -1,0 +1,12 @@
+.git
+.github
+.gradle
+.idea
+build
+docs
+*.iml
+.env
+.env.*
+!.env.example
+docker-compose*.yml
+**/.DS_Store

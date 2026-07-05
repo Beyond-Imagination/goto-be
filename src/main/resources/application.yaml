@@ -52,3 +52,12 @@ goto:
   batch:
     initial-load:
       auto-run-enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
