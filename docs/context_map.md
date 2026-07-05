@@ -17,6 +17,8 @@ docs/
 │   └── 0002_adr_incremental_sync_pipeline.md  # [adr] 증분 동기화, 자동 초기 적재, 스케줄러 가드
 ├── context_map.md                 # 본 문서 (전체 지도 및 도메인 컨텍스트 맵)
 └── specs/
+    ├── batch_upsert_strategy_spec.md # PLACE 배치 Upsert 상세 구현 전략
+    └── place_search_api_spec.md      # 위치 기반 장소 탐색 API 구현 명세
     └── batch_upsert_strategy_spec.md  # [spec] PlaceItemWriter 기반 벌크 Upsert 구현 스펙
 ```
 
@@ -43,6 +45,8 @@ docs/
 ### 1.2. `specs` 카테고리 (Implementation Specs)
 * **목적**: 실제 코드 구현과 물리 데이터베이스 설계에 반영되어야 하는 세부 물리 규격, API 상세 페이로드 포맷, ERD 명세를 보관하는 카테고리입니다.
 * **해당 문서**:
+  * [batch_upsert_strategy_spec.md](specs/batch_upsert_strategy_spec.md): PostgreSQL Native Upsert와 Spring JDBC 기반 PLACE 배치 적재 전략.
+  * [place_search_api_spec.md](specs/place_search_api_spec.md): 현재 위치 기반 장소 검색, 카테고리 필터, 거리 정렬, Mock 데이터 공급 구조 및 API 계약.
   * [batch_upsert_strategy_spec.md](specs/batch_upsert_strategy_spec.md): Spring Batch `PlaceItemWriter`의 PostgreSQL native Upsert, soft delete 반영, `place_bf_info` 저장 정책.
 
 ---
