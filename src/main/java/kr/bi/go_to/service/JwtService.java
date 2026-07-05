@@ -1,8 +1,5 @@
 package kr.bi.go_to.service;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
@@ -20,6 +17,8 @@ import kr.bi.go_to.config.security.JwtClaims;
 import kr.bi.go_to.enums.TokenType;
 import kr.bi.go_to.properties.JwtProperties;
 import org.springframework.stereotype.Service;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
 @Service
 public class JwtService {
@@ -80,7 +79,7 @@ public class JwtService {
                     TokenType.valueOf(tokenType),
                     Instant.ofEpochSecond(issuedAt),
                     Instant.ofEpochSecond(expiresAt)));
-        } catch (RuntimeException | IOException ex) {
+        } catch (RuntimeException ex) {
             return Optional.empty();
         }
     }
@@ -115,7 +114,7 @@ public class JwtService {
     private String encodeJson(Map<String, Object> value) {
         try {
             return encode(objectMapper.writeValueAsBytes(value));
-        } catch (IOException ex) {
+        } catch (RuntimeException ex) {
             throw new IllegalStateException("Failed to write JWT JSON", ex);
         }
     }

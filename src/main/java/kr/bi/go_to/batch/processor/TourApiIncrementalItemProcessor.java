@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import kr.bi.go_to.batch.client.TourApiClient;
 import kr.bi.go_to.batch.dto.PlaceProcessingResult;
 import kr.bi.go_to.batch.dto.TourApiItemDto;
 import kr.bi.go_to.batch.exception.HomepageParsingErrorType;
@@ -23,11 +24,12 @@ import org.springframework.batch.infrastructure.item.ItemProcessor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.util.HtmlUtils;
+import tools.jackson.databind.JsonNode;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class TourApiItemProcessor implements ItemProcessor<TourApiItemDto, PlaceProcessingResult> {
+public class TourApiIncrementalItemProcessor implements ItemProcessor<TourApiItemDto, PlaceProcessingResult> {
 
     private static final Pattern HREF_PATTERN =
             Pattern.compile("href\\s*=\\s*[\"']([^\"']+)[\"']", Pattern.CASE_INSENSITIVE);
@@ -36,6 +38,7 @@ public class TourApiItemProcessor implements ItemProcessor<TourApiItemDto, Place
 
     private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
     private final EtlFailureLogger etlFailureLogger;
+    private final TourApiClient tourApiClient;
 
     private static final String FAILURE_LOG_TEMPLATE = "[%s] %s, --> contentId: %s";
 
@@ -47,13 +50,20 @@ public class TourApiItemProcessor implements ItemProcessor<TourApiItemDto, Place
 
     @Override
     public PlaceProcessingResult process(TourApiItemDto dto) throws Exception {
+        // Validation: Mandatory fields
         if (!StringUtils.hasText(dto.contentid())) {
             log.warn("Skipping item with empty contentid: {}", dto.title());
             return null;
         }
 
         if (!StringUtils.hasText(dto.title())) {
-            log.warn("Skipping item with empty title: contentid={}", dto.contentid());
+            handleFailure("MISSING_REQUIRED_FIELD", "Title is empty", dto.contentid());
+            return null;
+        }
+
+        // Validation: Length constraints
+        if (dto.title().length() > 255) {
+            handleFailure("EXCEED_MAX_LENGTH", "Title length > 255", dto.contentid());
             return null;
         }
 
@@ -76,13 +86,55 @@ public class TourApiItemProcessor implements ItemProcessor<TourApiItemDto, Place
         }
 
         String address = constructAddress(dto.addr1(), dto.addr2());
+        if (address != null && address.length() > 500) {
+            handleFailure("EXCEED_MAX_LENGTH", "Address length > 500", dto.contentid());
+            return null;
+        }
+
         String thumbnailUrl = StringUtils.hasText(dto.firstimage())
                 ? dto.firstimage()
                 : (StringUtils.hasText(dto.firstimage2()) ? dto.firstimage2() : null);
 
-        String overview = StringUtils.hasText(dto.overview()) ? dto.overview() : null;
-        String homepage = sanitizeHomepage(dto.homepage());
         String tel = StringUtils.hasText(dto.tel()) ? dto.tel() : null;
+
+        boolean isDeleted = false;
+        String overview = null;
+        String homepage = null;
+        String bfDetails = null;
+        String introDetails = null;
+        boolean detailCommonSynced = false;
+        boolean detailWithTourSynced = false;
+        boolean detailIntroSynced = false;
+
+        // Check showflag
+        if ("0".equals(dto.showflag())) {
+            isDeleted = true;
+        } else {
+            // Eager Fetch for newly added/updated items
+            try {
+                JsonNode common2 = tourApiClient.fetchDetail("detailCommon2", dto.contentid(), null);
+                detailCommonSynced = common2 != null;
+                if (detailCommonSynced) {
+                    overview = tourApiClient.extractFieldOrEmpty(common2, "overview");
+                    String rawHomepage = tourApiClient.extractFieldOrEmpty(common2, "homepage");
+                    homepage = sanitizeHomepage(rawHomepage);
+                }
+
+                JsonNode withTour2 = tourApiClient.fetchDetail("detailWithTour2", dto.contentid(), null);
+                detailWithTourSynced = withTour2 != null;
+                bfDetails = withTour2 != null ? withTour2.toString() : null;
+
+                JsonNode intro2 = tourApiClient.fetchDetail("detailIntro2", dto.contentid(), dto.contenttypeid());
+                detailIntroSynced = intro2 != null;
+                introDetails = intro2 != null ? intro2.toString() : null;
+            } catch (HomepageParsingException hpe) {
+                // If homepage parsing fails, we bubble it up so skip listener logs it
+                throw hpe;
+            } catch (Exception e) {
+                log.warn("Eager fetch failed for contentId: {}, fallback to lazy fetch later.", dto.contentid(), e);
+                // Leave overview = null to trigger lazy fetch in Step 2
+            }
+        }
 
         Place place = Place.builder()
                 .externalId(dto.contentid())
@@ -96,9 +148,14 @@ public class TourApiItemProcessor implements ItemProcessor<TourApiItemDto, Place
                 .homepage(homepage)
                 .contentTypeId(dto.contenttypeid())
                 .category(dto.cat3())
+                .isDeleted(isDeleted)
+                .detailCommonSynced(detailCommonSynced)
+                .detailWithTourSynced(detailWithTourSynced)
+                .detailIntroSynced(detailIntroSynced)
                 .build();
 
-        return new PlaceProcessingResult(place, dto.bfDetails(), dto.introDetails());
+        return new PlaceProcessingResult(
+                place, bfDetails, introDetails, detailCommonSynced, detailWithTourSynced, detailIntroSynced);
     }
 
     private String constructAddress(String addr1, String addr2) {
@@ -113,35 +170,33 @@ public class TourApiItemProcessor implements ItemProcessor<TourApiItemDto, Place
     }
 
     private boolean isLocationWithinValidBounds(double lon, double lat) {
-        // 대한민국 영토 및 영해(독도, 이어도 등 포함)를 커버하는 넉넉한 바운딩 박스
         return lon >= 124.0 && lon <= 132.0 && lat >= 32.0 && lat <= 43.5;
     }
 
     private String sanitizeHomepage(String homepage) {
-        if (!StringUtils.hasText(homepage)) {
+        if (homepage == null) {
             return null;
         }
 
-        // HTML 엔티티 디코딩 (예: &lt; -> <)
+        if (!StringUtils.hasText(homepage)) {
+            return "";
+        }
+
         String unescaped = HtmlUtils.htmlUnescape(homepage);
 
-        // 1. 2개 이상의 서로 다른 URL이 포함되어 있는지 검사
         int urlCount = countDistinctUrls(unescaped);
         if (urlCount > 1) {
             throw new HomepageParsingException(HomepageParsingErrorType.MULTIPLE_URLS, homepage);
         }
 
-        // 2. URL 추출 시도
         String extracted;
         Matcher matcher = HREF_PATTERN.matcher(unescaped);
         if (matcher.find()) {
             extracted = matcher.group(1).trim();
         } else {
-            // href 속성이 없는 경우, 태그를 제거하고 남은 텍스트를 대상 URL로 삼음
             extracted = unescaped.replaceAll("<[^>]*>", "").trim();
         }
 
-        // 3. 홈페이지 정보가 들어왔으나 유효한 URL로 정제되지 않은 경우 예외 처리
         if (!StringUtils.hasText(extracted)) {
             throw new HomepageParsingException(HomepageParsingErrorType.NO_EXTRACTED_URL, homepage);
         }

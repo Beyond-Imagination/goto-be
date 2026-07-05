@@ -38,7 +38,7 @@ class EtlFailureLoggerIntegrationTest {
     }
 
     @Test
-    @DisplayName("외부 트랜잭션이 롤백되어도 REQUIRES_NEW인 etlFailureLogger의 로그는 저장되어야 한다")
+    @DisplayName("외부 트랜잭션이 롤백된 뒤 EtlFailureLogger.logFailure를 호출하면 REQUIRES_NEW로 실패 로그만 커밋된다")
     void logFailure_runsInNewTransaction_isNotRolledBackWhenOuterTransactionRollsBack() {
         // given
         String externalId = "test-ext-123";

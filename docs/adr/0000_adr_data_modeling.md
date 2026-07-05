@@ -37,15 +37,44 @@ status: Accepted
 
 ### Decision
 * **대안 B**를 채택하여 PostgreSQL의 **`JSONB`** 데이터 타입을 활용합니다.
-* JSONB 내부 스키마는 신체/상황별 카테고리(`mobility`, `visual`, `hearing`, `infant_family`)로 나누고, 검색 조건의 핵심이 되는 `is_available` 필드를 최상위 계층에 둔 구조로 정의합니다.
+* JSONB 내부 스키마는 신체/상황별 카테고리(`mobility`, `visual`, `hearing`, `infant_family`)로 나누고, 검색 조건의 핵심이 되는 `is_available` 필드를 세부 항목의 공통 속성으로 둔 구조로 정의합니다.
+* `mobility`, `visual`, `hearing`, `infant_family`, `intro`, `sources` 최상위 key는 항상 유지합니다. 각 카테고리 안의 알려진 편의시설 field도 기본 골격으로 유지하며, 외부 데이터로 판별할 수 없는 값은 `null`로 저장합니다.
+* `intro`는 앱에서 바로 쓰는 현재 projection이고, 원천 원문은 `sources` 아래에 보존합니다. 예를 들어 Tour API 원본은 `sources.tour_api.detailWithTour`, `sources.tour_api.detailIntro`에 저장합니다.
+* `is_available=false`는 외부 데이터가 명시적으로 이용 불가를 표현할 수 있을 때만 사용합니다. 현재 Tour API의 빈 문자열은 "없음"이 아니라 "판별 불가"로 보고 `is_available=null`, `count=null`, `details=null`로 저장합니다.
   ```json
   {
     "mobility": {
       "wheelchair": { "is_available": true, "count": 2, "details": "수동휠체어 2대 대여가능" },
-      "parking": { "is_available": true, "count": null, "details": "장애인 전용 주차장 있음" }
+      "parking": { "is_available": true, "count": null, "details": "장애인 전용 주차장 있음" },
+      "elevator": { "is_available": null, "count": null, "details": null }
     },
     "visual": {
-      "guide_dog": { "is_available": true, "details": "안내견 동반 가능" }
+      "helpdog": { "is_available": true, "count": null, "details": "안내견 동반 가능" },
+      "braileblock": { "is_available": null, "count": null, "details": null }
+    },
+    "hearing": {
+      "signguide": { "is_available": null, "count": null, "details": null }
+    },
+    "infant_family": {
+      "lactationroom": { "is_available": null, "count": null, "details": null }
+    },
+    "intro": {
+      "contentid": "1067369",
+      "usetime": "09:00~18:00"
+    },
+    "sources": {
+      "tour_api": {
+        "externalId": "1067369",
+        "syncedAt": "2026-07-01T00:00:00Z",
+        "detailWithTour": {
+          "contentid": "1067369",
+          "wheelchair": "수동휠체어 2대 대여가능"
+        },
+        "detailIntro": {
+          "contentid": "1067369",
+          "usetime": "09:00~18:00"
+        }
+      }
     }
   }
   ```

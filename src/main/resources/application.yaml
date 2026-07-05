@@ -41,6 +41,14 @@ springdoc:
 
 tour-api:
   base-url: "http://apis.data.go.kr/B551011/KorWithService2"
-  service-key: ${TOUR_API_SERVICE_KEY}
   mobile-os: "ETC"
   mobile-app: "Goto"
+  detail-quota: 250
+  detail-concurrency: 1
+  detail-queue-capacity: 250
+  detail-await-termination-seconds: 60
+
+goto:
+  batch:
+    initial-load:
+      auto-run-enabled: true

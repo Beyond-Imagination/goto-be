@@ -27,7 +27,7 @@ spring:
 
 tour-api:
   base-url: "http://apis.data.go.kr/B551011/KorWithService2"
-  service-key: "${TOUR_API_SERVICE_KEY:test-service-key}"
+  service-key: "${TOUR_API_SERVICE_KEY}"
   mobile-os: "ETC"
   mobile-app: "Goto"
 
@@ -37,3 +37,8 @@ security:
     secret: test-secret-key-must-be-at-least-32-bytes-long
     access-token-ttl: 5m
     refresh-token-ttl: 30m
+
+goto:
+  batch:
+    initial-load:
+      auto-run-enabled: false
