@@ -9,11 +9,13 @@ import org.springframework.batch.core.job.parameters.JobParametersBuilder;
 import org.springframework.batch.core.launch.JobOperator;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.annotation.Profile;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
+@Profile("default")
 @RequiredArgsConstructor
 @ConditionalOnProperty(prefix = "goto.batch.initial-load", name = "auto-run-enabled", havingValue = "true")
 public class TourApiInitialLoadRunner {
