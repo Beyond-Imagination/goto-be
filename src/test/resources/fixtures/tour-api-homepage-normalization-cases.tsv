@@ -1,0 +1,30 @@
+type	raw_homepage	expected_homepage
+ANCHOR_DETAIL_HREF	진도 관광문화 <a href="https://www.jindo.go.kr/tour/tour/info/nature/002.cs?act=view&infoId=1&category=002&searchCondition=&searchKeyword=&pageIndex=1&m=57" target="_blank" title="새창 : 진도 관광문화 사이트로 이동">https://www.jindo.go.kr/tour</a>	https://www.jindo.go.kr/tour/tour/info/nature/002.cs?act=view&infoId=1&category=002&searchCondition=&searchKeyword=&pageIndex=1&m=57
+ANCHOR_SAME_URL	<a href="http://www.artpark.co.kr/" target="_blank" title="새창: 가나아트파크 홈페이지로 이동">http://www.artpark.co.kr</a>	http://www.artpark.co.kr/
+ANCHOR_DETAIL_HREF	농수산물식품공사 <a href="http://www.garak.co.kr/gongsa/jsp/mk/marketinfo/garak_overview201109.jsp" target="_blank" title="가락시장 안내페이지로 이동">http://www.garak.co.kr</a>	http://www.garak.co.kr/gongsa/jsp/mk/marketinfo/garak_overview201109.jsp
+ANCHOR_MISSING_SPACE_BEFORE_ATTR	<a href="https://www.wonju.go.kr/tour/contents.do?key=5526&"target="_blank" title="새창: 원주 문화관광 홈페이지로 이동">https://www.wonju.go.kr/tour/</a>	https://www.wonju.go.kr/tour/contents.do?key=5526&
+ANCHOR_LINE_BREAK_IN_HREF	<a href="https://www.ygtour.kr/Home/H20000/H20400/placeDetail?place_no=51\n" target="_blank" title="새창 : 양구 문화관광 양구전쟁기념관 페이지로 이동">http://www.ygtour.kr</a>	https://www.ygtour.kr/Home/H20000/H20400/placeDetail?place_no=51
+ANCHOR_WWW_TEXT	<a title="새창:다이나믹메이즈 홈페이지로 이동" href="http://www.dynamicmaze.com" target="_blank">www.dynamicmaze.com</a>	http://www.dynamicmaze.com
+ANCHOR_PROTOCOL_DIFF	<a href="https://www.maegoe.com/main/?load_popup=1" target="_blank" title="새창 : 감곡매괴성모순례지성당 홈페이지로 이동">http://www.maegoe.com</a>	https://www.maegoe.com/main/?load_popup=1
+ANCHOR_ENCODED_HREF_KOREAN_TEXT	<a href="http://yhsk.kr/%EC%97%B0%EA%B3%A1%EA%BE%B9%EC%A0%80%EA%B5%AC%ED%83%95" target="_blank" title="새창: 홈페이지로 이동">http://yhsk.kr/연곡꾹저구탕</a>	http://yhsk.kr/%EC%97%B0%EA%B3%A1%EA%BE%B9%EC%A0%80%EA%B5%AC%ED%83%95
+ANCHOR_IDN_TEXT	<a href="http://xn--699a3bx02d1yad25aw3ac37a.com/" target="_blank" title="새창 : 영암곤충박물관 홈페이지로 이동">http://영암곤충박물관.com</a>	http://xn--699a3bx02d1yad25aw3ac37a.com/
+LABEL_URL	문경 문화관광 https://www.gbmg.go.kr/tour	https://www.gbmg.go.kr/tour
+LABEL_URL	남해군여행 https://www.namhae.go.kr/	https://www.namhae.go.kr/
+LABEL_URL	강릉시청 https://www.gn.go.kr/welfare	https://www.gn.go.kr/welfare
+LABEL_URL	영덕군청 https://www.yd.go.kr/?page_id=2889	https://www.yd.go.kr/?page_id=2889
+BARE_DOMAIN	airbnb.co.kr/h/yangstay	https://airbnb.co.kr/h/yangstay
+BARE_DOMAIN	ulvine.com	https://ulvine.com
+BARE_DOMAIN	dk-on.com	https://dk-on.com
+BARE_DOMAIN	daksshoes.com	https://daksshoes.com
+INSTAGRAM_HANDLE	@bbang.dabang	https://www.instagram.com/bbang.dabang
+SINGLE_AUXILIARY_URL	<a href="https://www.instagram.com/end_toand/" target="_blank" title="새창 : 엔드투엔드 인스타그램으로 이동">https://www.instagram.com/end_toand</a>	https://www.instagram.com/end_toand/
+PRIMARY_WITH_AUXILIARY	공식 홈페이지 http://gnhcc.co.kr공식 인스타그램 https://www.instagram.com/gn_hcc/	http://gnhcc.co.kr
+PRIMARY_WITH_AUXILIARY	홈페이지: <a href="https://noctemare.com" target="_blank" title="새창 : 여수 녹테마레">https://noctemare.com</a><br>인스타그램: <a href="https://www.instagram.com/noctemare/" target="_blank" title="새창 : 여수 녹테마레">https://www.instagram.com/noctemare/</a>	https://noctemare.com
+DIFFERENT_PRIMARY_DOMAINS	<a href="https://www.chuncheon.go.kr/tour/destination/all-tour/detail/?tourId=182&pageIndex=1&parntsSortOrdr=5&searchWrd=%EA%B0%95%EC%B4%8C&searchType=" target="_blank" title="새창 : 홈페이지로 이동">http://tour.chuncheon.go.kr/</a>	__NULL__
+DIFFERENT_PRIMARY_DOMAINS	단양국가지질공원 <a href="https://www.danyanggeopark.org/www/13" target="_blank" title="새창 : 단양국가지질공원 홈페이지로 이동">https://www.danyang.go.kr/geopark</a>	__NULL__
+MULTIPLE_PRIMARY_URLS	강화군 문화관광 https://www.ganghwa.go.kr/tour/국가유산청 https://www.khs.go.kr/main.html	__NULL__
+MULTIPLE_PRIMARY_URLS	강문해수욕장 http://gangmunbeach.co.kr/비짓강릉 https://www.gn.go.kr/tour/	__NULL__
+MULTIPLE_PRIMARY_URLS	영주 문화관광 https://www.yeongju.go.kr국립공원공단 예약시스템 https://reservation.knps.or.kr	__NULL__
+MULTIPLE_PRIMARY_URLS	공식 홈페이지 <a href="http://yeonggeumjeong.co.kr/" target="_blank" title="새창 : 영금정 홈페이지로 이동">http://yeonggeumjeong.co.kr/</a> <br>속초 관광 <a href="https://www.sokcho.go.kr/ct/tour/attraction/culture?contentSeq=42" target="_blank" title="새창 : 속초시 문화관광 홈페이지로 이동">https://www.sokcho.go.kr/ct/tour</a>	__NULL__
+MULTIPLE_AUXILIARY_URLS	<a href="https://m.smartstore.naver.com/wanjudaldalguri" target="_blank" title="새창 : 달달구리 스마트스토어로 이동">https://m.smartstore.naver.com/wanjudaldalguri</a> <br> <a href="https://instagram.com/daldalguri_official" target="_blank" title="새창 : 달달구리 인스타그램으로 이동">https://instagram.com/daldalguri_official</a> <br> <a href="https://m.blog.naver.com/daldalguri_" target="_blank" title="새창 : 달달구리 블로그으로 이동">https://m.blog.naver.com/daldalguri_</a>	__NULL__
+EMAIL_ONLY	문의 test@example.com	__NULL__
