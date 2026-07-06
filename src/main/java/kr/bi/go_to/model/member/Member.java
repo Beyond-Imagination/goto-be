@@ -1,6 +1,13 @@
 package kr.bi.go_to.model.member;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import kr.bi.go_to.enums.Role;
 import kr.bi.go_to.model.common.BaseAuditEntity;
 import lombok.AccessLevel;
@@ -33,7 +40,7 @@ public class Member extends BaseAuditEntity {
     /**
      * 멤버의 닉네임
      */
-    @Column(nullable = false, length = 100)
+    @Column(nullable = false, unique = true, length = 100)
     private String nickname;
 
     public Member(Role role, String nickname) {

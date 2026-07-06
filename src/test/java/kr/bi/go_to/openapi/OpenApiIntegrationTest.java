@@ -25,7 +25,7 @@ class OpenApiIntegrationTest {
     MockMvc mockMvc;
 
     @Test
-    void exposesOpenApiDocsWithoutAuthentication() throws Exception {
+    void 인증_없이_OpenAPI_문서를_조회하면_인증_도움_요청_스키마와_태그가_노출된다() throws Exception {
         mockMvc.perform(get("/v3/api-docs"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith("application/json"))
@@ -33,18 +33,28 @@ class OpenApiIntegrationTest {
                 .andExpect(jsonPath("$.tags[0].name").value("A. Auth"))
                 .andExpect(jsonPath("$.paths['/api/v1/auth/login']").exists())
                 .andExpect(jsonPath("$.paths['/api/v1/auth/refresh']").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/help-requests']").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/help-requests/nearby']").exists())
                 .andExpect(
                         jsonPath("$.paths['/api/v1/auth/login'].post.tags[0]").value("A. Auth"))
+                .andExpect(jsonPath("$.paths['/api/v1/help-requests'].post.tags[0]")
+                        .value("B. Help Request"))
                 .andExpect(jsonPath("$.components.schemas.LoginRequest").exists())
                 .andExpect(jsonPath("$.components.schemas.LoginResponse").exists())
                 .andExpect(jsonPath("$.components.schemas.RefreshRequest").exists())
                 .andExpect(jsonPath("$.components.schemas.AccessTokenResponse").exists())
+                .andExpect(jsonPath("$.components.schemas.CreateHelpRequestRequest")
+                        .exists())
+                .andExpect(jsonPath("$.components.schemas.HelpRequestResponse").exists())
+                .andExpect(jsonPath("$.components.schemas.NearbyHelpRequestResponse")
+                        .exists())
+                .andExpect(jsonPath("$.components.schemas.ErrorResponse").exists())
                 .andExpect(jsonPath("$.components.securitySchemes.bearerAuth.scheme")
                         .value("bearer"));
     }
 
     @Test
-    void exposesSwaggerUiWithoutAuthentication() throws Exception {
+    void 인증_없이_Swagger_UI에_접근하면_UI_경로로_리다이렉트된다() throws Exception {
         mockMvc.perform(get("/swagger-ui.html"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/swagger-ui/index.html"));

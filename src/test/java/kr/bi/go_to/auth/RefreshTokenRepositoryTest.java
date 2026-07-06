@@ -7,7 +7,7 @@ import java.util.UUID;
 import kr.bi.go_to.config.ClockConfig;
 import kr.bi.go_to.config.JpaAuditConfig;
 import kr.bi.go_to.model.refreshToken.RefreshToken;
-import kr.bi.go_to.model.refreshToken.RefreshTokenRepository;
+import kr.bi.go_to.repository.RefreshTokenRepository;
 import kr.bi.go_to.support.TestcontainersConfiguration;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,7 +30,7 @@ class RefreshTokenRepositoryTest {
     RefreshTokenRepository refreshTokenRepository;
 
     @Test
-    void storesRefreshTokenInPostgresContainer() {
+    void 리프레시_토큰_subject를_PostgreSQL에_저장하고_조회한다() {
         UUID tokenId = UUID.randomUUID();
         RefreshToken saved = refreshTokenRepository.save(
                 new RefreshToken(tokenId, "tester", Instant.now().plusSeconds(600)));
@@ -38,7 +38,7 @@ class RefreshTokenRepositoryTest {
         assertThat(refreshTokenRepository.findById(saved.getId()))
                 .isPresent()
                 .get()
-                .extracting(RefreshToken::getUsername)
+                .extracting(RefreshToken::getSubject)
                 .isEqualTo("tester");
         assertThat(saved.getCreatedAt()).isNotNull();
         assertThat(saved.getUpdatedAt()).isNotNull();

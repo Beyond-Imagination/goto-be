@@ -1,7 +1,14 @@
 package kr.bi.go_to.batch.writer;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyInt;
+import static org.mockito.Mockito.anyList;
+import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import java.util.Collections;
 import java.util.List;
@@ -18,13 +25,12 @@ import org.springframework.jdbc.core.JdbcTemplate;
 class PlaceItemWriterTest {
 
     private JdbcTemplate jdbcTemplate;
-    private TourApiBfDetailsNormalizer bfDetailsNormalizer;
     private PlaceItemWriter writer;
 
     @BeforeEach
     void setUp() {
         jdbcTemplate = mock(JdbcTemplate.class);
-        bfDetailsNormalizer = mock(TourApiBfDetailsNormalizer.class);
+        TourApiBfDetailsNormalizer bfDetailsNormalizer = mock(TourApiBfDetailsNormalizer.class);
         writer = new PlaceItemWriter(jdbcTemplate, bfDetailsNormalizer);
     }
 

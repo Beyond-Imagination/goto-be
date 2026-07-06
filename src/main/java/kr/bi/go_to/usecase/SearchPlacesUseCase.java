@@ -31,7 +31,8 @@ public class SearchPlacesUseCase {
                 .sorted()
                 .toList();
         List<PlaceSearchItemResponse> places = allPlaces.stream()
-                .filter(place -> request.category() == null || request.category().equals(place.category()))
+                .filter(place ->
+                        request.category() == null || request.category().equals(place.category()))
                 .map(place -> toResponse(place, request.lat(), request.lng()))
                 .sorted(Comparator.comparingDouble(PlaceSearchItemResponse::distanceMeters))
                 .limit(request.k())

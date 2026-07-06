@@ -16,7 +16,7 @@ public class RefreshToken extends BaseAuditEntity {
     private UUID id;
 
     @Column(nullable = false, length = 100)
-    private String username;
+    private String subject;
 
     @Column(nullable = false)
     private Instant expiresAt;
@@ -26,9 +26,9 @@ public class RefreshToken extends BaseAuditEntity {
 
     protected RefreshToken() {}
 
-    public RefreshToken(UUID id, String username, Instant expiresAt) {
+    public RefreshToken(UUID id, String subject, Instant expiresAt) {
         this.id = id;
-        this.username = username;
+        this.subject = subject;
         this.expiresAt = expiresAt;
         this.revoked = false;
     }
@@ -37,8 +37,8 @@ public class RefreshToken extends BaseAuditEntity {
         return id;
     }
 
-    public String getUsername() {
-        return username;
+    public String getSubject() {
+        return subject;
     }
 
     public Instant getExpiresAt() {
