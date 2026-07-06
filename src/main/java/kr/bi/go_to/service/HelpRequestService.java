@@ -11,13 +11,11 @@ import kr.bi.go_to.controller.help.response.HelpRequestResponse;
 import kr.bi.go_to.controller.help.response.NearbyHelpRequestResponse;
 import kr.bi.go_to.exception.BusinessException;
 import kr.bi.go_to.exception.ErrorCode;
-import kr.bi.go_to.model.help.HelpMatchingLog;
 import kr.bi.go_to.model.help.HelpRequest;
 import kr.bi.go_to.model.help.HelpRequestRejection;
 import kr.bi.go_to.model.help.HelpRequestStatus;
 import kr.bi.go_to.model.member.Member;
 import kr.bi.go_to.model.place.Place;
-import kr.bi.go_to.repository.HelpMatchingLogRepository;
 import kr.bi.go_to.repository.HelpRequestRejectionRepository;
 import kr.bi.go_to.repository.HelpRequestRepository;
 import kr.bi.go_to.repository.PlaceRepository;
@@ -31,7 +29,6 @@ public class HelpRequestService {
 
     private final HelpRequestRepository helpRequestRepository;
     private final HelpRequestRejectionRepository rejectionRepository;
-    private final HelpMatchingLogRepository matchingLogRepository;
     private final PlaceRepository placeRepository;
     private final MemberService memberService;
     private final Clock clock;
@@ -39,13 +36,11 @@ public class HelpRequestService {
     public HelpRequestService(
             HelpRequestRepository helpRequestRepository,
             HelpRequestRejectionRepository rejectionRepository,
-            HelpMatchingLogRepository matchingLogRepository,
             PlaceRepository placeRepository,
             MemberService memberService,
             Clock clock) {
         this.helpRequestRepository = helpRequestRepository;
         this.rejectionRepository = rejectionRepository;
-        this.matchingLogRepository = matchingLogRepository;
         this.placeRepository = placeRepository;
         this.memberService = memberService;
         this.clock = clock;
@@ -120,7 +115,6 @@ public class HelpRequestService {
         }
 
         helpRequest.accept(helper, Instant.now(clock));
-        matchingLogRepository.save(new HelpMatchingLog(helpRequest));
         return HelpRequestResponse.from(helpRequest);
     }
 
@@ -150,7 +144,6 @@ public class HelpRequestService {
 
         Instant now = Instant.now(clock);
         helpRequest.complete(now);
-        matchingLogRepository.findByHelpRequestId(helpRequest.getId()).ifPresent(log -> log.complete(now));
         return HelpRequestResponse.from(helpRequest);
     }
 

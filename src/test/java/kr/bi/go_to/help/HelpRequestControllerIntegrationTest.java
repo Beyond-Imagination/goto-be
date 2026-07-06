@@ -1,6 +1,5 @@
 package kr.bi.go_to.help;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -8,7 +7,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.util.Map;
 import java.util.UUID;
-import kr.bi.go_to.repository.HelpMatchingLogRepository;
 import kr.bi.go_to.repository.HelpRequestRejectionRepository;
 import kr.bi.go_to.repository.HelpRequestRepository;
 import kr.bi.go_to.repository.MemberRepository;
@@ -42,9 +40,6 @@ class HelpRequestControllerIntegrationTest {
     ObjectMapper objectMapper;
 
     @Autowired
-    HelpMatchingLogRepository matchingLogRepository;
-
-    @Autowired
     HelpRequestRejectionRepository rejectionRepository;
 
     @Autowired
@@ -58,7 +53,6 @@ class HelpRequestControllerIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        matchingLogRepository.deleteAll();
         rejectionRepository.deleteAll();
         helpRequestRepository.deleteAll();
         refreshTokenRepository.deleteAll();
@@ -125,18 +119,11 @@ class HelpRequestControllerIntegrationTest {
                 .andExpect(jsonPath("$.latitude").value(35.8294371))
                 .andExpect(jsonPath("$.longitude").value(129.2286552));
 
-        assertThat(matchingLogRepository.findByHelpRequestId(helpRequestId)).isPresent();
-
         mockMvc.perform(post("/api/v1/help-requests/{id}/complete", helpRequestId)
                         .header(HttpHeaders.AUTHORIZATION, bearer(requesterToken)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("COMPLETED"))
                 .andExpect(jsonPath("$.completedAt").isString());
-
-        assertThat(matchingLogRepository.findByHelpRequestId(helpRequestId))
-                .get()
-                .extracting("completedAt")
-                .isNotNull();
     }
 
     @Test
