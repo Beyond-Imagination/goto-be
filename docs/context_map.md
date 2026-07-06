@@ -19,7 +19,8 @@ docs/
 └── specs/
     ├── backend_runtime_contract.md  # [spec] main module dev backend 런타임 계약
     ├── batch_upsert_strategy_spec.md  # [spec] PlaceItemWriter 기반 벌크 Upsert 구현 스펙
-    └── place_search_api_spec.md       # [spec] 위치 기반 장소 탐색 API 구현 명세
+    ├── place_search_api_spec.md       # [spec] 위치 기반 장소 탐색 API 구현 명세
+    └── tour_api_homepage_normalization_spec.md  # [spec] Tour API homepage 정규화 규칙
 ```
 
 > Dev runtime 인프라 ADR, Docker Compose, Caddy, GitHub Actions 배포 workflow, Lightsail host preparation 문서는 backend submodule이 아니라 main module이 소유합니다. 현재 main module 기준 문서는 `docs/adr/0001_dev_runtime_infra_and_selective_deploy.md`, `infra/dev/deploy.md`, `docs/dev-runtime-next-steps.md`입니다. Backend repository에서는 `docs/specs/backend_runtime_contract.md`만 runtime contract로 유지합니다.
@@ -50,6 +51,7 @@ docs/
   * [backend_runtime_contract.md](specs/backend_runtime_contract.md): main module dev runtime에서 backend submodule이 유지해야 하는 Dockerfile/.dockerignore/build context, container port, health endpoint, Parameter Store/env 주입, external RDS, Flyway startup migration, stateless container 계약.
   * [batch_upsert_strategy_spec.md](specs/batch_upsert_strategy_spec.md): Spring Batch `PlaceItemWriter`의 PostgreSQL native Upsert, soft delete 반영, `place_bf_info` 저장 정책.
   * [place_search_api_spec.md](specs/place_search_api_spec.md): 현재 위치 기반 장소 검색, 카테고리 필터, 거리 정렬, Mock 데이터 공급 구조 및 API 계약.
+  * [tour_api_homepage_normalization_spec.md](specs/tour_api_homepage_normalization_spec.md): Tour API `homepage` 원문에서 `places.homepage` 대표 URL을 추출하는 `TourApiHomepageNormalizer` 규칙, 호스트 분류, 모호함 시 `null` 정책, fixture 회귀 테스트.
 
 ## 2. Bounded Context Map (도메인 아키텍처 관계)
 
@@ -183,6 +185,7 @@ Lazy Detail Fetch Step은 `is_deleted=false`이면서 `detail_common_synced`, `d
 | :--- | :--- | :--- | :--- |
 | **데이터베이스 스키마 및 엔티티 변경** | [0000_adr_data_modeling.md](adr/0000_adr_data_modeling.md) | N/A | 대리키 PK 원칙, JSONB 구조, PostGIS 공간 타입 및 pg_trgm 인덱스 규칙을 따라야 함. |
 | **ETL 배치 구현 및 수정** | [0002_adr_incremental_sync_pipeline.md](adr/0002_adr_incremental_sync_pipeline.md) | [batch_upsert_strategy_spec.md](specs/batch_upsert_strategy_spec.md) | 현재 Accepted 상태의 증분 동기화, 자동 초기 적재, 스케줄러 가드, Upsert 구현 스펙을 우선 준수해야 함. |
+| **Tour API homepage 정규화 수정** | [tour_api_homepage_normalization_spec.md](specs/tour_api_homepage_normalization_spec.md) | [batch_upsert_strategy_spec.md](specs/batch_upsert_strategy_spec.md) | `TourApiHomepageNormalizer` 규칙과 TSV fixture를 함께 갱신해야 함. processor에는 파싱 로직을 다시 인라인하지 않음. |
 | **backend 런타임 계약 변경** | [backend_runtime_contract.md](specs/backend_runtime_contract.md) | N/A | 배포 인프라 결정은 main module에서 관리합니다. backend repository에서는 Dockerfile/.dockerignore/build context, container port, health endpoint, Parameter Store/env 주입, Flyway startup migration처럼 backend submodule이 지켜야 하는 계약만 관리합니다. |
 | **장소 상세 및 무장애 정보 조회 API 개발 (웹 백엔드)** | [0000_adr_data_modeling.md](adr/0000_adr_data_modeling.md) | [batch_upsert_strategy_spec.md](specs/batch_upsert_strategy_spec.md) | ADR-0000의 목표 JSONB 구조와 현재 `place_bf_info.bf_details` 적재 정책을 함께 확인해야 함. |
 | **실내 지도/도면 렌더링 개발 (프론트/백엔드)** | [0000_adr_data_modeling.md](adr/0000_adr_data_modeling.md) | N/A | `FLOOR_MAP.geojson_data` 및 `FACILITY_NODE.target_feature_id` 매핑 관계를 참고해야 함. |
