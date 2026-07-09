@@ -28,7 +28,6 @@ public class TourApiIncrementalItemProcessor implements ItemProcessor<TourApiIte
     private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
     private final EtlFailureLogger etlFailureLogger;
     private final TourApiClient tourApiClient;
-    private final TourApiHomepageNormalizer homepageNormalizer;
 
     private static final String FAILURE_LOG_TEMPLATE = "[%s] %s, --> contentId: %s";
 
@@ -107,7 +106,7 @@ public class TourApiIncrementalItemProcessor implements ItemProcessor<TourApiIte
                 if (detailCommonSynced) {
                     overview = tourApiClient.extractFieldOrEmpty(common2, "overview");
                     String rawHomepage = tourApiClient.extractFieldOrEmpty(common2, "homepage");
-                    homepage = homepageNormalizer.normalize(rawHomepage);
+                    homepage = TourApiHomepageNormalizer.normalize(rawHomepage);
                 }
 
                 JsonNode withTour2 = tourApiClient.fetchDetail("detailWithTour2", dto.contentid(), null);

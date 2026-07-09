@@ -12,7 +12,6 @@ import kr.bi.go_to.batch.client.TourApiClient;
 import kr.bi.go_to.batch.dto.PlaceProcessingResult;
 import kr.bi.go_to.batch.dto.TourApiItemDto;
 import kr.bi.go_to.batch.listener.EtlFailureLogger;
-import kr.bi.go_to.batch.mapper.TourApiHomepageNormalizer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -32,8 +31,7 @@ class TourApiIncrementalItemProcessorTest {
         when(tourApiClient.extractFieldOrEmpty(any(JsonNode.class), anyString()))
                 .thenReturn("");
 
-        processor = new TourApiIncrementalItemProcessor(
-                mock(EtlFailureLogger.class), tourApiClient, new TourApiHomepageNormalizer());
+        processor = new TourApiIncrementalItemProcessor(mock(EtlFailureLogger.class), tourApiClient);
     }
 
     @Test

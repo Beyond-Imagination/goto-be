@@ -12,32 +12,32 @@ import org.springframework.util.StringUtils;
 
 class TourApiHomepageNormalizerTest {
 
-    private final TourApiHomepageNormalizer normalizer = new TourApiHomepageNormalizer();
-
     @Test
     @DisplayName("빈 홈페이지 원문은 홈페이지 없음 의미로 빈 문자열을 반환한다")
     void normalize_blankHomepage_returnsEmptyString() {
-        assertThat(normalizer.normalize("   ")).isEmpty();
+        assertThat(TourApiHomepageNormalizer.normalize("   ")).isEmpty();
     }
 
     @Test
     @DisplayName("라벨과 URL이 함께 있으면 URL만 추출한다")
     void normalize_labelAndUrl_returnsUrlOnly() {
-        assertThat(normalizer.normalize("문경 문화관광 https://www.gbmg.go.kr/tour"))
+        assertThat(TourApiHomepageNormalizer.normalize("문경 문화관광 https://www.gbmg.go.kr/tour"))
                 .isEqualTo("https://www.gbmg.go.kr/tour");
     }
 
     @Test
     @DisplayName("단일 Instagram handle은 Instagram URL로 변환한다")
     void normalize_instagramHandle_returnsInstagramUrl() {
-        assertThat(normalizer.normalize("@bbang.dabang")).isEqualTo("https://www.instagram.com/bbang.dabang");
+        assertThat(TourApiHomepageNormalizer.normalize("@bbang.dabang"))
+                .isEqualTo("https://www.instagram.com/bbang.dabang");
     }
 
     @Test
     @DisplayName("scheme이 없는 bare domain은 https URL로 변환한다")
     void normalize_bareDomain_returnsHttpsUrl() {
-        assertThat(normalizer.normalize("airbnb.co.kr/h/yangstay")).isEqualTo("https://airbnb.co.kr/h/yangstay");
-        assertThat(normalizer.normalize("ulvine.com")).isEqualTo("https://ulvine.com");
+        assertThat(TourApiHomepageNormalizer.normalize("airbnb.co.kr/h/yangstay"))
+                .isEqualTo("https://airbnb.co.kr/h/yangstay");
+        assertThat(TourApiHomepageNormalizer.normalize("ulvine.com")).isEqualTo("https://ulvine.com");
     }
 
     @Test
@@ -50,7 +50,7 @@ class TourApiHomepageNormalizerTest {
                 </a>
                 """;
 
-        assertThat(normalizer.normalize(raw))
+        assertThat(TourApiHomepageNormalizer.normalize(raw))
                 .isEqualTo("https://www.seosan.go.kr/tour/guideView.do?key=5976&guidanceNo=52");
     }
 
@@ -63,7 +63,7 @@ class TourApiHomepageNormalizerTest {
                 " target="_blank">http://www.ygtour.kr</a>
                 """;
 
-        assertThat(normalizer.normalize(raw))
+        assertThat(TourApiHomepageNormalizer.normalize(raw))
                 .isEqualTo("https://www.ygtour.kr/Home/H20000/H20400/placeDetail?place_no=51");
     }
 
@@ -72,7 +72,7 @@ class TourApiHomepageNormalizerTest {
     void normalize_primaryAndInstagram_returnsPrimaryUrl() {
         String raw = "공식 홈페이지 http://gnhcc.co.kr 공식 인스타그램 https://www.instagram.com/gn_hcc/";
 
-        assertThat(normalizer.normalize(raw)).isEqualTo("http://gnhcc.co.kr");
+        assertThat(TourApiHomepageNormalizer.normalize(raw)).isEqualTo("http://gnhcc.co.kr");
     }
 
     @Test
@@ -80,7 +80,7 @@ class TourApiHomepageNormalizerTest {
     void normalize_multiplePrimaryUrls_returnsNull() {
         String raw = "강화군 문화관광 https://www.ganghwa.go.kr/tour/ 국가유산청 https://www.khs.go.kr/main.html";
 
-        assertThat(normalizer.normalize(raw)).isNull();
+        assertThat(TourApiHomepageNormalizer.normalize(raw)).isNull();
     }
 
     @Test
@@ -93,20 +93,20 @@ class TourApiHomepageNormalizerTest {
                 <a href="https://m.blog.naver.com/daldalguri_">블로그</a>
                 """;
 
-        assertThat(normalizer.normalize(raw)).isNull();
+        assertThat(TourApiHomepageNormalizer.normalize(raw)).isNull();
     }
 
     @Test
     @DisplayName("이메일 주소는 홈페이지 URL 후보로 보지 않는다")
     void normalize_emailAddress_returnsNull() {
-        assertThat(normalizer.normalize("문의 test@example.com")).isNull();
+        assertThat(TourApiHomepageNormalizer.normalize("문의 test@example.com")).isNull();
     }
 
     @Test
     @DisplayName("실제 홈페이지 파싱 실패 유형 fixture를 정책대로 정규화한다")
     void normalize_realFailureTypeFixture_returnsExpectedResult() throws Exception {
         for (HomepageNormalizationFixture fixture : loadHomepageNormalizationFixture()) {
-            String normalized = normalizer.normalize(fixture.rawHomepage());
+            String normalized = TourApiHomepageNormalizer.normalize(fixture.rawHomepage());
 
             if (fixture.expectedHomepage() == null) {
                 assertThat(normalized)

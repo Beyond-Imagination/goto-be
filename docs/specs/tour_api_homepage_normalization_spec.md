@@ -29,11 +29,11 @@
 
 | 구성 요소 | 역할 |
 | :--- | :--- |
-| `kr.bi.go_to.batch.mapper.TourApiHomepageNormalizer` | homepage 원문 → 대표 URL 정규화 |
-| `TourApiBaseItemProcessor` | 초기 적재 시 `homepageNormalizer.normalize(dto.homepage())` 호출 |
-| `TourApiIncrementalItemProcessor` | 증분 상세 보강 시 `homepageNormalizer.normalize(rawHomepage)` 호출 |
+| `kr.bi.go_to.batch.mapper.TourApiHomepageNormalizer` | homepage 원문 → 대표 URL 정규화 (stateless static utility) |
+| `TourApiBaseItemProcessor` | 초기 적재 시 `TourApiHomepageNormalizer.normalize(dto.homepage())` 호출 |
+| `TourApiIncrementalItemProcessor` | 증분 상세 보강 시 `TourApiHomepageNormalizer.normalize(rawHomepage)` 호출 |
 
-두 processor는 homepage 파싱 규칙을 직접 소유하지 않고 normalizer에 위임합니다.
+두 processor는 homepage 파싱 규칙을 직접 소유하지 않고 normalizer static 메서드에 위임합니다.
 
 ### 2.2 데이터 흐름
 

@@ -25,7 +25,6 @@ public class TourApiBaseItemProcessor implements ItemProcessor<TourApiItemDto, P
 
     private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
     private final EtlFailureLogger etlFailureLogger;
-    private final TourApiHomepageNormalizer homepageNormalizer;
 
     private static final String FAILURE_LOG_TEMPLATE = "[%s] %s, --> contentId: %s";
 
@@ -71,7 +70,7 @@ public class TourApiBaseItemProcessor implements ItemProcessor<TourApiItemDto, P
                 : (StringUtils.hasText(dto.firstimage2()) ? dto.firstimage2() : null);
 
         String overview = normalizeKnownEmptyText(dto.overview());
-        String homepage = homepageNormalizer.normalize(dto.homepage());
+        String homepage = TourApiHomepageNormalizer.normalize(dto.homepage());
         String tel = StringUtils.hasText(dto.tel()) ? dto.tel() : null;
 
         Place place = Place.builder()

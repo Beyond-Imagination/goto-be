@@ -8,13 +8,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.util.HtmlUtils;
 
 /**
  * Tour API로부터 수집된 원본 홈페이지 텍스트 데이터({@code rawHomepage})를 정규화하여
- * 대표 웹사이트 주소 또는 대표 SNS 채널 주소를 추출하는 {@link Component}입니다.
+ * 대표 웹사이트 주소 또는 대표 SNS 채널 주소를 추출하는 stateless static utility입니다.
  *
  * <p>현재 버전에서는 다음과 같은 구체적인 동작을 수행합니다:
  * <ul>
@@ -26,8 +25,7 @@ import org.springframework.web.util.HtmlUtils;
  *   <li>다중 대표 도메인 또는 서로 다른 종류의 다중 보조 도메인이 혼재할 경우 대표성 모호함 방지를 위한 {@code null} 반환</li>
  * </ul>
  */
-@Component
-public class TourApiHomepageNormalizer {
+public final class TourApiHomepageNormalizer {
 
     private static final Pattern HREF_PATTERN =
             Pattern.compile("href\\s*=\\s*[\"']([^\"']+)[\"']", Pattern.CASE_INSENSITIVE);
@@ -55,6 +53,8 @@ public class TourApiHomepageNormalizer {
             "naver.me",
             "tistory.com");
 
+    private TourApiHomepageNormalizer() {}
+
     /**
      * 원본 홈페이지 텍스트 데이터를 정규화하여 단일 대표 {@code URL}을 반환합니다.
      *
@@ -70,7 +70,7 @@ public class TourApiHomepageNormalizer {
      *           <li>유효한 {@code URL} 후보군이 추출되지 않은 경우 {@code null} 반환</li>
      *         </ul>
      */
-    public String normalize(String rawHomepage) {
+    public static String normalize(String rawHomepage) {
         if (rawHomepage == null) {
             return null;
         }
@@ -118,7 +118,7 @@ public class TourApiHomepageNormalizer {
      * @param text HTML Unescape 처리가 완료된 입력 텍스트
      * @return 중복이 제거된 {@link HomepageCandidate} 목록
      */
-    private List<HomepageCandidate> extractCandidates(String text) {
+    private static List<HomepageCandidate> extractCandidates(String text) {
         List<HomepageCandidate> candidates = new ArrayList<>();
         int order = 0;
 
@@ -170,7 +170,7 @@ public class TourApiHomepageNormalizer {
      * @param order 전체 텍스트 내에서 발견된 순서
      * @return 유효한 URL인 경우 생성된 {@link HomepageCandidate} 객체, 유효하지 않으면 {@code null}
      */
-    private HomepageCandidate createUrlCandidate(String rawUrl, boolean fromHref, int order) {
+    private static HomepageCandidate createUrlCandidate(String rawUrl, boolean fromHref, int order) {
         String cleaned = cleanUrlToken(rawUrl);
         if (!StringUtils.hasText(cleaned)) {
             return null;
@@ -201,7 +201,7 @@ public class TourApiHomepageNormalizer {
      * @param candidates 중복을 검사할 {@link HomepageCandidate} 목록
      * @return 중복이 제거된 {@link HomepageCandidate} 목록
      */
-    private List<HomepageCandidate> deduplicate(List<HomepageCandidate> candidates) {
+    private static List<HomepageCandidate> deduplicate(List<HomepageCandidate> candidates) {
         Map<String, HomepageCandidate> deduped = new LinkedHashMap<>();
         for (HomepageCandidate candidate : candidates) {
             String key = candidate.normalizedUrl().replaceFirst("^http://", "https://");
@@ -219,7 +219,7 @@ public class TourApiHomepageNormalizer {
      * @param candidates 그룹화할 {@link HomepageCandidate} 목록
      * @return {@code Host}를 Key로 하고, 해당 {@code Host}에 속한 {@link HomepageCandidate} 리스트를 Value로 가지는 {@link Map}
      */
-    private Map<String, List<HomepageCandidate>> groupByHost(List<HomepageCandidate> candidates) {
+    private static Map<String, List<HomepageCandidate>> groupByHost(List<HomepageCandidate> candidates) {
         Map<String, List<HomepageCandidate>> grouped = new LinkedHashMap<>();
         for (HomepageCandidate candidate : candidates) {
             grouped.computeIfAbsent(candidate.host(), ignored -> new ArrayList<>())
@@ -241,7 +241,7 @@ public class TourApiHomepageNormalizer {
      * @param candidates 동일 호스트 내의 {@link HomepageCandidate} 목록
      * @return 가장 우선순위가 높은 {@link HomepageCandidate}
      */
-    private HomepageCandidate selectBestCandidate(List<HomepageCandidate> candidates) {
+    private static HomepageCandidate selectBestCandidate(List<HomepageCandidate> candidates) {
         return candidates.stream()
                 .min(Comparator.comparing(HomepageCandidate::fromHref)
                         .reversed()
@@ -257,7 +257,7 @@ public class TourApiHomepageNormalizer {
         return rawPath == null ? 0 : rawPath.length();
     }
 
-    private String normalizeUri(URI uri) {
+    private static String normalizeUri(URI uri) {
         String scheme = uri.getScheme().toLowerCase();
         String host = uri.getHost().toLowerCase();
         int port = uri.getPort();
@@ -282,7 +282,7 @@ public class TourApiHomepageNormalizer {
         return normalized.toString();
     }
 
-    private String cleanUrlToken(String value) {
+    private static String cleanUrlToken(String value) {
         String cleaned = value == null ? "" : value.trim().replaceAll("\\s+", "");
         while (cleaned.endsWith(".") || cleaned.endsWith(",") || cleaned.endsWith(")") || cleaned.endsWith("]")) {
             cleaned = cleaned.substring(0, cleaned.length() - 1);
@@ -290,16 +290,16 @@ public class TourApiHomepageNormalizer {
         return cleaned;
     }
 
-    private String stripHtmlTags(String value) {
+    private static String stripHtmlTags(String value) {
         return value.replaceAll("<[^>]*>", " ");
     }
 
-    private boolean hasScheme(String value) {
+    private static boolean hasScheme(String value) {
         return value.regionMatches(true, 0, "http://", 0, "http://".length())
                 || value.regionMatches(true, 0, "https://", 0, "https://".length());
     }
 
-    private URI parseUri(String value) {
+    private static URI parseUri(String value) {
         try {
             return URI.create(value);
         } catch (IllegalArgumentException e) {
@@ -307,7 +307,7 @@ public class TourApiHomepageNormalizer {
         }
     }
 
-    private String normalizeHost(String host) {
+    private static String normalizeHost(String host) {
         String normalized = host.toLowerCase();
         return normalized.startsWith("www.") ? normalized.substring("www.".length()) : normalized;
     }
@@ -321,7 +321,7 @@ public class TourApiHomepageNormalizer {
      * @param host 검사할 소문자 및 {@code www.}이 제거된 {@code Host}
      * @return 보조 SNS 또는 외부 플랫폼 채널인 경우 {@code true}, 그렇지 않으면 {@code false}
      */
-    private boolean isAuxiliaryHost(String host) {
+    private static boolean isAuxiliaryHost(String host) {
         return AUXILIARY_HOST_SUFFIXES.stream().anyMatch(suffix -> host.equals(suffix) || host.endsWith("." + suffix));
     }
 

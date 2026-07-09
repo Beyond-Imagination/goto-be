@@ -51,7 +51,7 @@ docs/
   * [backend_runtime_contract.md](specs/backend_runtime_contract.md): main module dev runtime에서 backend submodule이 유지해야 하는 Dockerfile/.dockerignore/build context, container port, health endpoint, Parameter Store/env 주입, external RDS, Flyway startup migration, stateless container 계약.
   * [batch_upsert_strategy_spec.md](specs/batch_upsert_strategy_spec.md): Spring Batch `PlaceItemWriter`의 PostgreSQL native Upsert, soft delete 반영, `place_bf_info` 저장 정책.
   * [place_search_api_spec.md](specs/place_search_api_spec.md): 현재 위치 기반 장소 검색, 카테고리 필터, 거리 정렬, Mock 데이터 공급 구조 및 API 계약.
-  * [tour_api_homepage_normalization_spec.md](specs/tour_api_homepage_normalization_spec.md): Tour API `homepage` 원문에서 `places.homepage` 대표 URL을 추출하는 `TourApiHomepageNormalizer` 규칙, 호스트 분류, 모호함 시 `null` 정책, fixture 회귀 테스트.
+  * [tour_api_homepage_normalization_spec.md](specs/tour_api_homepage_normalization_spec.md): Tour API `homepage` 원문에서 `places.homepage` 대표 URL을 추출하는 `TourApiHomepageNormalizer` static utility 규칙, 호스트 분류, 모호함 시 `null` 정책, fixture 회귀 테스트.
 
 ## 2. Bounded Context Map (도메인 아키텍처 관계)
 

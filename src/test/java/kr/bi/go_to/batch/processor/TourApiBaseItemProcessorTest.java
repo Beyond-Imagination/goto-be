@@ -7,7 +7,6 @@ import static org.mockito.Mockito.verify;
 import kr.bi.go_to.batch.dto.PlaceProcessingResult;
 import kr.bi.go_to.batch.dto.TourApiItemDto;
 import kr.bi.go_to.batch.listener.EtlFailureLogger;
-import kr.bi.go_to.batch.mapper.TourApiHomepageNormalizer;
 import kr.bi.go_to.enums.PlaceSource;
 import kr.bi.go_to.model.place.Place;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,7 +21,7 @@ class TourApiBaseItemProcessorTest {
     @BeforeEach
     void setUp() {
         etlFailureLogger = mock(EtlFailureLogger.class);
-        processor = new TourApiBaseItemProcessor(etlFailureLogger, new TourApiHomepageNormalizer());
+        processor = new TourApiBaseItemProcessor(etlFailureLogger);
     }
 
     private TourApiItemDto createDto(
