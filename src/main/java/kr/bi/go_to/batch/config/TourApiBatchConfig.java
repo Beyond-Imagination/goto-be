@@ -55,11 +55,9 @@ public class TourApiBatchConfig {
     }
 
     @Bean
-    public Job tourApiInitialLoadJob(
-            JobRepository jobRepository, Step tourApiBaseSyncStep, Step tourApiDetailSyncStep) {
+    public Job tourApiInitialLoadJob(JobRepository jobRepository, Step tourApiBaseSyncStep) {
         return new JobBuilder("tourApiInitialLoadJob", jobRepository)
                 .start(tourApiBaseSyncStep)
-                .next(tourApiDetailSyncStep)
                 .build();
     }
 

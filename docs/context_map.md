@@ -118,14 +118,13 @@ flowchart TD
             BaseReader[areaBasedList2 Reader]
             BaseProcessor[Base Processor]
             Writer[Upsert ItemWriter]
-            DetailReader[Lazy Detail Reader]
-            DetailProcessor[Detail Processor]
         end
 
         subgraph Incremental_Steps [Incremental Sync Steps]
             IncrementalReader[areaBasedSyncList1 Reader]
             IncrementalProcessor[Eager Detail Processor]
             SharedDetailReader[Shared Lazy Detail Reader]
+            DetailProcessor[Detail Processor]
             IncrementalSyncLogListener[Incremental Sync Log Listener]
         end
     end
@@ -146,13 +145,11 @@ flowchart TD
     Scheduler -->|Trigger| IncrementalJob
     
     InitialJob --> BaseReader --> BaseProcessor --> Writer
-    InitialJob --> DetailReader --> DetailProcessor --> Writer
     IncrementalJob --> IncrementalReader --> IncrementalProcessor --> Writer
-    IncrementalJob --> SharedDetailReader --> DetailProcessor
+    IncrementalJob --> SharedDetailReader --> DetailProcessor --> Writer
     
     BaseReader -->|areaBasedList2| KNTO_Barrier
     IncrementalReader -->|areaBasedSyncList1| KNTO_Barrier
-    DetailReader -->|detailCommon2/detailWithTour2/detailIntro2 for is_deleted=false| KNTO_Barrier
     SharedDetailReader -->|detailCommon2/detailWithTour2/detailIntro2 for is_deleted=false| KNTO_Barrier
     IncrementalProcessor -->|Eager detail fetch| KNTO_Barrier
     BaseProcessor -->|Error Detected| DlqTbl
@@ -168,6 +165,8 @@ flowchart TD
 ```
 
 현재 `batch_sync_log`는 증분 Reader가 마지막 성공 기준일을 조회하고, `TourApiIncrementalSyncLogListener`가 증분 Job 종료 후 `SUCCESS` 또는 `FAIL` 이력을 누적하는 용도로 사용합니다. Reader는 마지막 성공 `target_date`를 이번 실행의 `modifiedtime` 요청 기준일(`requestDate`)로 사용하고, KST 기준 실행일을 성공 시 저장할 다음 기준일(`targetDate`)로 Job context에 함께 등록합니다. `SUCCESS` 이력의 `target_date`만 다음 증분 실행의 `modifiedtime` 기준이 되며, `FAIL` 이력의 `target_date`는 실패한 실행이 실제 요청한 기준일을 기록합니다.
+
+Lazy Detail Fetch Step은 `tourApiIncrementalSyncJob`에서만 실행합니다. `tourApiInitialLoadJob`은 목록(base) step만 수행하며, 상세 보강은 03:00 KST 증분 job과 증분 processor의 Eager Fetch로 점진 보강합니다.
 
 Lazy Detail Fetch Step은 `is_deleted=false`이면서 `detail_common_synced`, `detail_with_tour_synced`, `detail_intro_synced` 중 하나라도 false인 Tour API 장소만 상세 보강 대상으로 삼습니다. 삭제된 장소(`is_deleted=true`)의 상세 정보 최신화가 향후 관리자/감사 요구사항이 된다면, 현재 detail step과 별도의 수집 정책을 설계해야 합니다.
 

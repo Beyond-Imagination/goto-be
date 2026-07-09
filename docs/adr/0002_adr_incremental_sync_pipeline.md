@@ -61,12 +61,22 @@ Tour API의 `showflag=0` (삭제 데이터) 처리를 반영하기 위해 `place
 
 ### Decision
 - **초기 적재 자동 실행**: `TourApiInitialLoadRunner`가 `ApplicationReadyEvent` 이후 `tourApiInitialLoadJob`을 자동 실행합니다. 단, `goto.batch.initial-load.auto-run-enabled=true`일 때만 자동 실행 기능이 켜집니다.
-- **초기 적재 완료 판정**: 초기 적재 여부는 설정값이 아니라 Spring Batch 메타 테이블의 `tourApiInitialLoadJob` 실행 이력 중 `BatchStatus.COMPLETED` 존재 여부로 판단합니다. 설정값은 완료 여부가 아니라 자동 실행 기능을 켜고 끄는 운영 스위치입니다.
+- **초기 적재 job 범위**: `tourApiInitialLoadJob`은 목록(base) step(`tourApiBaseSyncStep`)만 실행합니다. Lazy Detail Fetch step(`tourApiDetailSyncStep`)은 초기 적재에 포함하지 않고, `tourApiIncrementalSyncJob`에서만 실행합니다. 이는 기동 시 Tour API detail 호출 부하와 Spring Batch 실행으로 인한 `/actuator/health` `OUT_OF_SERVICE` 지연을 줄이기 위함입니다.
+- **초기 적재 완료 판정**: 초기 적재 여부는 설정값이 아니라 Spring Batch 메타 테이블의 `tourApiInitialLoadJob` 실행 이력 중 `BatchStatus.COMPLETED` 존재 여부로 판단합니다. base step만 완료되어도 `COMPLETED`로 간주합니다. 설정값은 완료 여부가 아니라 자동 실행 기능을 켜고 끄는 운영 스위치입니다.
 - **재시도 정책**: 완료 이력이 없고 실행 중인 초기 적재도 없으면 자동 초기 적재를 시도합니다. 이전 실행이 실패했더라도 `COMPLETED`가 아니면 다음 기동 시 재시도할 수 있습니다.
 - **증분 스케줄러 가드**: Spring의 `@Scheduled(cron = "0 0 3 * * ?")`를 활용해 매일 새벽 3시에 증분 동기화를 트리거하되, `tourApiInitialLoadJob`이 아직 완료되지 않았다면 `tourApiIncrementalSyncJob` 실행을 스킵합니다.
 - **증분 기준일 메타데이터**: 마지막 성공 동기화 날짜를 명시적으로 추적하기 위한 `batch_sync_log` 커스텀 메타데이터 테이블을 도입합니다. `TourApiIncrementalItemReader`는 마지막 성공 `target_date`를 이번 실행의 API 요청 기준일(`requestDate`)로 사용하고, KST 기준 실행일을 성공 시 저장할 다음 기준일(`targetDate`)로 Job 실행 컨텍스트에 함께 기록합니다. `TourApiIncrementalSyncLogListener`는 Job 종료 후 `SUCCESS` 이력에는 다음 기준일을, `FAIL` 이력에는 실패 실행의 요청 기준일을 `batch_sync_log`에 추가합니다.
 
 ### Consequences
 초기 적재와 증분 동기화의 실행 순서가 애플리케이션 내부에서 보장됩니다. 테스트 프로필에서는 자동 초기 적재를 끌 수 있어 컨텍스트 로딩 테스트가 외부 Tour API를 호출하지 않습니다. Spring Batch 메타 테이블은 초기 적재 완료 여부의 source of truth로 사용하고, `batch_sync_log`는 증분 동기화 기준일을 관리하는 커스텀 운영 메타데이터로 분리합니다.
+
+초기 적재 직후에는 `places` 목록 필드만 채워지고 `overview`, `homepage`, `place_bf_info`는 비어 있을 수 있습니다. detail 보강은 03:00 KST 증분 job의 Lazy Detail Fetch step(실행당 최대 `tour-api.detail-quota`, 기본 250건)과 증분 processor의 Eager Fetch로 점진적으로 진행됩니다.
+
+다음 잔여 리스크를 운영상 인지해야 합니다.
+
+- `TourApiInitialLoadRunner`는 `JobOperator.start()`로 job을 동기 실행하므로, base-only여도 기동 중 health가 `OUT_OF_SERVICE`일 수 있습니다.
+- 빈 DB 최초 1회 base 적재가 deploy health check budget(150초)을 넘기면 1회 배포 검증이 실패할 수 있습니다.
+- 미보강 backlog가 많으면 전체 detail 완성까지 수일~수개월이 걸릴 수 있습니다.
+- `COMPLETED`가 없으면 재기동마다 base 적재를 재시도합니다. upsert는 idempotent하지만 목록 API 호출 비용이 발생합니다.
 
 현재 구현은 `TourApiIncrementalItemReader`가 `batch_sync_log`의 마지막 성공 `target_date`를 조회하고, `TourApiIncrementalSyncLogListener`가 Job 종료 시점에 실행 결과를 write-back하는 단계까지 반영되어 있습니다. 성공 이력은 다음 실행의 watermark를 전진시키고, 실패 이력은 재시도 진단을 위해 요청 기준일을 남깁니다. `processed_count`는 증분 base step(`tourApiIncrementalBaseSyncStep`)의 write count를 기준으로 기록합니다.
