@@ -132,7 +132,7 @@ public class TourApiIncrementalItemReader implements ItemReader<TourApiItemDto>,
             return;
         }
 
-        URI uri = UriComponentsBuilder.fromUriString(baseUrl + "/areaBasedSyncList1")
+        URI uri = UriComponentsBuilder.fromUriString(baseUrl + "/areaBasedSyncList2")
                 .queryParam("serviceKey", serviceKey)
                 .queryParam("pageNo", currentPage)
                 .queryParam("numOfRows", numOfRows)
@@ -148,6 +148,8 @@ public class TourApiIncrementalItemReader implements ItemReader<TourApiItemDto>,
         try {
             TourApiResponseDto responseDto =
                     restClient.get().uri(uri).retrieve().body(TourApiResponseDto.class);
+
+            validateResultCode(responseDto);
 
             if (responseDto != null
                     && responseDto.getResponse() != null
@@ -181,5 +183,25 @@ public class TourApiIncrementalItemReader implements ItemReader<TourApiItemDto>,
             log.error("Error fetching Tour API incremental data on page {}", currentPage, e);
             throw e;
         }
+    }
+
+    private void validateResultCode(TourApiResponseDto responseDto) {
+        if (responseDto == null || responseDto.getResponse() == null) {
+            throw new IllegalStateException("Tour API 증분 목록 조회 실패: 응답 구조가 비어 있습니다.");
+        }
+
+        TourApiResponseDto.Header header = responseDto.getResponse().getHeader();
+        if (header == null) {
+            throw new IllegalStateException("Tour API 증분 목록 조회 실패: 응답 header가 없습니다.");
+        }
+
+        String resultCode = header.getResultCode();
+        if (resultCode == null || resultCode.isBlank() || "0000".equals(resultCode)) {
+            return;
+        }
+
+        String resultMsg = header.getResultMsg();
+        throw new IllegalStateException(
+                "Tour API 증분 목록 조회 실패: resultCode=%s, resultMsg=%s".formatted(resultCode, resultMsg));
     }
 }

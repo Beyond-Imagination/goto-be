@@ -15,7 +15,7 @@ status: Accepted
 ## 1. ETL Scope Expansion (증분 동기화 도입)
 
 ### Decision
-기존의 일회성 전체 데이터 수집에서 확장하여, `areaBasedSyncList1` API를 활용한 매일 새벽 3시 기준 **증분 동기화 파이프라인**(`tourApiIncrementalSyncJob`)을 구현합니다.
+기존의 일회성 전체 데이터 수집에서 확장하여, `areaBasedSyncList2` API를 활용한 매일 새벽 3시 기준 **증분 동기화 파이프라인**(`tourApiIncrementalSyncJob`)을 구현합니다.
 
 ### Consequences
 최초 동기화용 Job(`tourApiInitialLoadJob`)과 증분 동기화용 Job(`tourApiIncrementalSyncJob`)이 분리 운영되어 운영 안정성과 효율성이 향상됩니다.
@@ -32,11 +32,11 @@ status: Accepted
 ### Consequences
 가능한 한 데이터를 즉시 완성하되, 대규모 변경 시 발생할 수 있는 Rate Limit 초과에 유연하게 대응할 수 있습니다.
 
-삭제된 장소를 Lazy Detail Fetch 대상에서 제외하면, 같은 증분 Job 안에서 `showflag=0`으로 삭제 처리한 row가 상세 미완료 상태라는 이유로 다시 상세 보강 대상에 포함되어 `is_deleted=false`로 되돌아가는 회귀를 막을 수 있습니다. 이 정책은 detail step을 "상세 보강 전용"으로 제한하고, 삭제/복구 상태 판단은 `areaBasedSyncList1` 증분 목록의 `showflag`에 위임한다는 의미입니다.
+삭제된 장소를 Lazy Detail Fetch 대상에서 제외하면, 같은 증분 Job 안에서 `showflag=0`으로 삭제 처리한 row가 상세 미완료 상태라는 이유로 다시 상세 보강 대상에 포함되어 `is_deleted=false`로 되돌아가는 회귀를 막을 수 있습니다. 이 정책은 detail step을 "상세 보강 전용"으로 제한하고, 삭제/복구 상태 판단은 `areaBasedSyncList2` 증분 목록의 `showflag`에 위임한다는 의미입니다.
 
 다만 다음 리스크를 운영상 인지해야 합니다.
 
-- `is_deleted=true`가 잘못 저장된 장소는 Lazy Detail Fetch로는 복구되지 않습니다. 해당 장소의 복구는 이후 `areaBasedSyncList1`에서 `showflag=1` 또는 비삭제 상태로 다시 내려와 증분 동기화가 처리해야 합니다.
+- `is_deleted=true`가 잘못 저장된 장소는 Lazy Detail Fetch로는 복구되지 않습니다. 해당 장소의 복구는 이후 `areaBasedSyncList2`에서 `showflag=1` 또는 비삭제 상태로 다시 내려와 증분 동기화가 처리해야 합니다.
 - 삭제 후 복구 이벤트를 놓치면 `is_deleted=true` 상태가 오래 유지될 수 있습니다. `TourApiIncrementalSyncLogListener`가 성공 이력을 `batch_sync_log`에 기록하므로 정상 실행 간 catch-up 기준은 유지되지만, 로그 기록 자체가 실패하거나 수동으로 이력을 수정하면 증분 기준일이 틀어질 수 있습니다.
 - 향후 관리자 화면, 감사 로그, 데이터 품질 분석처럼 삭제된 장소의 상세 정보를 계속 최신화해야 하는 요구가 생기면, 현재 정책과 충돌합니다. 이 경우 앱 노출용 상세 보강과 삭제 row 감사용 상세 수집을 별도 step 또는 별도 저장소로 분리해야 합니다.
 - `detailWithTour2`와 `detailIntro2`는 둘 다 성공했을 때만 `place_bf_info.bf_details` JSONB에 반영합니다. `detailWithTour2` 원본 JSON 필드는 root에 직접 저장하지 않고 `PlaceBfDetails` JSON schema의 `mobility`, `visual`, `hearing`, `infant_family` 카테고리로 정규화합니다. `detailIntro2` 응답은 앱에서 바로 쓰는 `intro` projection으로 저장합니다. 두 원천의 원문은 재처리와 디버깅을 위해 `sources.tour_api.detailWithTour`, `sources.tour_api.detailIntro` 아래에도 보존합니다. 둘 중 하나라도 누락되면 `place_bf_info`를 완성 상태로 갱신하지 않고, 다음 Lazy Detail Fetch 대상에 남깁니다.
@@ -53,7 +53,7 @@ Tour API의 `showflag=0` (삭제 데이터) 처리를 반영하기 위해 `place
 ### Consequences
 물리적 삭제로 인한 외래키 위반 위험을 없애고, 내부 로직 및 앱에서는 논리적 삭제 플래그만 검토하여 노출을 제어할 수 있습니다.
 
-`is_deleted`는 detail API 응답으로 판단하지 않습니다. 삭제 상태의 source of truth는 `areaBasedSyncList1`의 `showflag`이며, detail step은 이 상태를 변경하지 않아야 합니다.
+`is_deleted`는 detail API 응답으로 판단하지 않습니다. 삭제 상태의 source of truth는 `areaBasedSyncList2`의 `showflag`이며, detail step은 이 상태를 변경하지 않아야 합니다.
 
 ---
 

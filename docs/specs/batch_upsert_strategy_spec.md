@@ -50,7 +50,7 @@
     *   `places.is_deleted`는 Tour API의 `showflag=0` 삭제 데이터를 반영하기 위한 명시 컬럼입니다. `PlaceItemWriter`는 장소 Upsert 시 `is_deleted`를 항상 `EXCLUDED.is_deleted` 값으로 갱신합니다.
     *   삭제된 장소(`is_deleted=true`)는 `place_bf_info` Upsert 대상에서 제외하여, 삭제 데이터에 대해 무장애 상세 정보를 갱신하지 않습니다.
     *   Lazy Detail Fetch Step은 삭제된 장소를 상세 보강 대상으로 삼지 않습니다. 현재 상세 보강 대상 조회 조건은 `source = 'TOUR_API' AND is_deleted = false`이면서 `detail_common_synced`, `detail_with_tour_synced`, `detail_intro_synced` 중 하나라도 `false`인 row입니다.
-    *   삭제/복구 상태 판단은 detail API가 아니라 `areaBasedSyncList1`의 `showflag`를 기준으로 합니다. 따라서 detail step은 `is_deleted` 상태를 복구하거나 변경하는 책임을 갖지 않습니다.
+    *   삭제/복구 상태 판단은 detail API가 아니라 `areaBasedSyncList2`의 `showflag`를 기준으로 합니다. 따라서 detail step은 `is_deleted` 상태를 복구하거나 변경하는 책임을 갖지 않습니다.
 *   **Detail Completion Flags (상세 보강 완료 상태)**:
     *   상세 보강 완료는 `detailCommon2`, `detailWithTour2`, `detailIntro2` 세 API가 모두 성공했을 때만 성립합니다.
     *   `places.detail_common_synced`, `places.detail_with_tour_synced`, `places.detail_intro_synced`는 각 API의 성공 여부를 저장합니다.

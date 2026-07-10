@@ -60,7 +60,7 @@ classDiagram
     class KorWithService2_OpenAPI {
         <<Upstream / OHS, PL>>
         +areaBasedList2()
-        +areaBasedSyncList1()
+        +areaBasedSyncList2()
         +detailCommon2()
         +detailWithTour2()
         +detailIntro2()
@@ -121,7 +121,7 @@ flowchart TD
         end
 
         subgraph Incremental_Steps [Incremental Sync Steps]
-            IncrementalReader[areaBasedSyncList1 Reader]
+            IncrementalReader[areaBasedSyncList2 Reader]
             IncrementalProcessor[Eager Detail Processor]
             SharedDetailReader[Shared Lazy Detail Reader]
             DetailProcessor[Detail Processor]
@@ -149,7 +149,7 @@ flowchart TD
     IncrementalJob --> SharedDetailReader --> DetailProcessor --> Writer
     
     BaseReader -->|areaBasedList2| KNTO_Barrier
-    IncrementalReader -->|areaBasedSyncList1| KNTO_Barrier
+    IncrementalReader -->|areaBasedSyncList2| KNTO_Barrier
     SharedDetailReader -->|detailCommon2/detailWithTour2/detailIntro2 for is_deleted=false| KNTO_Barrier
     IncrementalProcessor -->|Eager detail fetch| KNTO_Barrier
     BaseProcessor -->|Error Detected| DlqTbl

@@ -1,6 +1,7 @@
 package kr.bi.go_to.batch.reader;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -36,20 +37,19 @@ class TourApiIncrementalItemReaderTest {
     private static final Clock FIXED_CLOCK =
             Clock.fixed(ZonedDateTime.of(2026, 6, 29, 3, 0, 0, 0, KST).toInstant(), KST);
 
+    private static final String OK_RESPONSE =
+            """
+            {"response":{"header":{"resultCode":"0000","resultMsg":"OK"},"body":{"items":{},"numOfRows":1000,"pageNo":1,"totalCount":0}}}
+            """;
+
     @Test
-    @DisplayName("성공한 동기화 로그가 없으면 read로 KST 기준 어제 날짜의 areaBasedSyncList1을 조회한다")
+    @DisplayName("성공한 동기화 로그가 없으면 read로 KST 기준 어제 날짜의 areaBasedSyncList2를 조회한다")
     void usesKstYesterdayWhenNoSuccessfulSyncLogExists() throws Exception {
         RestClient.Builder restClientBuilder = RestClient.builder();
         MockRestServiceServer mockServer =
                 MockRestServiceServer.bindTo(restClientBuilder).build();
         JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
-        TourApiIncrementalItemReader reader = new TourApiIncrementalItemReader(restClientBuilder, jdbcTemplate);
-
-        ReflectionTestUtils.setField(reader, "serviceKey", "test-service-key");
-        ReflectionTestUtils.setField(reader, "baseUrl", "https://tour-api.example");
-        ReflectionTestUtils.setField(reader, "mobileOs", "ETC");
-        ReflectionTestUtils.setField(reader, "mobileApp", "AppTest");
-        ReflectionTestUtils.setField(reader, "clock", FIXED_CLOCK);
+        TourApiIncrementalItemReader reader = createReader(restClientBuilder, jdbcTemplate);
 
         when(jdbcTemplate.queryForObject(anyString(), eq(String.class), eq(TourApiIncrementalSyncContext.JOB_NAME)))
                 .thenThrow(new EmptyResultDataAccessException(1));
@@ -61,11 +61,9 @@ class TourApiIncrementalItemReaderTest {
                 .expect(
                         ExpectedCount.once(),
                         requestTo(allOf(
-                                containsString("/areaBasedSyncList1"),
+                                containsString("/areaBasedSyncList2"),
                                 containsString("modifiedtime=" + expectedModifiedTime))))
-                .andRespond(withSuccess(
-                        "{\"response\":{\"body\":{\"items\":{},\"numOfRows\":1000,\"pageNo\":1,\"totalCount\":0}}}",
-                        MediaType.APPLICATION_JSON));
+                .andRespond(withSuccess(OK_RESPONSE, MediaType.APPLICATION_JSON));
 
         reader.read();
 
@@ -79,13 +77,7 @@ class TourApiIncrementalItemReaderTest {
         MockRestServiceServer mockServer =
                 MockRestServiceServer.bindTo(restClientBuilder).build();
         JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
-        TourApiIncrementalItemReader reader = new TourApiIncrementalItemReader(restClientBuilder, jdbcTemplate);
-
-        ReflectionTestUtils.setField(reader, "serviceKey", "test-service-key");
-        ReflectionTestUtils.setField(reader, "baseUrl", "https://tour-api.example");
-        ReflectionTestUtils.setField(reader, "mobileOs", "ETC");
-        ReflectionTestUtils.setField(reader, "mobileApp", "AppTest");
-        ReflectionTestUtils.setField(reader, "clock", FIXED_CLOCK);
+        TourApiIncrementalItemReader reader = createReader(restClientBuilder, jdbcTemplate);
 
         when(jdbcTemplate.queryForObject(anyString(), eq(String.class), eq(TourApiIncrementalSyncContext.JOB_NAME)))
                 .thenReturn("20260628");
@@ -98,10 +90,8 @@ class TourApiIncrementalItemReaderTest {
                 .expect(
                         ExpectedCount.once(),
                         requestTo(
-                                allOf(containsString("/areaBasedSyncList1"), containsString("modifiedtime=20260628"))))
-                .andRespond(withSuccess(
-                        "{\"response\":{\"body\":{\"items\":{},\"numOfRows\":1000,\"pageNo\":1,\"totalCount\":0}}}",
-                        MediaType.APPLICATION_JSON));
+                                allOf(containsString("/areaBasedSyncList2"), containsString("modifiedtime=20260628"))))
+                .andRespond(withSuccess(OK_RESPONSE, MediaType.APPLICATION_JSON));
 
         reader.read();
 
@@ -110,5 +100,74 @@ class TourApiIncrementalItemReaderTest {
         assertThat(jobExecution.getExecutionContext().getString(TourApiIncrementalSyncContext.TARGET_DATE_KEY))
                 .isEqualTo("20260629");
         mockServer.verify();
+    }
+
+    @Test
+    @DisplayName("areaBasedSyncList2 요청 URL에 매뉴얼 v4.3 필수/선택 파라미터가 모두 포함된다")
+    void includesAllRequiredAndOptionalQueryParams() throws Exception {
+        RestClient.Builder restClientBuilder = RestClient.builder();
+        MockRestServiceServer mockServer =
+                MockRestServiceServer.bindTo(restClientBuilder).build();
+        JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
+        TourApiIncrementalItemReader reader = createReader(restClientBuilder, jdbcTemplate);
+
+        when(jdbcTemplate.queryForObject(anyString(), eq(String.class), eq(TourApiIncrementalSyncContext.JOB_NAME)))
+                .thenReturn("20260628");
+
+        mockServer
+                .expect(
+                        ExpectedCount.once(),
+                        requestTo(allOf(
+                                containsString("/areaBasedSyncList2"),
+                                containsString("serviceKey=test-service-key"),
+                                containsString("pageNo=1"),
+                                containsString("numOfRows=1000"),
+                                containsString("MobileOS=ETC"),
+                                containsString("MobileApp=AppTest"),
+                                containsString("modifiedtime=20260628"),
+                                containsString("_type=json"))))
+                .andRespond(withSuccess(OK_RESPONSE, MediaType.APPLICATION_JSON));
+
+        reader.read();
+
+        mockServer.verify();
+    }
+
+    @Test
+    @DisplayName("resultCode가 0000이 아니면 IllegalStateException을 던진다")
+    void throwsWhenResultCodeIsNotOk() {
+        RestClient.Builder restClientBuilder = RestClient.builder();
+        MockRestServiceServer mockServer =
+                MockRestServiceServer.bindTo(restClientBuilder).build();
+        JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
+        TourApiIncrementalItemReader reader = createReader(restClientBuilder, jdbcTemplate);
+
+        when(jdbcTemplate.queryForObject(anyString(), eq(String.class), eq(TourApiIncrementalSyncContext.JOB_NAME)))
+                .thenReturn("20260628");
+
+        mockServer
+                .expect(ExpectedCount.once(), requestTo(containsString("/areaBasedSyncList2")))
+                .andRespond(withSuccess(
+                        """
+                        {"response":{"header":{"resultCode":"0003","resultMsg":"인증키가 유효하지 않습니다."},"body":{"items":{},"numOfRows":1000,"pageNo":1,"totalCount":0}}}
+                        """,
+                        MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(reader::read)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("resultCode=0003")
+                .hasMessageContaining("인증키가 유효하지 않습니다.");
+
+        mockServer.verify();
+    }
+
+    private TourApiIncrementalItemReader createReader(RestClient.Builder restClientBuilder, JdbcTemplate jdbcTemplate) {
+        TourApiIncrementalItemReader reader = new TourApiIncrementalItemReader(restClientBuilder, jdbcTemplate);
+        ReflectionTestUtils.setField(reader, "serviceKey", "test-service-key");
+        ReflectionTestUtils.setField(reader, "baseUrl", "https://tour-api.example");
+        ReflectionTestUtils.setField(reader, "mobileOs", "ETC");
+        ReflectionTestUtils.setField(reader, "mobileApp", "AppTest");
+        ReflectionTestUtils.setField(reader, "clock", FIXED_CLOCK);
+        return reader;
     }
 }
