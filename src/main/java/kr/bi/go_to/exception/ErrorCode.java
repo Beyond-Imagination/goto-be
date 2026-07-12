@@ -22,6 +22,7 @@ public enum ErrorCode {
     // 404 NOT_FOUND
     PLACE_NOT_FOUND(HttpStatus.NOT_FOUND, "장소를 찾을 수 없습니다."),
     HELP_REQUEST_NOT_FOUND(HttpStatus.NOT_FOUND, "도움 요청을 찾을 수 없습니다."),
+    FACILITY_NODE_NOT_FOUND(HttpStatus.NOT_FOUND, "시설물 노드를 찾을 수 없습니다."),
 
     // 409 CONFLICT
     HELP_REQUEST_EXPIRED(HttpStatus.CONFLICT, "도움 요청이 만료되었습니다."),
