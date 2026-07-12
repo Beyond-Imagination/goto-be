@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -42,6 +43,11 @@ class TourApiIncrementalItemReaderTest {
             {"response":{"header":{"resultCode":"0000","resultMsg":"OK"},"body":{"items":{},"numOfRows":1000,"pageNo":1,"totalCount":0}}}
             """;
 
+    private static final String EMPTY_ITEMS_STRING_RESPONSE =
+            """
+            {"response":{"header":{"resultCode":"0000","resultMsg":"OK"},"body":{"items":"","numOfRows":0,"pageNo":1,"totalCount":0}}}
+            """;
+
     @Test
     @DisplayName("성공한 동기화 로그가 없으면 read로 KST 기준 어제 날짜의 areaBasedSyncList2를 조회한다")
     void usesKstYesterdayWhenNoSuccessfulSyncLogExists() throws Exception {
@@ -62,7 +68,9 @@ class TourApiIncrementalItemReaderTest {
                         ExpectedCount.once(),
                         requestTo(allOf(
                                 containsString("/areaBasedSyncList2"),
-                                containsString("modifiedtime=" + expectedModifiedTime))))
+                                not(containsString("/areaBasedSyncList1")),
+                                containsString("modifiedtime=" + expectedModifiedTime),
+                                not(containsString("showflag=")))))
                 .andRespond(withSuccess(OK_RESPONSE, MediaType.APPLICATION_JSON));
 
         reader.read();
@@ -89,8 +97,11 @@ class TourApiIncrementalItemReaderTest {
         mockServer
                 .expect(
                         ExpectedCount.once(),
-                        requestTo(
-                                allOf(containsString("/areaBasedSyncList2"), containsString("modifiedtime=20260628"))))
+                        requestTo(allOf(
+                                containsString("/areaBasedSyncList2"),
+                                not(containsString("/areaBasedSyncList1")),
+                                containsString("modifiedtime=20260628"),
+                                not(containsString("showflag=")))))
                 .andRespond(withSuccess(OK_RESPONSE, MediaType.APPLICATION_JSON));
 
         reader.read();
@@ -125,10 +136,32 @@ class TourApiIncrementalItemReaderTest {
                                 containsString("MobileOS=ETC"),
                                 containsString("MobileApp=AppTest"),
                                 containsString("modifiedtime=20260628"),
-                                containsString("_type=json"))))
+                                containsString("_type=json"),
+                                not(containsString("showflag=")))))
                 .andRespond(withSuccess(OK_RESPONSE, MediaType.APPLICATION_JSON));
 
         reader.read();
+
+        mockServer.verify();
+    }
+
+    @Test
+    @DisplayName("items가 빈 문자열인 0건 응답도 역직렬화 예외 없이 read를 종료한다")
+    void toleratesEmptyStringItemsWhenTotalCountIsZero() throws Exception {
+        RestClient.Builder restClientBuilder = RestClient.builder();
+        MockRestServiceServer mockServer =
+                MockRestServiceServer.bindTo(restClientBuilder).build();
+        JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
+        TourApiIncrementalItemReader reader = createReader(restClientBuilder, jdbcTemplate);
+
+        when(jdbcTemplate.queryForObject(anyString(), eq(String.class), eq(TourApiIncrementalSyncContext.JOB_NAME)))
+                .thenReturn("20260628");
+
+        mockServer
+                .expect(ExpectedCount.once(), requestTo(containsString("/areaBasedSyncList2")))
+                .andRespond(withSuccess(EMPTY_ITEMS_STRING_RESPONSE, MediaType.APPLICATION_JSON));
+
+        assertThat(reader.read()).isNull();
 
         mockServer.verify();
     }
