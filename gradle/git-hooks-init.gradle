@@ -1,0 +1,30 @@
+import org.apache.tools.ant.taskdefs.condition.Os
+
+// Caller must set settings.ext.hooksProjectDir to the backend git root.
+def hooksProjectDir = settings.ext.hooksProjectDir as File
+def hooksDir = new File(hooksProjectDir, '.githooks')
+
+if (!hooksDir.isDirectory()) {
+  return
+}
+
+try {
+  providers.exec {
+    workingDir = hooksProjectDir
+    commandLine 'git', 'config', 'core.hooksPath', '.githooks'
+  }.result.get()
+
+  if (!Os.isFamily(Os.FAMILY_WINDOWS)) {
+    hooksDir.eachFile { file ->
+      if (file.isFile()) {
+        file.setExecutable(true, false)
+      }
+    }
+    providers.exec {
+      workingDir = hooksDir
+      commandLine 'chmod', '-R', '+x', '.'
+    }.result.get()
+  }
+} catch (Exception e) {
+  logger.warn("[Gradle Init] Git Hooks setup warning: ${e.message}")
+}
