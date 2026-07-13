@@ -1,17 +1,12 @@
 package kr.bi.go_to.batch.processor;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import kr.bi.go_to.batch.client.TourApiClient;
 import kr.bi.go_to.batch.dto.PlaceProcessingResult;
 import kr.bi.go_to.batch.dto.TourApiItemDto;
-import kr.bi.go_to.batch.exception.HomepageParsingErrorType;
-import kr.bi.go_to.batch.exception.HomepageParsingException;
 import kr.bi.go_to.batch.listener.EtlFailureLogger;
+import kr.bi.go_to.batch.mapper.TourApiHomepageNormalizer;
 import kr.bi.go_to.enums.PlaceSource;
 import kr.bi.go_to.model.place.Place;
 import lombok.RequiredArgsConstructor;
@@ -23,18 +18,12 @@ import org.locationtech.jts.geom.PrecisionModel;
 import org.springframework.batch.infrastructure.item.ItemProcessor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import org.springframework.web.util.HtmlUtils;
 import tools.jackson.databind.JsonNode;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class TourApiIncrementalItemProcessor implements ItemProcessor<TourApiItemDto, PlaceProcessingResult> {
-
-    private static final Pattern HREF_PATTERN =
-            Pattern.compile("href\\s*=\\s*[\"']([^\"']+)[\"']", Pattern.CASE_INSENSITIVE);
-    private static final Pattern URL_FIND_PATTERN =
-            Pattern.compile("https?://[^\\s<>\"']+|www\\.[^\\s<>\"']+", Pattern.CASE_INSENSITIVE);
 
     private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
     private final EtlFailureLogger etlFailureLogger;
@@ -117,7 +106,7 @@ public class TourApiIncrementalItemProcessor implements ItemProcessor<TourApiIte
                 if (detailCommonSynced) {
                     overview = tourApiClient.extractFieldOrEmpty(common2, "overview");
                     String rawHomepage = tourApiClient.extractFieldOrEmpty(common2, "homepage");
-                    homepage = sanitizeHomepage(rawHomepage);
+                    homepage = TourApiHomepageNormalizer.normalize(rawHomepage);
                 }
 
                 JsonNode withTour2 = tourApiClient.fetchDetail("detailWithTour2", dto.contentid(), null);
@@ -127,9 +116,6 @@ public class TourApiIncrementalItemProcessor implements ItemProcessor<TourApiIte
                 JsonNode intro2 = tourApiClient.fetchDetail("detailIntro2", dto.contentid(), dto.contenttypeid());
                 detailIntroSynced = intro2 != null;
                 introDetails = intro2 != null ? intro2.toString() : null;
-            } catch (HomepageParsingException hpe) {
-                // If homepage parsing fails, we bubble it up so skip listener logs it
-                throw hpe;
             } catch (Exception e) {
                 log.warn("Eager fetch failed for contentId: {}, fallback to lazy fetch later.", dto.contentid(), e);
                 // Leave overview = null to trigger lazy fetch in Step 2
@@ -171,57 +157,5 @@ public class TourApiIncrementalItemProcessor implements ItemProcessor<TourApiIte
 
     private boolean isLocationWithinValidBounds(double lon, double lat) {
         return lon >= 124.0 && lon <= 132.0 && lat >= 32.0 && lat <= 43.5;
-    }
-
-    private String sanitizeHomepage(String homepage) {
-        if (homepage == null) {
-            return null;
-        }
-
-        if (!StringUtils.hasText(homepage)) {
-            return "";
-        }
-
-        String unescaped = HtmlUtils.htmlUnescape(homepage);
-
-        int urlCount = countDistinctUrls(unescaped);
-        if (urlCount > 1) {
-            throw new HomepageParsingException(HomepageParsingErrorType.MULTIPLE_URLS, homepage);
-        }
-
-        String extracted;
-        Matcher matcher = HREF_PATTERN.matcher(unescaped);
-        if (matcher.find()) {
-            extracted = matcher.group(1).trim();
-        } else {
-            extracted = unescaped.replaceAll("<[^>]*>", "").trim();
-        }
-
-        if (!StringUtils.hasText(extracted)) {
-            throw new HomepageParsingException(HomepageParsingErrorType.NO_EXTRACTED_URL, homepage);
-        }
-
-        if (!isValidUrl(extracted)) {
-            throw new HomepageParsingException(HomepageParsingErrorType.INVALID_URL_FORMAT, extracted, homepage);
-        }
-
-        return extracted;
-    }
-
-    private int countDistinctUrls(String text) {
-        if (!StringUtils.hasText(text)) {
-            return 0;
-        }
-        Set<String> urls = new HashSet<>();
-        Matcher matcher = URL_FIND_PATTERN.matcher(text);
-        while (matcher.find()) {
-            urls.add(matcher.group().toLowerCase().trim());
-        }
-        return urls.size();
-    }
-
-    private boolean isValidUrl(String url) {
-        String lower = url.toLowerCase();
-        return lower.startsWith("http://") || lower.startsWith("https://") || lower.startsWith("www.");
     }
 }
