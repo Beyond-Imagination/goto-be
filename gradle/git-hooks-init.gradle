@@ -15,15 +15,21 @@ try {
   }.result.get()
 
   if (!Os.isFamily(Os.FAMILY_WINDOWS)) {
+    def needs_chmod_fallback = false
+
     hooksDir.eachFile { file ->
-      if (file.isFile()) {
-        file.setExecutable(true, false)
+      if (file.isFile() && !file.setExecutable(true, false)) {
+        needs_chmod_fallback = true
       }
     }
-    providers.exec {
-      workingDir = hooksDir
-      commandLine 'chmod', '-R', '+x', '.'
-    }.result.get()
+
+    if (needs_chmod_fallback) {
+      logger.warn('[Gradle Init] setExecutable failed; falling back to chmod')
+      providers.exec {
+        workingDir = hooksDir
+        commandLine 'chmod', '-R', '+x', '.'
+      }.result.get()
+    }
   }
 } catch (Exception e) {
   logger.warn("[Gradle Init] Git Hooks setup warning: ${e.message}")
