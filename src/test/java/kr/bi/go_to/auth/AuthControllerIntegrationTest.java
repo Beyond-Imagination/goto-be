@@ -5,11 +5,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Map;
-
-import kr.bi.go_to.model.refreshToken.RefreshTokenRepository;
+import kr.bi.go_to.repository.MemberRepository;
+import kr.bi.go_to.repository.RefreshTokenRepository;
 import kr.bi.go_to.support.TestcontainersConfiguration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,6 +18,8 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -27,8 +27,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @Import(TestcontainersConfiguration.class)
 class AuthControllerIntegrationTest {
 
-    private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {
-    };
+    private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
 
     @Autowired
     MockMvc mockMvc;
@@ -39,21 +38,27 @@ class AuthControllerIntegrationTest {
     @Autowired
     RefreshTokenRepository refreshTokenRepository;
 
+    @Autowired
+    MemberRepository memberRepository;
+
     @BeforeEach
     void setUp() {
         refreshTokenRepository.deleteAll();
+        memberRepository.deleteAll();
     }
 
     @Test
-    void loginIssuesAccessAndRefreshTokens() throws Exception {
-        String responseBody = mockMvc.perform(post("/api/v1/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "username": "tester",
-                                  "password": "password"
-                                }
-                                """))
+    void 임시_로그인하면_액세스_토큰과_리프레시_토큰을_발급한다() throws Exception {
+        String responseBody = mockMvc.perform(
+                        post("/api/v1/auth/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        """
+                        {
+                          "nickname": "tester",
+                          "password": "password"
+                        }
+                        """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.tokenType").value("Bearer"))
                 .andExpect(jsonPath("$.accessToken").isString())
@@ -67,24 +72,28 @@ class AuthControllerIntegrationTest {
         assertThat((String) response.get("accessToken")).contains(".");
         assertThat((String) response.get("refreshToken")).contains(".");
         assertThat(refreshTokenRepository.count()).isEqualTo(1);
+        assertThat(memberRepository.findByNickname("tester")).isPresent();
     }
 
     @Test
-    void refreshIssuesNewAccessTokenWithRefreshToken() throws Exception {
-        String loginBody = mockMvc.perform(post("/api/v1/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "username": "tester",
-                                  "password": "password"
-                                }
-                                """))
+    void 유효한_리프레시_토큰으로_새_액세스_토큰을_발급한다() throws Exception {
+        String loginBody = mockMvc.perform(
+                        post("/api/v1/auth/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        """
+                        {
+                          "nickname": "tester",
+                          "password": "password"
+                        }
+                        """))
                 .andExpect(status().isCreated())
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
 
-        String refreshToken = (String) objectMapper.readValue(loginBody, MAP_TYPE).get("refreshToken");
+        String refreshToken =
+                (String) objectMapper.readValue(loginBody, MAP_TYPE).get("refreshToken");
 
         mockMvc.perform(post("/api/v1/auth/refresh")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -96,14 +105,18 @@ class AuthControllerIntegrationTest {
     }
 
     @Test
-    void refreshRejectsInvalidRefreshToken() throws Exception {
-        mockMvc.perform(post("/api/v1/auth/refresh")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "refreshToken": "not-a-jwt"
-                                }
-                                """))
-                .andExpect(status().isUnauthorized());
+    void 유효하지_않은_리프레시_토큰은_표준_에러_응답으로_거절한다() throws Exception {
+        mockMvc.perform(
+                        post("/api/v1/auth/refresh")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        """
+                        {
+                          "refreshToken": "not-a-jwt"
+                        }
+                        """))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.errorCode").value("INVALID_REFRESH_TOKEN"))
+                .andExpect(jsonPath("$.errorMessage").value("유효하지 않은 리프레시 토큰입니다."));
     }
 }

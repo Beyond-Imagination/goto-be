@@ -1,6 +1,11 @@
 spring:
   application:
     name: Goto
+  batch:
+    job:
+      enabled: false
+    jdbc:
+      initialize-schema: never
   cloud:
     aws:
       region:
@@ -35,3 +40,26 @@ springdoc:
     path: /swagger-ui.html
     operations-sorter: method
     tags-sorter: alpha
+
+tour-api:
+  base-url: "http://apis.data.go.kr/B551011/KorWithService2"
+  mobile-os: "ETC"
+  mobile-app: "Goto"
+  detail-quota: 250
+  detail-concurrency: 1
+  detail-queue-capacity: 250
+  detail-await-termination-seconds: 60
+
+goto:
+  batch:
+    initial-load:
+      auto-run-enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never

@@ -1,0 +1,41 @@
+{
+  "response": {
+    "header": {
+      "resultCode": "0000",
+      "resultMsg": "OK"
+    },
+    "body": {
+      "items": {
+        "item": [
+          {
+            "contentid": "1433504",
+            "originimgurl": "http://tong.visitkorea.or.kr/cms/resource/48/3492548_image2_1.jpg",
+            "imgname": "청주_가경 터미널시장 (1)",
+            "smallimageurl": "http://tong.visitkorea.or.kr/cms/resource/48/3492548_image3_1.jpg",
+            "cpyrhtDivCd": "Type3",
+            "serialnum": "3492548_1"
+          },
+          {
+            "contentid": "1433504",
+            "originimgurl": "http://tong.visitkorea.or.kr/cms/resource/49/3492549_image2_1.jpg",
+            "imgname": "청주_가경 터미널시장 (2)",
+            "smallimageurl": "http://tong.visitkorea.or.kr/cms/resource/49/3492549_image3_1.jpg",
+            "cpyrhtDivCd": "Type3",
+            "serialnum": "3492549_3"
+          },
+          {
+            "contentid": "1433504",
+            "originimgurl": "http://tong.visitkorea.or.kr/cms/resource/51/3492551_image2_1.jpg",
+            "imgname": "청주_가경 터미널시장 (4)",
+            "smallimageurl": "http://tong.visitkorea.or.kr/cms/resource/51/3492551_image3_1.jpg",
+            "cpyrhtDivCd": "Type3",
+            "serialnum": "3492551_2"
+          }
+        ]
+      },
+      "numOfRows": 3,
+      "pageNo": 1,
+      "totalCount": 3
+    }
+  }
+}

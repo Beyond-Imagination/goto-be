@@ -1,8 +1,5 @@
 package kr.bi.go_to.service;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
@@ -16,18 +13,18 @@ import java.util.Optional;
 import java.util.UUID;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-
-import kr.bi.go_to.properties.JwtProperties;
 import kr.bi.go_to.config.security.JwtClaims;
 import kr.bi.go_to.enums.TokenType;
+import kr.bi.go_to.properties.JwtProperties;
 import org.springframework.stereotype.Service;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
 @Service
 public class JwtService {
 
     private static final String HMAC_ALGORITHM = "HmacSHA256";
-    private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {
-    };
+    private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
 
     private final JwtProperties properties;
     private final ObjectMapper objectMapper;
@@ -81,9 +78,8 @@ public class JwtService {
                     UUID.fromString(tokenId),
                     TokenType.valueOf(tokenType),
                     Instant.ofEpochSecond(issuedAt),
-                    Instant.ofEpochSecond(expiresAt)
-            ));
-        } catch (RuntimeException | IOException ex) {
+                    Instant.ofEpochSecond(expiresAt)));
+        } catch (RuntimeException ex) {
             return Optional.empty();
         }
     }
@@ -118,7 +114,7 @@ public class JwtService {
     private String encodeJson(Map<String, Object> value) {
         try {
             return encode(objectMapper.writeValueAsBytes(value));
-        } catch (IOException ex) {
+        } catch (RuntimeException ex) {
             throw new IllegalStateException("Failed to write JWT JSON", ex);
         }
     }

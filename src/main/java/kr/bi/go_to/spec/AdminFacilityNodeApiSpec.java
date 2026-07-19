@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import kr.bi.go_to.config.security.AuthenticatedMember;
 import kr.bi.go_to.controller.admin.request.CreateFacilityNodeRequest;
 import kr.bi.go_to.controller.admin.response.FacilityNodeResponse;
 import kr.bi.go_to.enums.SwaggerTag;
@@ -25,11 +26,15 @@ public interface AdminFacilityNodeApiSpec {
                 responseCode = "201",
                 description = "노드 등록 성공",
                 content = @Content(schema = @Schema(implementation = FacilityNodeResponse.class))),
-        @ApiResponse(responseCode = "400", description = "요청 값 검증 실패", content = @Content),
+        @ApiResponse(
+                responseCode = "400",
+                description = "요청 값 검증 실패 또는 targetFeatureId가 도면 GeoJSON에 존재하지 않음",
+                content = @Content),
         @ApiResponse(responseCode = "401", description = "인증 필요", content = @Content),
         @ApiResponse(responseCode = "404", description = "층 도면 없음", content = @Content)
     })
     FacilityNodeResponse createNode(
+            AuthenticatedMember member,
             @PathVariable Long placeId,
             @PathVariable Integer floor,
             @Valid @RequestBody CreateFacilityNodeRequest request);
