@@ -12,6 +12,8 @@ import jakarta.persistence.Table;
 import kr.bi.go_to.model.common.BaseAuditEntity;
 import kr.bi.go_to.model.member.Member;
 import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.locationtech.jts.geom.Point;
@@ -20,6 +22,8 @@ import org.locationtech.jts.geom.Point;
  * 실내 지도상에 위치한 엘리베이터, 화장실 등의 개별 편의시설 노드를 관리하는 엔티티
  */
 @Getter
+@Builder
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(name = "facility_nodes")
@@ -67,6 +71,7 @@ public class FacilityNode extends BaseAuditEntity {
      * PDR(보행자 데드레코닝) 센서 이동 궤적을 캘리브레이션할 수 있는 보정 영점 여부
      */
     @Column(name = "is_checkpoint", nullable = false)
+    @Builder.Default
     private boolean isCheckpoint = false;
 
     /**
@@ -74,6 +79,12 @@ public class FacilityNode extends BaseAuditEntity {
      */
     @Column(name = "snap_radius")
     private Integer snapRadius;
+
+    /**
+     * 사람이 읽을 수 있는 위치 설명 (예: 신라역사관 동쪽 복도 끝, 로비에서 30m)
+     */
+    @Column(name = "location_description", length = 255)
+    private String locationDescription;
 
     /**
      * 시설물 노드 정보를 등록한 사용자

@@ -13,6 +13,8 @@ import kr.bi.go_to.model.common.BaseAuditEntity;
 import kr.bi.go_to.model.member.Member;
 import kr.bi.go_to.model.place.Place;
 import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -22,6 +24,8 @@ import org.hibernate.type.SqlTypes;
  * 특정 장소의 실내 층별 지도(도면)를 관리하는 엔티티
  */
 @Getter
+@Builder
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(name = "floor_maps")
@@ -60,4 +64,8 @@ public class FloorMap extends BaseAuditEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by")
     private Member createdBy;
+
+    public void replaceGeojsonData(FloorGeoJson geojsonData) {
+        this.geojsonData = geojsonData;
+    }
 }
