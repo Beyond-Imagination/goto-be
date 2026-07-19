@@ -3,9 +3,10 @@ package kr.bi.go_to.security;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.UUID;
+
 import kr.bi.go_to.config.security.JwtClaims;
-import kr.bi.go_to.enums.TokenType;
 import kr.bi.go_to.service.JwtService;
+import kr.bi.go_to.enums.TokenType;
 import kr.bi.go_to.support.TestcontainersConfiguration;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

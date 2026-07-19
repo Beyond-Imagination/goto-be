@@ -20,27 +20,31 @@ public interface AuthApiSpec {
     @Operation(
             tags = SwaggerTag.AUTH_NAME,
             summary = "임시 로그인",
-            description = "임시 계정 정보로 accessToken과 refreshToken을 발급합니다.")
+            description = "임시 계정 정보로 accessToken과 refreshToken을 발급합니다."
+    )
     @ApiResponses({
-        @ApiResponse(
-                responseCode = "201",
-                description = "토큰 발급 성공",
-                content = @Content(schema = @Schema(implementation = LoginResponse.class))),
-        @ApiResponse(responseCode = "400", description = "요청 값 검증 실패", content = @Content)
+            @ApiResponse(
+                    responseCode = "201",
+                    description = "토큰 발급 성공",
+                    content = @Content(schema = @Schema(implementation = LoginResponse.class))
+            ),
+            @ApiResponse(responseCode = "400", description = "요청 값 검증 실패", content = @Content)
     })
     LoginResponse login(@Valid @RequestBody LoginRequest request);
 
     @Operation(
             tags = SwaggerTag.AUTH_NAME,
             summary = "임시 액세스 토큰 갱신",
-            description = "refreshToken으로 새 accessToken을 발급합니다.")
+            description = "refreshToken으로 새 accessToken을 발급합니다."
+    )
     @ApiResponses({
-        @ApiResponse(
-                responseCode = "200",
-                description = "액세스 토큰 갱신 성공",
-                content = @Content(schema = @Schema(implementation = AccessTokenResponse.class))),
-        @ApiResponse(responseCode = "400", description = "요청 값 검증 실패", content = @Content),
-        @ApiResponse(responseCode = "401", description = "유효하지 않은 리프레시 토큰", content = @Content)
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "액세스 토큰 갱신 성공",
+                    content = @Content(schema = @Schema(implementation = AccessTokenResponse.class))
+            ),
+            @ApiResponse(responseCode = "400", description = "요청 값 검증 실패", content = @Content),
+            @ApiResponse(responseCode = "401", description = "유효하지 않은 리프레시 토큰", content = @Content)
     })
     AccessTokenResponse refresh(@Valid @RequestBody RefreshRequest request);
 }

@@ -1,10 +1,10 @@
 package kr.bi.go_to;
 
-import kr.bi.go_to.support.TestcontainersConfiguration;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import kr.bi.go_to.support.TestcontainersConfiguration;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -12,5 +12,7 @@ import org.springframework.test.context.ActiveProfiles;
 class GotoApplicationTests {
 
     @Test
-    void contextLoads() {}
+    void contextLoads() {
+    }
+
 }

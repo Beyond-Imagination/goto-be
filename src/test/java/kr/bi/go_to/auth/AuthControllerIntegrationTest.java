@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Map;
+
 import kr.bi.go_to.model.refreshToken.RefreshTokenRepository;
 import kr.bi.go_to.support.TestcontainersConfiguration;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,7 +27,8 @@ import org.springframework.test.web.servlet.MockMvc;
 @Import(TestcontainersConfiguration.class)
 class AuthControllerIntegrationTest {
 
-    private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
+    private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {
+    };
 
     @Autowired
     MockMvc mockMvc;
@@ -44,11 +46,9 @@ class AuthControllerIntegrationTest {
 
     @Test
     void loginIssuesAccessAndRefreshTokens() throws Exception {
-        String responseBody = mockMvc.perform(
-                        post("/api/v1/auth/login")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(
-                                        """
+        String responseBody = mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
                                 {
                                   "username": "tester",
                                   "password": "password"
@@ -71,11 +71,9 @@ class AuthControllerIntegrationTest {
 
     @Test
     void refreshIssuesNewAccessTokenWithRefreshToken() throws Exception {
-        String loginBody = mockMvc.perform(
-                        post("/api/v1/auth/login")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(
-                                        """
+        String loginBody = mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
                                 {
                                   "username": "tester",
                                   "password": "password"
@@ -86,8 +84,7 @@ class AuthControllerIntegrationTest {
                 .getResponse()
                 .getContentAsString();
 
-        String refreshToken =
-                (String) objectMapper.readValue(loginBody, MAP_TYPE).get("refreshToken");
+        String refreshToken = (String) objectMapper.readValue(loginBody, MAP_TYPE).get("refreshToken");
 
         mockMvc.perform(post("/api/v1/auth/refresh")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -100,11 +97,9 @@ class AuthControllerIntegrationTest {
 
     @Test
     void refreshRejectsInvalidRefreshToken() throws Exception {
-        mockMvc.perform(
-                        post("/api/v1/auth/refresh")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(
-                                        """
+        mockMvc.perform(post("/api/v1/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
                                 {
                                   "refreshToken": "not-a-jwt"
                                 }

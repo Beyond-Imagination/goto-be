@@ -7,9 +7,9 @@ import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.tags.Tag;
 import java.util.Comparator;
+import kr.bi.go_to.enums.SwaggerTag;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import kr.bi.go_to.enums.SwaggerTag;
 import org.springdoc.core.customizers.GlobalOpenApiCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -28,12 +28,10 @@ public class OpenApiConfig {
                         .version("v1"))
                 .tags(SwaggerTag.openApiTags())
                 .components(new Components()
-                        .addSecuritySchemes(
-                                BEARER_AUTH,
-                                new SecurityScheme()
-                                        .type(SecurityScheme.Type.HTTP)
-                                        .scheme("bearer")
-                                        .bearerFormat("JWT")))
+                        .addSecuritySchemes(BEARER_AUTH, new SecurityScheme()
+                                .type(SecurityScheme.Type.HTTP)
+                                .scheme("bearer")
+                                .bearerFormat("JWT")))
                 .addSecurityItem(new SecurityRequirement().addList(BEARER_AUTH));
     }
 
