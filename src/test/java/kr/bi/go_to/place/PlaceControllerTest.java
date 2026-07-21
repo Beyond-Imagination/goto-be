@@ -29,7 +29,7 @@ class PlaceControllerTest {
 
     @Test
     void searchesWithDefaultLimitAndCategoryFilter() throws Exception {
-        mockMvc.perform(get("/api/places/search")
+        mockMvc.perform(get("/api/v1/places/search")
                         .param("lat", "37.5665")
                         .param("lng", "126.9780")
                         .param("category", "관광지"))
@@ -42,7 +42,7 @@ class PlaceControllerTest {
 
     @Test
     void rejectsOutOfRangeCoordinatesAndLimit() throws Exception {
-        mockMvc.perform(get("/api/places/search")
+        mockMvc.perform(get("/api/v1/places/search")
                         .param("lat", "91")
                         .param("lng", "126.9780")
                         .param("k", "51"))
@@ -51,6 +51,6 @@ class PlaceControllerTest {
 
     @Test
     void requiresCoordinates() throws Exception {
-        mockMvc.perform(get("/api/places/search")).andExpect(status().isBadRequest());
+        mockMvc.perform(get("/api/v1/places/search")).andExpect(status().isBadRequest());
     }
 }
