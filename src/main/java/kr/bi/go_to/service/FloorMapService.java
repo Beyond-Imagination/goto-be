@@ -10,11 +10,15 @@ import kr.bi.go_to.model.member.Member;
 import kr.bi.go_to.model.place.Place;
 import kr.bi.go_to.repository.FloorMapRepository;
 import kr.bi.go_to.repository.PlaceRepository;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class FloorMapService {
+
+    private static final String INDOOR_MAP_CACHE = "indoor-map";
 
     private final FloorMapRepository floorMapRepository;
     private final PlaceRepository placeRepository;
@@ -28,6 +32,7 @@ public class FloorMapService {
     }
 
     @Transactional
+    @CacheEvict(value = INDOOR_MAP_CACHE, key = "#placeId + ':' + #floor")
     public FloorMapResponse upsertFloorMap(Long memberId, Long placeId, Integer floor, FloorGeoJson geojsonData) {
         FloorMap floorMap = floorMapRepository
                 .findByPlace_IdAndFloorLevel(placeId, floor)
@@ -52,6 +57,7 @@ public class FloorMapService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = INDOOR_MAP_CACHE, key = "#placeId + ':' + #floor")
     public FloorGeoJson getIndoorMap(Long placeId, Integer floor) {
         return floorMapRepository
                 .findByPlace_IdAndFloorLevel(placeId, floor)

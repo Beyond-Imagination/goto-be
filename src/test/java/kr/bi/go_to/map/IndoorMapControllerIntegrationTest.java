@@ -6,7 +6,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.List;
 import java.util.Map;
+import kr.bi.go_to.model.map.FloorGeoJson;
+import kr.bi.go_to.model.map.FloorMap;
 import kr.bi.go_to.model.place.Place;
 import kr.bi.go_to.repository.FacilityNodeRepository;
 import kr.bi.go_to.repository.FloorMapRepository;
@@ -116,6 +119,86 @@ class IndoorMapControllerIntegrationTest {
     void returns401WhenCalledWithoutAuthentication() throws Exception {
         mockMvc.perform(get("/api/v1/places/{placeId}/floors/{floor}/indoor-map", place.getId(), 1))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("조회 결과를 캐싱해서 DB가 직접 바뀌어도 캐시된 값을 반환한다")
+    void cachesIndoorMapSoDirectDbChangeIsNotReflectedImmediately() throws Exception {
+        mockMvc.perform(
+                        put("/api/v1/admin/places/{placeId}/floors/{floor}", place.getId(), 1)
+                                .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        """
+                        {
+                          "type": "FeatureCollection",
+                          "features": [
+                            {"type":"Feature","geometry":{"type":"Point","coordinates":[126.977,37.579]},"properties":{"node_id":"elevator-1"}}
+                          ]
+                        }
+                        """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/v1/places/{placeId}/floors/{floor}/indoor-map", place.getId(), 1)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.features[0].properties.node_id").value("elevator-1"));
+
+        FloorMap floorMap =
+                floorMapRepository.findByPlace_IdAndFloorLevel(place.getId(), 1).orElseThrow();
+        FloorGeoJson emptyGeoJson = new FloorGeoJson();
+        emptyGeoJson.setFeatures(List.of());
+        floorMap.replaceGeojsonData(emptyGeoJson);
+        floorMapRepository.save(floorMap);
+
+        mockMvc.perform(get("/api/v1/places/{placeId}/floors/{floor}/indoor-map", place.getId(), 1)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.features[0].properties.node_id").value("elevator-1"));
+    }
+
+    @Test
+    @DisplayName("도면을 재등록하면 캐시가 무효화되어 새 값을 즉시 반환한다")
+    void evictsCacheWhenFloorMapIsReRegistered() throws Exception {
+        mockMvc.perform(
+                        put("/api/v1/admin/places/{placeId}/floors/{floor}", place.getId(), 1)
+                                .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        """
+                        {
+                          "type": "FeatureCollection",
+                          "features": [
+                            {"type":"Feature","geometry":{"type":"Point","coordinates":[126.977,37.579]},"properties":{"node_id":"elevator-1"}}
+                          ]
+                        }
+                        """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/v1/places/{placeId}/floors/{floor}/indoor-map", place.getId(), 1)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.features[0].properties.node_id").value("elevator-1"));
+
+        mockMvc.perform(
+                        put("/api/v1/admin/places/{placeId}/floors/{floor}", place.getId(), 1)
+                                .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        """
+                        {
+                          "type": "FeatureCollection",
+                          "features": [
+                            {"type":"Feature","geometry":{"type":"Point","coordinates":[1,1]},"properties":{"node_id":"toilet-1"}}
+                          ]
+                        }
+                        """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/v1/places/{placeId}/floors/{floor}/indoor-map", place.getId(), 1)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.features[0].properties.node_id").value("toilet-1"));
     }
 
     private String login(String nickname) throws Exception {
