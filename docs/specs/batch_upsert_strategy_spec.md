@@ -10,8 +10,8 @@
 본 문서는 "함께가길" (goto) 프로젝트의 Spring Batch 기반 ETL 파이프라인에서 장소(`Place`) 데이터 영속화, 상세 보강 상태 저장, 증분 동기화 메타데이터 기록을 효율적이고 안전하게 처리하기 위한 세부 구현 전략 및 아키텍처 의사결정을 정의합니다.
 
 ### 1.2 Scope
-*   **In-Scope:** Spring Batch의 `ItemWriter` 컴포넌트 데이터베이스 적재 로직, PostgreSQL 충돌 해결(Conflict Resolution) 전략, 상세 보강 flag 및 `place_bf_info` 저장 정책, 증분 동기화 이력(`batch_sync_log`) write-back 트랜잭션 경계, 성능 및 메모리 관리 최적화 방안.
-*   **Out-of-Scope:** Tour API 호출 자체의 Extract 흐름, 스케줄링(Quartz/Spring Scheduler) 트리거 정책, 애플리케이션 사용자 트래픽 처리 로직.
+*   **In-Scope:** Spring Batch의 `ItemWriter` 컴포넌트 데이터베이스 적재 로직, PostgreSQL 충돌 해결(Conflict Resolution) 전략, 상세 보강 flag 및 `place_bf_info` 저장 정책, 증분 동기화 이력(`batch_sync_log`) write-back 트랜잭션 경계, 성능 및 메모리 관리 최적화 방안, Tour API 목록 응답 DTO(`TourApiResponseDto`) 역직렬화 edge case(`body.items` 타입 불일치).
+*   **Out-of-Scope:** Tour API 호출 자체의 Extract 흐름(페이징/스케줄 트리거 제외), 스케줄링(Quartz/Spring Scheduler) 트리거 정책, 애플리케이션 사용자 트래픽 처리 로직.
 
 ---
 
@@ -128,6 +128,31 @@
     *   빈 문자열(`""`)은 "외부 API 응답은 성공했지만 해당 필드에 제공된 값이 없다"는 의미입니다. `COALESCE`는 빈 문자열을 `NULL`로 보지 않으므로 기존 값을 빈 문자열로 덮어써 stale 값을 제거합니다.
     *   UI는 `""`을 "제공된 정보 없음", `null`을 "현재 데이터 갱신중"과 같이 구분해 표현할 수 있습니다.
     *   detail API 호출 자체가 실패한 경우에는 관련 필드를 `null`로 유지하고, detail API가 성공했으나 개별 필드가 누락/빈 값인 경우에만 `""`로 매핑합니다.
+
+### 3.3 Tour API List Response Deserialization (`body.items`)
+
+Writer 앞단의 목록 Reader(`TourApiIncrementalItemReader`, `TourApiBaseItemReader`)는 Tour API 목록 응답을 `TourApiResponseDto`로 역직렬화한다. envelope(`response` / `header` / `body`) 자체는 공통화되어 있으나, **결과 0건일 때만** `body.items`의 JSON 타입이 달라진다.
+
+| 상황 | `body.items` 형태 |
+|------|-------------------|
+| 1건 이상 | 객체 `{ "item": [ ... ] }` |
+| 0건 (`totalCount=0`) | 문자열 `""` |
+
+typed 필드 `Items items`로 바로 매핑하면 Jackson 3가 빈 문자열을 POJO로 강제하지 않아 `InvalidFormatException`이 발생하고, Reader의 기존 `items == null` no-items 분기까지 도달하지 못한다.
+
+#### Decision
+새 Raw DTO 계층이나 전역 `CoercionConfig` 대신, `Body.items`에만 국소 커스텀 deserializer(`TourApiItemsDeserializer`)를 적용한다.
+
+* blank/`""` → `null`로 정규화
+* 객체 토큰 → 기존 `Items` 매핑 유지
+* Reader/Writer 비즈니스 로직은 변경하지 않으며, 기존 null 분기로 0건을 처리한다
+
+#### Jackson / Deserializer Risks
+* **미처리 token shape:** `items`가 `""`/객체가 아닌 배열(`[]`) 등으로 바뀌면 현재 deserializer도 실패할 수 있다. 회귀 테스트 fixture는 실측 0건 응답(`"items":""`)에 묶는다.
+* **과도한 흡수:** non-blank 문자열 `items`까지 null/무시하면 실제 스키마 변경을 숨긴다. blank/`""`만 null로 두고, 그 외는 기본 파싱 실패를 유지한다.
+* **Jackson 3 패키지 혼선:** 런타임 deserializer는 `tools.jackson.*`를 쓰고, `@JsonDeserialize`는 `tools.jackson.databind.annotation`을 사용한다. 버전 업 시 import/동작 확인이 필요하다.
+* **단일 `item` vs 배열:** `Items.item`이 `List`인데 API가 1건일 때 object로 주는 경우(공공 API 흔한 quirk)는 이번 deserializer 범위 밖이며, 별도 `item` deserializer가 필요할 수 있다.
+* **테스트 공백:** `"items":{}`만 검증하면 `"items":""` 회귀를 잡지 못한다. 실측 0건 fixture가 필수다.
 
 ```sql
 -- Place 벌크 Upsert 쿼리

@@ -11,8 +11,7 @@ public record ReportResponse(
         @Schema(description = "제보 이슈 유형", example = "BROKEN") String issueType,
         @Schema(description = "제보 상세 내용", nullable = true) String description,
         @Schema(description = "제보 생성 시각") Instant createdAt,
-        @Schema(description = "PDR 보정 정보. 체크포인트 노드가 아니면 null", nullable = true)
-                CalibrationResponse calibration) {
+        @Schema(description = "PDR 보정 정보. 체크포인트 노드가 아니면 null", nullable = true) CalibrationResponse calibration) {
 
     public static ReportResponse from(ReportData report) {
         return new ReportResponse(

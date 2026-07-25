@@ -1,0 +1,15 @@
+#!/usr/bin/env sh
+# Runs Spotless before the commit message is edited.
+# Skips merge/squash/amend commit sources to avoid breaking those flows.
+
+commit_source="${2-}"
+case "$commit_source" in
+  merge|squash|commit) exit 0 ;;
+esac
+
+cd "$(dirname "$0")/.." || exit 1
+
+./gradlew spotlessCheck --no-daemon || {
+  echo "spotlessCheck failed. Run ./gradlew spotlessApply and retry." >&2
+  exit 1
+}

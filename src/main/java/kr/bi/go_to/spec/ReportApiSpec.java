@@ -20,8 +20,7 @@ public interface ReportApiSpec {
     @Operation(
             tags = SwaggerTag.REPORT_NAME,
             summary = "시설물 상태 제보 생성",
-            description =
-                    "시설물 노드 상태 제보를 생성합니다. 제보한 노드가 체크포인트이면 제보 생성 시점에 확인된 PDR 보정 좌표를 함께 반환합니다.")
+            description = "시설물 노드 상태 제보를 생성합니다. 제보한 노드가 체크포인트이면 제보 생성 시점에 확인된 PDR 보정 좌표를 함께 반환합니다.")
     @ApiResponses({
         @ApiResponse(
                 responseCode = "201",

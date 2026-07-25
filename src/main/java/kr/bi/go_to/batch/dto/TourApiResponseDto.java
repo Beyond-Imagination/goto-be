@@ -5,6 +5,7 @@ import java.util.List;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
+import tools.jackson.databind.annotation.JsonDeserialize;
 
 @Getter
 @Setter
@@ -40,7 +41,9 @@ public class TourApiResponseDto {
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class Body {
 
+        @JsonDeserialize(using = TourApiItemsDeserializer.class)
         private Items items;
+
         private int numOfRows;
         private int pageNo;
         private int totalCount;

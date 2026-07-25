@@ -1,14 +1,11 @@
 package kr.bi.go_to.batch.processor;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 import kr.bi.go_to.batch.dto.PlaceProcessingResult;
 import kr.bi.go_to.batch.dto.TourApiItemDto;
-import kr.bi.go_to.batch.exception.HomepageParsingErrorType;
-import kr.bi.go_to.batch.exception.HomepageParsingException;
 import kr.bi.go_to.batch.listener.EtlFailureLogger;
 import kr.bi.go_to.enums.PlaceSource;
 import kr.bi.go_to.model.place.Place;
@@ -318,33 +315,34 @@ class TourApiBaseItemProcessorTest {
     }
 
     @Test
-    @DisplayName("homepage에 URL이 2개 이상이면 process하면 HomepageParsingException(MULTIPLE_URLS)이 난다")
-    void process_homepageMultipleUrls_throwsHomepageParsingException() {
+    @DisplayName("homepage에 판단할 수 없는 일반 URL이 2개 이상이면 process하면 homepage는 null이다")
+    void process_homepageMultiplePrimaryUrls_returnsNullHomepage() throws Exception {
         TourApiItemDto dto =
-                createDtoWithHomepage("<a href=\"https://url1.com\"></a> <a href=\"https://url2.com\"></a>");
-        assertThatThrownBy(() -> processor.process(dto))
-                .isInstanceOf(HomepageParsingException.class)
-                .extracting("errorType")
-                .isEqualTo(HomepageParsingErrorType.MULTIPLE_URLS);
+                createDtoWithHomepage("강화군 문화관광 https://www.ganghwa.go.kr/tour/ 국가유산청 https://www.khs.go.kr/main.html");
+
+        PlaceProcessingResult result = processor.process(dto);
+
+        assertThat(result.place().getHomepage()).isNull();
     }
 
     @Test
-    @DisplayName("homepage에서 추출한 값이 유효한 URL이 아니면 process하면 HomepageParsingException(INVALID_URL_FORMAT)이 난다")
-    void process_homepageInvalidUrlFormat_throwsHomepageParsingException() {
+    @DisplayName("homepage가 라벨과 URL로 구성되어 있으면 process하면 URL만 추출한다")
+    void process_homepageLabelAndUrl_returnsUrl() throws Exception {
         TourApiItemDto dto = createDtoWithHomepage("<a>가경터미널시장 블로그</a>");
-        assertThatThrownBy(() -> processor.process(dto))
-                .isInstanceOf(HomepageParsingException.class)
-                .extracting("errorType")
-                .isEqualTo(HomepageParsingErrorType.INVALID_URL_FORMAT);
+
+        PlaceProcessingResult result =
+                processor.process(dto.withDetails(null, "문경 문화관광 https://www.gbmg.go.kr/tour", null, null));
+
+        assertThat(result.place().getHomepage()).isEqualTo("https://www.gbmg.go.kr/tour");
     }
 
     @Test
-    @DisplayName("homepage에서 URL을 추출할 수 없으면 process하면 HomepageParsingException(NO_EXTRACTED_URL)이 난다")
-    void process_homepageNoExtractedUrl_throwsHomepageParsingException() {
+    @DisplayName("homepage에서 URL을 추출할 수 없으면 process하면 homepage는 null이다")
+    void process_homepageNoExtractedUrl_returnsNullHomepage() throws Exception {
         TourApiItemDto dto = createDtoWithHomepage("<a></a>");
-        assertThatThrownBy(() -> processor.process(dto))
-                .isInstanceOf(HomepageParsingException.class)
-                .extracting("errorType")
-                .isEqualTo(HomepageParsingErrorType.NO_EXTRACTED_URL);
+
+        PlaceProcessingResult result = processor.process(dto);
+
+        assertThat(result.place().getHomepage()).isNull();
     }
 }
