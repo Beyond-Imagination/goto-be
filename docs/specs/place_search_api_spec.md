@@ -22,7 +22,7 @@
 ### 2.1 Endpoint
 
 ```http
-GET /api/places/search
+GET /api/v1/places/search
 ```
 
 기존 Spring Security 정책에 따라 인증이 필요하며, 유효한 JWT access token을 전달해야 합니다.
@@ -43,7 +43,7 @@ Authorization: Bearer {accessToken}
 요청 예시:
 
 ```http
-GET /api/places/search?lat=37.5665&lng=126.9780&k=10&category=관광지
+GET /api/v1/places/search?lat=37.5665&lng=126.9780&k=10&category=관광지
 ```
 
 ### 2.3 Response

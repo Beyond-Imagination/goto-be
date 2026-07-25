@@ -9,7 +9,8 @@ public enum SwaggerTag {
     AUTH("A. Auth", "인증 API"),
     HELP_REQUEST("B. Help Request", "도움 요청 API"),
     PLACE("C. Place", "장소 탐색 API"),
-    ADMIN("D. Admin", "관리자 API");
+    ADMIN("D. Admin", "관리자 API"),
+    REPORT("E. Report", "시설물 상태 제보 API");
 
     public static final String AUTH_NAME = "A. Auth";
     public static final String AUTH_DESCRIPTION = "인증 API";
@@ -19,6 +20,8 @@ public enum SwaggerTag {
     public static final String PLACE_DESCRIPTION = "장소 탐색 API";
     public static final String ADMIN_NAME = "D. Admin";
     public static final String ADMIN_DESCRIPTION = "관리자 API";
+    public static final String REPORT_NAME = "E. Report";
+    public static final String REPORT_DESCRIPTION = "시설물 상태 제보 API";
 
     private final String tagName;
     private final String description;

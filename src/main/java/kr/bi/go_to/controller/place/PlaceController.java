@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/places")
+@RequestMapping("/api/v1/places")
 public class PlaceController implements PlaceApiSpec {
 
     private final SearchPlacesUseCase searchPlacesUseCase;
