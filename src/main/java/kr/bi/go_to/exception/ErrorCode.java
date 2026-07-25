@@ -7,6 +7,7 @@ public enum ErrorCode {
     INVALID_REQUEST(HttpStatus.BAD_REQUEST, "요청 값이 올바르지 않습니다."),
     CANNOT_ACCEPT_OWN_HELP_REQUEST(HttpStatus.BAD_REQUEST, "자신의 도움 요청은 수락할 수 없습니다."),
     CANNOT_REJECT_OWN_HELP_REQUEST(HttpStatus.BAD_REQUEST, "자신의 도움 요청은 거절할 수 없습니다."),
+    TARGET_FEATURE_NOT_FOUND(HttpStatus.BAD_REQUEST, "해당 층 도면에 존재하지 않는 targetFeatureId입니다."),
 
     // 401 UNAUTHORIZED
     INVALID_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "유효하지 않은 리프레시 토큰입니다."),
@@ -22,6 +23,7 @@ public enum ErrorCode {
     // 404 NOT_FOUND
     PLACE_NOT_FOUND(HttpStatus.NOT_FOUND, "장소를 찾을 수 없습니다."),
     HELP_REQUEST_NOT_FOUND(HttpStatus.NOT_FOUND, "도움 요청을 찾을 수 없습니다."),
+    FLOOR_MAP_NOT_FOUND(HttpStatus.NOT_FOUND, "층 도면을 찾을 수 없습니다."),
 
     // 409 CONFLICT
     HELP_REQUEST_EXPIRED(HttpStatus.CONFLICT, "도움 요청이 만료되었습니다."),
