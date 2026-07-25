@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/admin/places/{placeId}/floors/{floor}/nodes")
+@RequestMapping("/api/v1/admin/places/{placeId}/floors/{floor}")
 public class AdminFacilityNodeController implements AdminFacilityNodeApiSpec {
 
     private final FacilityNodeService facilityNodeService;
@@ -25,7 +25,7 @@ public class AdminFacilityNodeController implements AdminFacilityNodeApiSpec {
         this.facilityNodeService = facilityNodeService;
     }
 
-    @PostMapping
+    @PostMapping("/nodes")
     @ResponseStatus(HttpStatus.CREATED)
     @Override
     public FacilityNodeResponse createNode(
