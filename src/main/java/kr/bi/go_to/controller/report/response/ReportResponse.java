@@ -4,14 +4,14 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 import kr.bi.go_to.service.report.model.ReportData;
 
-@Schema(name = "ReportResponse", description = "Facility status report response")
+@Schema(name = "ReportResponse", description = "시설물 상태 제보 응답")
 public record ReportResponse(
-        @Schema(description = "Report ID", example = "1") Long id,
-        @Schema(description = "Reported facility node ID", example = "1") Long nodeId,
-        @Schema(description = "Report issue type", example = "BROKEN") String issueType,
-        @Schema(description = "Report details", nullable = true) String description,
-        @Schema(description = "Report creation time") Instant createdAt,
-        @Schema(description = "PDR calibration data. Null when the node is not a checkpoint.", nullable = true)
+        @Schema(description = "제보 ID", example = "1") Long id,
+        @Schema(description = "제보된 시설물 노드 ID", example = "1") Long nodeId,
+        @Schema(description = "제보 이슈 유형", example = "BROKEN") String issueType,
+        @Schema(description = "제보 상세 내용", nullable = true) String description,
+        @Schema(description = "제보 생성 시각") Instant createdAt,
+        @Schema(description = "PDR 보정 정보. 체크포인트 노드가 아니면 null", nullable = true)
                 CalibrationResponse calibration) {
 
     public static ReportResponse from(ReportData report) {
