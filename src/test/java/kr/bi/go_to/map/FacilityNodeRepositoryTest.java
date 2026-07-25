@@ -13,6 +13,7 @@ import kr.bi.go_to.repository.FloorMapRepository;
 import kr.bi.go_to.repository.PlaceRepository;
 import kr.bi.go_to.support.TestcontainersConfiguration;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
@@ -65,7 +66,8 @@ class FacilityNodeRepositoryTest {
     }
 
     @Test
-    void 같은_도면에_속한_노드만_조회한다() {
+    @DisplayName("같은 도면에 속한 노드만 조회한다")
+    void findsOnlyNodesBelongingToSameFloorMap() {
         facilityNodeRepository.save(FacilityNode.builder()
                 .floorMap(floorMapOnFloor1)
                 .nodeType("ELEVATOR")
@@ -84,7 +86,8 @@ class FacilityNodeRepositoryTest {
     }
 
     @Test
-    void 도면에_노드가_없으면_빈_목록을_반환한다() {
+    @DisplayName("도면에 노드가 없으면 빈 목록을 반환한다")
+    void returnsEmptyListWhenFloorMapHasNoNodes() {
         List<FacilityNode> found = facilityNodeRepository.findByFloorMap_Id(floorMapOnFloor1.getId());
 
         assertThat(found).isEmpty();

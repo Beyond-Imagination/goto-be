@@ -14,6 +14,7 @@ import kr.bi.go_to.repository.PlaceRepository;
 import kr.bi.go_to.repository.RefreshTokenRepository;
 import kr.bi.go_to.support.TestcontainersConfiguration;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -91,7 +92,8 @@ class AdminFacilityNodeControllerIntegrationTest {
     }
 
     @Test
-    void 도면에_존재하는_targetFeatureId로_노드를_등록한다() throws Exception {
+    @DisplayName("도면에 존재하는 targetFeatureId로 노드를 등록한다")
+    void registersNodeWithTargetFeatureIdExistingInFloorMap() throws Exception {
         mockMvc.perform(
                         post("/api/v1/admin/places/{placeId}/floors/{floor}/nodes", place.getId(), 1)
                                 .header(HttpHeaders.AUTHORIZATION, bearer(token))
@@ -116,7 +118,8 @@ class AdminFacilityNodeControllerIntegrationTest {
     }
 
     @Test
-    void 도면에_없는_targetFeatureId면_400을_반환한다() throws Exception {
+    @DisplayName("도면에 없는 targetFeatureId면 400을 반환한다")
+    void returns400WhenTargetFeatureIdDoesNotExistInFloorMap() throws Exception {
         mockMvc.perform(
                         post("/api/v1/admin/places/{placeId}/floors/{floor}/nodes", place.getId(), 1)
                                 .header(HttpHeaders.AUTHORIZATION, bearer(token))
@@ -135,7 +138,8 @@ class AdminFacilityNodeControllerIntegrationTest {
     }
 
     @Test
-    void targetFeatureId가_없어도_등록된다() throws Exception {
+    @DisplayName("targetFeatureId가 없어도 등록된다")
+    void registersNodeEvenWithoutTargetFeatureId() throws Exception {
         mockMvc.perform(
                         post("/api/v1/admin/places/{placeId}/floors/{floor}/nodes", place.getId(), 1)
                                 .header(HttpHeaders.AUTHORIZATION, bearer(token))
@@ -153,7 +157,8 @@ class AdminFacilityNodeControllerIntegrationTest {
     }
 
     @Test
-    void 존재하지_않는_도면이면_404를_반환한다() throws Exception {
+    @DisplayName("존재하지 않는 도면이면 404를 반환한다")
+    void returns404WhenFloorMapDoesNotExist() throws Exception {
         mockMvc.perform(
                         post("/api/v1/admin/places/{placeId}/floors/{floor}/nodes", place.getId(), 99)
                                 .header(HttpHeaders.AUTHORIZATION, bearer(token))

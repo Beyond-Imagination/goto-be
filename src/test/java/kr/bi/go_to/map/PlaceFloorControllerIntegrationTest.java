@@ -15,6 +15,7 @@ import kr.bi.go_to.repository.PlaceRepository;
 import kr.bi.go_to.repository.RefreshTokenRepository;
 import kr.bi.go_to.support.TestcontainersConfiguration;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -77,7 +78,8 @@ class PlaceFloorControllerIntegrationTest {
     }
 
     @Test
-    void 등록된_층_목록을_오름차순으로_반환한다() throws Exception {
+    @DisplayName("등록된 층 목록을 오름차순으로 반환한다")
+    void returnsRegisteredFloorLevelsInAscendingOrder() throws Exception {
         floorMapRepository.save(FloorMap.builder().place(place).floorLevel(2).build());
         floorMapRepository.save(FloorMap.builder().place(place).floorLevel(-1).build());
         floorMapRepository.save(FloorMap.builder().place(place).floorLevel(1).build());
@@ -91,7 +93,8 @@ class PlaceFloorControllerIntegrationTest {
     }
 
     @Test
-    void 등록된_도면이_없으면_빈_배열을_반환한다() throws Exception {
+    @DisplayName("등록된 도면이 없으면 빈 배열을 반환한다")
+    void returnsEmptyArrayWhenNoFloorMapsExist() throws Exception {
         mockMvc.perform(get("/api/v1/places/{placeId}/floors", place.getId())
                         .header(HttpHeaders.AUTHORIZATION, bearer(token)))
                 .andExpect(status().isOk())
@@ -99,7 +102,8 @@ class PlaceFloorControllerIntegrationTest {
     }
 
     @Test
-    void 인증_없이_호출하면_401을_반환한다() throws Exception {
+    @DisplayName("인증 없이 호출하면 401을 반환한다")
+    void returns401WhenCalledWithoutAuthentication() throws Exception {
         mockMvc.perform(get("/api/v1/places/{placeId}/floors", place.getId())).andExpect(status().isUnauthorized());
     }
 

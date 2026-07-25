@@ -15,6 +15,7 @@ import kr.bi.go_to.repository.PlaceRepository;
 import kr.bi.go_to.repository.RefreshTokenRepository;
 import kr.bi.go_to.support.TestcontainersConfiguration;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -77,7 +78,8 @@ class IndoorMapControllerIntegrationTest {
     }
 
     @Test
-    void 등록된_도면을_조회한다() throws Exception {
+    @DisplayName("등록된 도면을 조회한다")
+    void getsRegisteredFloorMap() throws Exception {
         mockMvc.perform(
                         put("/api/v1/admin/places/{placeId}/floors/{floor}", place.getId(), 1)
                                 .header(HttpHeaders.AUTHORIZATION, bearer(token))
@@ -101,7 +103,8 @@ class IndoorMapControllerIntegrationTest {
     }
 
     @Test
-    void 존재하지_않는_도면이면_404를_반환한다() throws Exception {
+    @DisplayName("존재하지 않는 도면이면 404를 반환한다")
+    void returns404WhenFloorMapDoesNotExist() throws Exception {
         mockMvc.perform(get("/api/v1/places/{placeId}/floors/{floor}/indoor-map", place.getId(), 99)
                         .header(HttpHeaders.AUTHORIZATION, bearer(token)))
                 .andExpect(status().isNotFound())
@@ -109,7 +112,8 @@ class IndoorMapControllerIntegrationTest {
     }
 
     @Test
-    void 인증_없이_호출하면_401을_반환한다() throws Exception {
+    @DisplayName("인증 없이 호출하면 401을 반환한다")
+    void returns401WhenCalledWithoutAuthentication() throws Exception {
         mockMvc.perform(get("/api/v1/places/{placeId}/floors/{floor}/indoor-map", place.getId(), 1))
                 .andExpect(status().isUnauthorized());
     }

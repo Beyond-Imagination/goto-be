@@ -17,6 +17,7 @@ import kr.bi.go_to.repository.PlaceRepository;
 import kr.bi.go_to.repository.RefreshTokenRepository;
 import kr.bi.go_to.support.TestcontainersConfiguration;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -76,7 +77,8 @@ class AdminFloorMapControllerIntegrationTest {
     }
 
     @Test
-    void 도면을_처음_등록하면_생성된다() throws Exception {
+    @DisplayName("도면을 처음 등록하면 생성된다")
+    void createsFloorMapWhenRegisteredFirstTime() throws Exception {
         String token = login("admin");
 
         mockMvc.perform(
@@ -102,7 +104,8 @@ class AdminFloorMapControllerIntegrationTest {
     }
 
     @Test
-    void 같은_장소와_층에_재등록하면_기존_도면을_덮어쓴다() throws Exception {
+    @DisplayName("같은 장소와 층에 재등록하면 기존 도면을 덮어쓴다")
+    void overwritesExistingFloorMapWhenReRegisteredForSamePlaceAndFloor() throws Exception {
         String firstToken = login("first-admin");
 
         mockMvc.perform(put("/api/v1/admin/places/{placeId}/floors/{floor}", place.getId(), 1)
@@ -142,7 +145,8 @@ class AdminFloorMapControllerIntegrationTest {
     }
 
     @Test
-    void 존재하지_않는_장소면_404를_반환한다() throws Exception {
+    @DisplayName("존재하지 않는 장소면 404를 반환한다")
+    void returns404WhenPlaceDoesNotExist() throws Exception {
         String token = login("admin");
 
         mockMvc.perform(put("/api/v1/admin/places/{placeId}/floors/{floor}", 999999L, 1)
@@ -154,7 +158,8 @@ class AdminFloorMapControllerIntegrationTest {
     }
 
     @Test
-    void 인증_없이_호출하면_401을_반환한다() throws Exception {
+    @DisplayName("인증 없이 호출하면 401을 반환한다")
+    void returns401WhenCalledWithoutAuthentication() throws Exception {
         mockMvc.perform(put("/api/v1/admin/places/{placeId}/floors/{floor}", place.getId(), 1)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"type\":\"FeatureCollection\",\"features\":[]}"))

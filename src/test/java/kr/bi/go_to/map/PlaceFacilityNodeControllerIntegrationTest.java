@@ -15,6 +15,7 @@ import kr.bi.go_to.repository.PlaceRepository;
 import kr.bi.go_to.repository.RefreshTokenRepository;
 import kr.bi.go_to.support.TestcontainersConfiguration;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -92,7 +93,8 @@ class PlaceFacilityNodeControllerIntegrationTest {
     }
 
     @Test
-    void 등록된_노드_목록을_조회한다() throws Exception {
+    @DisplayName("등록된 노드 목록을 조회한다")
+    void getsRegisteredNodeList() throws Exception {
         mockMvc.perform(
                         post("/api/v1/admin/places/{placeId}/floors/{floor}/nodes", place.getId(), 1)
                                 .header(HttpHeaders.AUTHORIZATION, bearer(token))
@@ -118,7 +120,8 @@ class PlaceFacilityNodeControllerIntegrationTest {
     }
 
     @Test
-    void 노드가_없으면_빈_목록을_반환한다() throws Exception {
+    @DisplayName("노드가 없으면 빈 목록을 반환한다")
+    void returnsEmptyListWhenNoNodesExist() throws Exception {
         mockMvc.perform(get("/api/v1/places/{placeId}/floors/{floor}/nodes", place.getId(), 1)
                         .header(HttpHeaders.AUTHORIZATION, bearer(token)))
                 .andExpect(status().isOk())
@@ -126,7 +129,8 @@ class PlaceFacilityNodeControllerIntegrationTest {
     }
 
     @Test
-    void 존재하지_않는_도면이면_404를_반환한다() throws Exception {
+    @DisplayName("존재하지 않는 도면이면 404를 반환한다")
+    void returns404WhenFloorMapDoesNotExist() throws Exception {
         mockMvc.perform(get("/api/v1/places/{placeId}/floors/{floor}/nodes", place.getId(), 99)
                         .header(HttpHeaders.AUTHORIZATION, bearer(token)))
                 .andExpect(status().isNotFound())

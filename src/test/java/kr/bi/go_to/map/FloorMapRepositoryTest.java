@@ -12,6 +12,7 @@ import kr.bi.go_to.repository.FloorMapRepository;
 import kr.bi.go_to.repository.PlaceRepository;
 import kr.bi.go_to.support.TestcontainersConfiguration;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
@@ -49,7 +50,8 @@ class FloorMapRepositoryTest {
     }
 
     @Test
-    void 존재하는_장소와_층으로_도면을_조회한다() {
+    @DisplayName("존재하는 장소와 층으로 도면을 조회한다")
+    void findsFloorMapByExistingPlaceAndFloorLevel() {
         FloorMap floorMap = floorMapRepository.save(
                 FloorMap.builder().place(place).floorLevel(1).build());
 
@@ -60,7 +62,8 @@ class FloorMapRepositoryTest {
     }
 
     @Test
-    void 존재하지_않는_층이면_빈_값을_반환한다() {
+    @DisplayName("존재하지 않는 층이면 빈 값을 반환한다")
+    void returnsEmptyWhenFloorLevelDoesNotExist() {
         floorMapRepository.save(FloorMap.builder().place(place).floorLevel(1).build());
 
         Optional<FloorMap> found = floorMapRepository.findByPlace_IdAndFloorLevel(place.getId(), 2);
@@ -69,7 +72,8 @@ class FloorMapRepositoryTest {
     }
 
     @Test
-    void 장소의_층_목록을_오름차순으로_반환한다() {
+    @DisplayName("장소의 층 목록을 오름차순으로 반환한다")
+    void returnsFloorLevelsInAscendingOrder() {
         floorMapRepository.save(FloorMap.builder().place(place).floorLevel(2).build());
         floorMapRepository.save(FloorMap.builder().place(place).floorLevel(-1).build());
         floorMapRepository.save(FloorMap.builder().place(place).floorLevel(1).build());
@@ -80,7 +84,8 @@ class FloorMapRepositoryTest {
     }
 
     @Test
-    void 등록된_도면이_없으면_빈_목록을_반환한다() {
+    @DisplayName("등록된 도면이 없으면 빈 목록을 반환한다")
+    void returnsEmptyListWhenNoFloorMapsExist() {
         List<Integer> floorLevels = floorMapRepository.findFloorLevelByPlace_IdOrderByFloorLevelAsc(place.getId());
 
         assertThat(floorLevels).isEmpty();
