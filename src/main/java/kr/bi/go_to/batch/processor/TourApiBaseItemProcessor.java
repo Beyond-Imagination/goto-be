@@ -2,11 +2,11 @@ package kr.bi.go_to.batch.processor;
 
 import java.util.ArrayList;
 import java.util.List;
-import kr.bi.go_to.batch.category.validation.TourApiPlaceCategoryValidator;
 import kr.bi.go_to.batch.dto.PlaceProcessingResult;
 import kr.bi.go_to.batch.dto.TourApiItemDto;
 import kr.bi.go_to.batch.listener.EtlFailureLogger;
 import kr.bi.go_to.batch.mapper.TourApiHomepageNormalizer;
+import kr.bi.go_to.batch.validation.TourApiPlaceCategoryValidator;
 import kr.bi.go_to.enums.PlaceSource;
 import kr.bi.go_to.model.place.Place;
 import lombok.RequiredArgsConstructor;
