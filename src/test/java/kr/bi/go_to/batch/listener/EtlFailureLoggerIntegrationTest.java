@@ -60,4 +60,23 @@ class EtlFailureLoggerIntegrationTest {
                 "SELECT COUNT(*) FROM etl_failure_log WHERE external_id = ?", Integer.class, externalId);
         assertThat(count).isEqualTo(1);
     }
+
+    @Test
+    @DisplayName("동일 JobInstance·step·항목·오류를 다시 기록하면 idempotency 제약으로 한 건만 유지한다")
+    void logFailureDeduplicatesSameBatchItemAcrossRestart() {
+        etlFailureLogger.logFailure(10L, "tourApiBaseSyncStep", "12345", "invalid category");
+        etlFailureLogger.logFailure(10L, "tourApiBaseSyncStep", "12345", "invalid category");
+
+        Long count = jdbcTemplate.queryForObject(
+                """
+                SELECT COUNT(*)
+                FROM etl_failure_log
+                WHERE job_instance_id = 10
+                  AND step_name = 'tourApiBaseSyncStep'
+                  AND external_id = '12345'
+                """,
+                Long.class);
+
+        assertThat(count).isEqualTo(1);
+    }
 }
