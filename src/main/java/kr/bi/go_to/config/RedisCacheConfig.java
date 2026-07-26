@@ -1,7 +1,10 @@
 package kr.bi.go_to.config;
 
 import java.time.Duration;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.CachingConfigurer;
 import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.cache.interceptor.CacheErrorHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
@@ -14,10 +17,17 @@ import tools.jackson.databind.jsontype.PolymorphicTypeValidator;
 
 @Configuration
 @EnableCaching
-public class RedisCacheConfig {
+public class RedisCacheConfig implements CachingConfigurer {
 
+    private final RedisConnectionFactory connectionFactory;
+
+    public RedisCacheConfig(RedisConnectionFactory connectionFactory) {
+        this.connectionFactory = connectionFactory;
+    }
+
+    @Override
     @Bean
-    RedisCacheManager cacheManager(RedisConnectionFactory connectionFactory) {
+    public CacheManager cacheManager() {
         PolymorphicTypeValidator typeValidator = BasicPolymorphicTypeValidator.builder()
                 .allowIfBaseType(Object.class)
                 .build();
@@ -32,5 +42,11 @@ public class RedisCacheConfig {
         return RedisCacheManager.builder(connectionFactory)
                 .cacheDefaults(cacheConfiguration)
                 .build();
+    }
+
+    @Override
+    @Bean
+    public CacheErrorHandler errorHandler() {
+        return new RedisCacheErrorHandler();
     }
 }
