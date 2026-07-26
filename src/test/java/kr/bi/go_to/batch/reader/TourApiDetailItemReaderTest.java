@@ -1,6 +1,7 @@
 package kr.bi.go_to.batch.reader;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
@@ -90,6 +91,17 @@ class TourApiDetailItemReaderTest {
         assertThat(dto.overview()).isEmpty();
         assertThat(dto.homepage()).isEmpty();
         assertThat(dto.detailCommonSynced()).isTrue();
+    }
+
+    @Test
+    @DisplayName("비동기 상세 조회 인프라 예외를 로그 후 무시하지 않고 step으로 전파한다")
+    void propagatesAsyncDetailInfrastructureFailure() {
+        jdbcTemplate.returnSinglePlaceRow();
+        RuntimeException failure = new RuntimeException("provider unavailable");
+        when(tourApiClient.fetchDetail(eq("detailCommon2"), eq("12345"), isNull()))
+                .thenThrow(failure);
+
+        assertThatThrownBy(reader::read).hasRootCause(failure);
     }
 
     private static final class CapturingJdbcTemplate extends JdbcTemplate {

@@ -1,14 +1,13 @@
 package kr.bi.go_to.batch.client;
 
 import java.net.URI;
-import lombok.extern.slf4j.Slf4j;
+import kr.bi.go_to.batch.exception.TourApiInfrastructureException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 import tools.jackson.databind.JsonNode;
 
-@Slf4j
 @Component
 public class TourApiClient {
 
@@ -46,21 +45,26 @@ public class TourApiClient {
 
         try {
             JsonNode response = restClient.get().uri(uri).retrieve().body(JsonNode.class);
-            if (response != null) {
-                if (hasNonOkResult(response, apiName, contentId)) {
-                    return null;
-                }
-
-                JsonNode item = response.at("/response/body/items/item");
-                if (item.isArray() && !item.isEmpty()) {
-                    return item.get(0);
-                }
-                if (item.isObject()) {
-                    return item;
-                }
+            if (response == null) {
+                throw new TourApiInfrastructureException(
+                        "Tour API detail response body is empty: apiName=%s, contentId=%s"
+                                .formatted(apiName, contentId));
             }
-        } catch (Exception e) {
-            log.warn("Failed to fetch detail API: {} for contentId: {}", apiName, contentId, e);
+            validateResult(response, apiName, contentId);
+
+            JsonNode item = response.at("/response/body/items/item");
+            if (item.isArray() && !item.isEmpty()) {
+                return item.get(0);
+            }
+            if (item.isObject()) {
+                return item;
+            }
+        } catch (TourApiInfrastructureException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new TourApiInfrastructureException(
+                    "Failed to fetch Tour API detail: apiName=%s, contentId=%s".formatted(apiName, contentId),
+                    exception);
         }
         return null;
     }
@@ -69,25 +73,17 @@ public class TourApiClient {
         return "detailIntro2".equals(apiName);
     }
 
-    private boolean hasNonOkResult(JsonNode response, String apiName, String contentId) {
+    private void validateResult(JsonNode response, String apiName, String contentId) {
         JsonNode resultCodeNode = response.at("/response/header/resultCode");
-        if (resultCodeNode.isMissingNode() || resultCodeNode.isNull()) {
-            return false;
-        }
-
-        String resultCode = resultCodeNode.asString();
-        if (resultCode.isBlank() || "0000".equals(resultCode)) {
-            return false;
+        String resultCode = resultCodeNode.isMissingNode() || resultCodeNode.isNull() ? "" : resultCodeNode.asString();
+        if ("0000".equals(resultCode)) {
+            return;
         }
 
         String resultMsg = response.at("/response/header/resultMsg").asString();
-        log.warn(
-                "Tour API 상세 조회 실패 응답입니다. apiName={}, contentId={}, resultCode={}, resultMsg={}",
-                apiName,
-                contentId,
-                resultCode,
-                resultMsg);
-        return true;
+        throw new TourApiInfrastructureException(
+                "Tour API detail request failed: apiName=%s, contentId=%s, resultCode=%s, resultMsg=%s"
+                        .formatted(apiName, contentId, resultCode, resultMsg));
     }
 
     public String extractFieldOrEmpty(JsonNode node, String fieldName) {

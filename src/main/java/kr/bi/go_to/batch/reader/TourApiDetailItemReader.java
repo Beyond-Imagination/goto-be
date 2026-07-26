@@ -89,13 +89,9 @@ public class TourApiDetailItemReader implements ItemReader<TourApiItemDto> {
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
 
         for (CompletableFuture<TourApiItemDto> future : futures) {
-            try {
-                TourApiItemDto result = future.get();
-                if (result != null) {
-                    itemBuffer.add(result);
-                }
-            } catch (Exception e) {
-                log.error("Error retrieving async result", e);
+            TourApiItemDto result = future.join();
+            if (result != null) {
+                itemBuffer.add(result);
             }
         }
         log.info("Enrichment complete. Buffer size: {}", itemBuffer.size());

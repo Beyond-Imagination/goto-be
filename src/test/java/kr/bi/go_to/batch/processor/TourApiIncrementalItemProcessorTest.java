@@ -1,6 +1,7 @@
 package kr.bi.go_to.batch.processor;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -118,6 +119,16 @@ class TourApiIncrementalItemProcessorTest {
         assertThat(result.place().isDetailCommonSynced()).isTrue();
         assertThat(result.place().isDetailWithTourSynced()).isFalse();
         assertThat(result.place().isDetailIntroSynced()).isTrue();
+    }
+
+    @Test
+    @DisplayName("detail provider 인프라 예외는 source-data skip으로 변환하지 않고 전파한다")
+    void propagatesDetailProviderInfrastructureFailure() {
+        IllegalStateException infrastructureFailure = new IllegalStateException("provider unavailable");
+        when(tourApiClient.fetchDetail(eq("detailCommon2"), anyString(), nullable(String.class)))
+                .thenThrow(infrastructureFailure);
+
+        assertThatThrownBy(() -> processor.process(createDto("1"))).isSameAs(infrastructureFailure);
     }
 
     private TourApiItemDto createDto(String showflag) {

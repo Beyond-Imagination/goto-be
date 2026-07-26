@@ -2,6 +2,7 @@ package kr.bi.go_to.batch.config;
 
 import kr.bi.go_to.batch.dto.PlaceProcessingResult;
 import kr.bi.go_to.batch.dto.TourApiItemDto;
+import kr.bi.go_to.batch.exception.InvalidTourApiCategoryException;
 import kr.bi.go_to.batch.listener.TourApiIncrementalSyncLogListener;
 import kr.bi.go_to.batch.listener.TourApiSkipListener;
 import kr.bi.go_to.batch.processor.TourApiBaseItemProcessor;
@@ -92,7 +93,7 @@ public class TourApiBatchConfig {
                 .processor(baseItemProcessor)
                 .writer(itemWriter)
                 .faultTolerant()
-                .skip(Exception.class)
+                .skip(InvalidTourApiCategoryException.class)
                 .skipLimit(100)
                 .listener(tourApiSkipListener)
                 .build();
@@ -108,7 +109,7 @@ public class TourApiBatchConfig {
                 .processor(incrementalItemProcessor)
                 .writer(itemWriter)
                 .faultTolerant()
-                .skip(Exception.class)
+                .skip(InvalidTourApiCategoryException.class)
                 .skipLimit(100)
                 .listener(tourApiSkipListener)
                 .listener(incrementalItemReader)
@@ -124,7 +125,7 @@ public class TourApiBatchConfig {
                 .processor(baseItemProcessor)
                 .writer(itemWriter)
                 .faultTolerant()
-                .skip(Exception.class)
+                .skip(InvalidTourApiCategoryException.class)
                 .skipLimit(100)
                 .listener(tourApiSkipListener)
                 .build();

@@ -103,27 +103,23 @@ public class TourApiIncrementalItemProcessor implements ItemProcessor<TourApiIte
         if ("0".equals(dto.showflag())) {
             isDeleted = true;
         } else {
-            // Eager Fetch for newly added/updated items
-            try {
-                JsonNode common2 = tourApiClient.fetchDetail("detailCommon2", dto.contentid(), null);
-                detailCommonSynced = common2 != null;
-                if (detailCommonSynced) {
-                    overview = tourApiClient.extractFieldOrEmpty(common2, "overview");
-                    String rawHomepage = tourApiClient.extractFieldOrEmpty(common2, "homepage");
-                    homepage = TourApiHomepageNormalizer.normalize(rawHomepage);
-                }
-
-                JsonNode withTour2 = tourApiClient.fetchDetail("detailWithTour2", dto.contentid(), null);
-                detailWithTourSynced = withTour2 != null;
-                bfDetails = withTour2 != null ? withTour2.toString() : null;
-
-                JsonNode intro2 = tourApiClient.fetchDetail("detailIntro2", dto.contentid(), dto.contenttypeid());
-                detailIntroSynced = intro2 != null;
-                introDetails = intro2 != null ? intro2.toString() : null;
-            } catch (Exception e) {
-                log.warn("Eager fetch failed for contentId: {}, fallback to lazy fetch later.", dto.contentid(), e);
-                // Leave overview = null to trigger lazy fetch in Step 2
+            // Eager Fetch for newly added/updated items. Transport/infrastructure exceptions
+            // intentionally propagate so they cannot be classified as source-data skips.
+            JsonNode common2 = tourApiClient.fetchDetail("detailCommon2", dto.contentid(), null);
+            detailCommonSynced = common2 != null;
+            if (detailCommonSynced) {
+                overview = tourApiClient.extractFieldOrEmpty(common2, "overview");
+                String rawHomepage = tourApiClient.extractFieldOrEmpty(common2, "homepage");
+                homepage = TourApiHomepageNormalizer.normalize(rawHomepage);
             }
+
+            JsonNode withTour2 = tourApiClient.fetchDetail("detailWithTour2", dto.contentid(), null);
+            detailWithTourSynced = withTour2 != null;
+            bfDetails = withTour2 != null ? withTour2.toString() : null;
+
+            JsonNode intro2 = tourApiClient.fetchDetail("detailIntro2", dto.contentid(), dto.contenttypeid());
+            detailIntroSynced = intro2 != null;
+            introDetails = intro2 != null ? intro2.toString() : null;
         }
 
         Place place = Place.builder()
