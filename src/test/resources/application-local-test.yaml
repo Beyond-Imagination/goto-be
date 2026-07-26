@@ -27,6 +27,7 @@ spring:
 
 tour-api:
   base-url: "https://apis.data.go.kr/B551011/KorService2"
+  with-base-url: "https://apis.data.go.kr/B551011/KorWithService2"
   service-key: "${TOUR_API_SERVICE_KEY}"
   mobile-os: "ETC"
   mobile-app: "Goto"

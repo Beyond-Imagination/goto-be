@@ -43,6 +43,7 @@ springdoc:
 
 tour-api:
   base-url: "https://apis.data.go.kr/B551011/KorService2"
+  with-base-url: "https://apis.data.go.kr/B551011/KorWithService2"
   mobile-os: "ETC"
   mobile-app: "Goto"
   detail-quota: 250

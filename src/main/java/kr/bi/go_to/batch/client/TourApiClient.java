@@ -19,6 +19,9 @@ public class TourApiClient {
     @Value("${tour-api.base-url:}")
     private String baseUrl;
 
+    @Value("${tour-api.with-base-url:}")
+    private String withBaseUrl;
+
     @Value("${tour-api.mobile-os:ETC}")
     private String mobileOs;
 
@@ -30,7 +33,8 @@ public class TourApiClient {
     }
 
     public JsonNode fetchDetail(String apiName, String contentId, String contentTypeId) {
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(baseUrl + "/" + apiName)
+        String targetBaseUrl = "detailWithTour2".equals(apiName) ? withBaseUrl : baseUrl;
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(targetBaseUrl + "/" + apiName)
                 .queryParam("serviceKey", serviceKey)
                 .queryParam("MobileOS", mobileOs)
                 .queryParam("MobileApp", mobileApp)
