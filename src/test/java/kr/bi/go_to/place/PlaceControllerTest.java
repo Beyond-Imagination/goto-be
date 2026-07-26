@@ -46,7 +46,7 @@ class PlaceControllerTest {
 
     @Test
     void rejectsLegacyCategoryParameter() throws Exception {
-        mockMvc.perform(get("/api/places/search")
+        mockMvc.perform(get("/api/v1/places/search")
                         .param("lat", "37.5665")
                         .param("lng", "126.9780")
                         .param("category", "A01010100"))
@@ -56,7 +56,7 @@ class PlaceControllerTest {
 
     @Test
     void rejectsLegacyCategoryWhenCategoryCodeIsAlsoPresent() throws Exception {
-        mockMvc.perform(get("/api/places/search")
+        mockMvc.perform(get("/api/v1/places/search")
                         .param("lat", "37.5665")
                         .param("lng", "126.9780")
                         .param("category", "")
