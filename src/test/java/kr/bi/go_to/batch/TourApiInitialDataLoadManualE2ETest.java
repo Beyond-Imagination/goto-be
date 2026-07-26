@@ -50,7 +50,6 @@ public class TourApiInitialDataLoadManualE2ETest {
     @Test
     @DisplayName("빈 DB에서 초기 적재 Job을 돌리면 COMPLETED 상태로 장소 데이터가 적재된다")
     void testRealTourApiSyncJob() throws Exception {
-        // given: DB 초기화 (전체 삭제 후 시작)
         jdbcTemplate.update("DELETE FROM etl_failure_log");
         jdbcTemplate.update("DELETE FROM place_bf_info");
         jdbcTemplate.update("DELETE FROM places");
@@ -59,10 +58,8 @@ public class TourApiInitialDataLoadManualE2ETest {
                 .addLong("time", System.currentTimeMillis())
                 .toJobParameters();
 
-        // when
         JobExecution jobExecution = jobOperatorTestUtils.startJob(jobParameters);
 
-        // then
         assertThat(jobExecution.getStatus()).isEqualTo(BatchStatus.COMPLETED);
 
         // 실제 API 연동 시 정상적으로 장소 데이터가 DB에 적재되었는지 검증

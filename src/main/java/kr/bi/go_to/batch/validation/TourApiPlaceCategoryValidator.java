@@ -21,7 +21,6 @@ public class TourApiPlaceCategoryValidator {
                     InvalidTourApiCategoryReason.MISSING_CURRENT_LEAF, item.contentid(), categoryCode);
         }
 
-        // Repository/infrastructure exceptions intentionally propagate and fail the step.
         if (!categoryRepository.isActiveLeaf(categoryCode)) {
             throw new InvalidTourApiCategoryException(
                     InvalidTourApiCategoryReason.UNKNOWN_INACTIVE_OR_NON_LEAF, item.contentid(), categoryCode);

@@ -7,7 +7,6 @@ import kr.bi.go_to.batch.client.TourApiCategoryClient;
 import kr.bi.go_to.batch.dto.TourApiCategoryPage;
 import kr.bi.go_to.batch.dto.TourApiCategorySnapshot;
 import kr.bi.go_to.batch.dto.TourApiCategorySyncResult;
-import kr.bi.go_to.batch.exception.TourApiCategorySnapshotException;
 import kr.bi.go_to.batch.repository.TourApiCategoryRepository;
 import kr.bi.go_to.batch.validation.TourApiCategorySnapshotValidator;
 import org.springframework.beans.factory.annotation.Value;
@@ -68,9 +67,6 @@ public class TourApiCategorySynchronizer {
             pages.add(page);
             if (expectedTotal == null) {
                 expectedTotal = page.totalCount();
-                if (expectedTotal <= 0) {
-                    throw new TourApiCategorySnapshotException("Taxonomy totalCount must be positive");
-                }
             }
             fetched += page.items().size();
             requestedPage++;

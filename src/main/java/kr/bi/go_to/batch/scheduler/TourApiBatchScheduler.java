@@ -18,10 +18,7 @@ public class TourApiBatchScheduler {
     private final Job tourApiIncrementalSyncJob;
     private final TourApiInitialLoadStatus initialLoadStatus;
 
-    /**
-     * 매일 새벽 3시에 배치 실행.
-     * Staggered 방식으로 빈 곳을 채워넣습니다.
-     */
+    /** 매일 오전 3시에 배치를 실행한다. */
     @Scheduled(cron = "0 0 3 * * ?", zone = "Asia/Seoul")
     public void runTourApiSyncJob() {
         if (!initialLoadStatus.hasCompletedInitialLoad()) {

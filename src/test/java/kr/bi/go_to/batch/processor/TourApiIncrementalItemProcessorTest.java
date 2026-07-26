@@ -132,8 +132,7 @@ class TourApiIncrementalItemProcessorTest {
     }
 
     private TourApiItemDto createDto(String showflag) {
-        // 한국관광공사 증분 API의 showflag는 공개/삭제 상태를 나타낸다.
-        // 0: 삭제 또는 비공개, 1: 공개 중인 데이터.
+        // 공개 상태 값은 0이면 삭제·비공개, 1이면 공개를 뜻한다.
         return new TourApiItemDto(
                 "12345",
                 "12",

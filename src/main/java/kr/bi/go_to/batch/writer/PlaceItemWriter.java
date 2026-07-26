@@ -70,8 +70,7 @@ public class PlaceItemWriter implements ItemWriter<PlaceProcessingResult> {
             return;
         }
 
-        // 하나의 job에서 etl step 각각에 대해서는 항상 chunk 별로 datasource가 동일해야합니다.
-        // 즉 하나의 작업에서는 하나의 datasource에서 온다는 뜻
+        // 한 청크에는 동일한 데이터 출처의 장소만 포함되어야 한다.
         String source = items.get(0).getSource();
         boolean allSameSource = items.stream().allMatch(place -> source.equals(place.getSource()));
         if (!allSameSource) {
@@ -106,10 +105,6 @@ public class PlaceItemWriter implements ItemWriter<PlaceProcessingResult> {
 
         List<String> externalIds = items.stream().map(Place::getExternalId).collect(Collectors.toList());
 
-        if (externalIds.isEmpty()) {
-            return;
-        }
-
         NamedParameterJdbcTemplate namedJdbcTemplate = new NamedParameterJdbcTemplate(jdbcTemplate);
         MapSqlParameterSource parameters = new MapSqlParameterSource();
         parameters.addValue("externalIds", externalIds);
@@ -125,10 +120,6 @@ public class PlaceItemWriter implements ItemWriter<PlaceProcessingResult> {
             }
             return map;
         });
-
-        if (externalIdToIdMap == null) {
-            return;
-        }
 
         List<PlaceProcessingResult> resultsWithBfInfo = results.stream()
                 .filter(r -> !r.place().isDeleted())

@@ -157,22 +157,18 @@ public class TourApiBatchManualE2ETest {
     @Test
     @DisplayName("Mock Tour API 응답으로 증분 동기화 Job을 돌리면 homepage가 정제된 장소가 DB에 저장된다")
     void testTourApiSyncJob() throws Exception {
-        // given
         JobParameters jobParameters = new JobParametersBuilder()
                 .addLong("time", System.currentTimeMillis())
                 .toJobParameters();
 
-        // when
         JobExecution jobExecution = jobOperatorTestUtils.startJob(jobParameters);
 
-        // then
         assertThat(jobExecution.getStatus()).isEqualTo(BatchStatus.COMPLETED);
 
         if (mockServer != null) {
             mockServer.verify();
         }
 
-        // Verify that the place is stored in DB with correctly sanitized homepage URL
         Optional<Place> placeOpt = placeRepository.findByExternalIdAndSource("1433504", PlaceSource.TOUR_API.name());
         assertThat(placeOpt).isPresent();
         assertThat(placeOpt.get().getHomepage()).isEqualTo("https://blog.naver.com/kktm2021");
@@ -212,16 +208,13 @@ public class TourApiBatchManualE2ETest {
         // 테스트 수행 전에 기존의 etl_failure_log 테이블을 비웁니다.
         jdbcTemplate.update("DELETE FROM etl_failure_log");
 
-        // given
         JobParameters jobParameters = new JobParametersBuilder()
                 .addLong("time", System.currentTimeMillis())
                 .toJobParameters();
 
-        // when
         JobExecution jobExecution = jobOperatorTestUtils.startJob(jobParameters);
 
-        // then
-        // ItemProcessor에서 예외를 던져서 Skip이 되었으므로, Job은 COMPLETED 상태로 끝나야 합니다.
+        // 처리 단계에서 발생한 예외를 건너뛰었으므로 작업은 완료 상태여야 한다.
         assertThat(jobExecution.getStatus()).isEqualTo(BatchStatus.COMPLETED);
 
         if (mockServer != null) {

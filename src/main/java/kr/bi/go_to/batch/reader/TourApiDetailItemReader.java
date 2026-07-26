@@ -85,7 +85,6 @@ public class TourApiDetailItemReader implements ItemReader<TourApiItemDto> {
                 .map(place -> CompletableFuture.supplyAsync(() -> fetchDetailsForPlace(place), detailTaskExecutor))
                 .collect(Collectors.toList());
 
-        // Wait for all to complete
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
 
         for (CompletableFuture<TourApiItemDto> future : futures) {
@@ -118,13 +117,13 @@ public class TourApiDetailItemReader implements ItemReader<TourApiItemDto> {
                 place.getExternalId(),
                 place.getContentTypeId(),
                 place.getName(),
-                null, // addr1
-                null, // addr2
-                null, // mapx
-                null, // mapy
-                null, // lclsSystm1 is not re-derived during detail enrichment
-                null, // lclsSystm2 is not re-derived during detail enrichment
-                place.getCategoryCode(), // explicit current leaf preserved from places.category_code
+                null, // 기본 주소 유지
+                null, // 상세 주소 유지
+                null, // 경도 유지
+                null, // 위도 유지
+                null, // 대분류 유지
+                null, // 중분류 유지
+                place.getCategoryCode(), // 현재 소분류 유지
                 place.getThumbnailUrl(),
                 null,
                 null,

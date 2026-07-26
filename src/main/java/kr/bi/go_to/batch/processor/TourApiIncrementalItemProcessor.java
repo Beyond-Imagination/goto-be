@@ -41,7 +41,6 @@ public class TourApiIncrementalItemProcessor implements ItemProcessor<TourApiIte
 
     @Override
     public PlaceProcessingResult process(TourApiItemDto dto) throws Exception {
-        // Validation: Mandatory fields
         if (!StringUtils.hasText(dto.contentid())) {
             log.warn("Skipping item with empty contentid: {}", dto.title());
             return null;
@@ -52,7 +51,6 @@ public class TourApiIncrementalItemProcessor implements ItemProcessor<TourApiIte
             return null;
         }
 
-        // Validation: Length constraints
         if (dto.title().length() > 255) {
             handleFailure("EXCEED_MAX_LENGTH", "Title length > 255", dto.contentid());
             return null;
@@ -99,12 +97,10 @@ public class TourApiIncrementalItemProcessor implements ItemProcessor<TourApiIte
         boolean detailWithTourSynced = false;
         boolean detailIntroSynced = false;
 
-        // Check showflag
         if ("0".equals(dto.showflag())) {
             isDeleted = true;
         } else {
-            // Eager Fetch for newly added/updated items. Transport/infrastructure exceptions
-            // intentionally propagate so they cannot be classified as source-data skips.
+            // 전송·인프라 예외는 원천 데이터 오류로 오분류되지 않도록 그대로 전파한다.
             JsonNode common2 = tourApiClient.fetchDetail("detailCommon2", dto.contentid(), null);
             detailCommonSynced = common2 != null;
             if (detailCommonSynced) {
