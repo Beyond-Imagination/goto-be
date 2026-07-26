@@ -188,7 +188,12 @@ management:
   endpoint:
     health:
       show-details: never
+  health:
+    redis:
+      enabled: false
 ```
+
+Redis health indicator는 `/actuator/health` 집계 상태에서 제외합니다(`management.health.redis.enabled: false`). 캐시는 부가 기능으로 취급하며, Redis 가용성이 배포 헬스체크 결과에 영향을 주지 않아야 합니다. 상세 배경은 [0003_adr_indoor_map_redis_caching_scope.md](../adr/0003_adr_indoor_map_redis_caching_scope.md)를 참고하십시오.
 
 main module deploy workflow는 public HTTPS endpoint인 `https://${DEV_API_DOMAIN}/actuator/health`가 HTTP 200과 `UP` 상태를 반환해야 배포 성공으로 판단합니다. 이 값은 main module repository variable이며, Compose runtime에서는 Caddy의 `API_DOMAIN` 값으로 전달됩니다.
 
