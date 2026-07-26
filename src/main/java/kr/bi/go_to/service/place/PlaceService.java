@@ -5,5 +5,7 @@ import kr.bi.go_to.service.place.model.PlaceData;
 
 public interface PlaceService {
 
-    List<PlaceData> findAll();
+    List<PlaceData> searchNearby(double latitude, double longitude, int limit, String category);
+
+    List<String> findDistinctCategories();
 }

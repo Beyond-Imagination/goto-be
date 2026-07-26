@@ -5,11 +5,10 @@ import java.util.List;
 import kr.bi.go_to.service.place.PlaceService;
 import kr.bi.go_to.service.place.model.BfDetailsData;
 import kr.bi.go_to.service.place.model.PlaceData;
-import org.springframework.stereotype.Service;
 
-@Service
 public class MockPlaceService implements PlaceService {
 
+    private static final double EARTH_RADIUS_METERS = 6_371_000;
     private static final Instant LAST_SYNCED_AT = Instant.parse("2026-06-01T00:00:00Z");
 
     private static final List<PlaceData> PLACES = List.of(
@@ -87,8 +86,23 @@ public class MockPlaceService implements PlaceService {
                     true));
 
     @Override
-    public List<PlaceData> findAll() {
-        return PLACES;
+    public List<PlaceData> searchNearby(double latitude, double longitude, int limit, String category) {
+        return PLACES.stream()
+                .filter(place -> category == null || category.equals(place.category()))
+                .map(place -> withDistance(place, latitude, longitude))
+                .sorted((left, right) -> Double.compare(left.distanceMeters(), right.distanceMeters()))
+                .limit(limit)
+                .toList();
+    }
+
+    @Override
+    public List<String> findDistinctCategories() {
+        return PLACES.stream()
+                .map(PlaceData::category)
+                .filter(category -> category != null && !category.isBlank())
+                .distinct()
+                .sorted()
+                .toList();
     }
 
     private static PlaceData place(
@@ -114,6 +128,33 @@ public class MockPlaceService implements PlaceService {
                 longitude,
                 thumbnailUrl,
                 new BfDetailsData(hasElevator, hasAccessibleToilet, hasRamp),
-                LAST_SYNCED_AT);
+                LAST_SYNCED_AT,
+                0);
+    }
+
+    private PlaceData withDistance(PlaceData place, double latitude, double longitude) {
+        return new PlaceData(
+                place.id(),
+                place.externalId(),
+                place.source(),
+                place.category(),
+                place.name(),
+                place.sanitizedAddress(),
+                place.latitude(),
+                place.longitude(),
+                place.thumbnailUrl(),
+                place.bfDetails(),
+                place.bfLastSyncedAt(),
+                haversineDistance(latitude, longitude, place.latitude(), place.longitude()));
+    }
+
+    private double haversineDistance(double latitude1, double longitude1, double latitude2, double longitude2) {
+        double latitudeDelta = Math.toRadians(latitude2 - latitude1);
+        double longitudeDelta = Math.toRadians(longitude2 - longitude1);
+        double startLatitude = Math.toRadians(latitude1);
+        double endLatitude = Math.toRadians(latitude2);
+        double haversine = Math.pow(Math.sin(latitudeDelta / 2), 2)
+                + Math.cos(startLatitude) * Math.cos(endLatitude) * Math.pow(Math.sin(longitudeDelta / 2), 2);
+        return 2 * EARTH_RADIUS_METERS * Math.asin(Math.sqrt(haversine));
     }
 }

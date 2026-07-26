@@ -13,4 +13,5 @@ public record PlaceData(
         double longitude,
         String thumbnailUrl,
         BfDetailsData bfDetails,
-        Instant bfLastSyncedAt) {}
+        Instant bfLastSyncedAt,
+        double distanceMeters) {}
