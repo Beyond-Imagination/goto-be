@@ -1,8 +1,11 @@
 package kr.bi.go_to.controller.place;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import kr.bi.go_to.controller.place.request.PlaceSearchRequest;
 import kr.bi.go_to.controller.place.response.PlaceSearchResponse;
+import kr.bi.go_to.exception.BusinessException;
+import kr.bi.go_to.exception.ErrorCode;
 import kr.bi.go_to.spec.PlaceApiSpec;
 import kr.bi.go_to.usecase.SearchPlacesUseCase;
 import org.springdoc.core.annotations.ParameterObject;
@@ -23,7 +26,11 @@ public class PlaceController implements PlaceApiSpec {
 
     @Override
     @GetMapping("/search")
-    public PlaceSearchResponse search(@Valid @ParameterObject @ModelAttribute PlaceSearchRequest request) {
+    public PlaceSearchResponse search(
+            @Valid @ParameterObject @ModelAttribute PlaceSearchRequest request, HttpServletRequest servletRequest) {
+        if (servletRequest.getParameterMap().containsKey("category")) {
+            throw new BusinessException(ErrorCode.UNSUPPORTED_QUERY_PARAMETER);
+        }
         return searchPlacesUseCase.execute(request);
     }
 }

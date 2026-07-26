@@ -55,6 +55,8 @@ class TourApiDetailItemReaderTest {
     void selectsNotDeletedAndIncompleteDetailPlacesForLazyDetailEnrichment() throws Exception {
         reader.read();
 
+        assertThat(jdbcTemplate.capturedSql).contains("category_code");
+        assertThat(jdbcTemplate.capturedSql).doesNotContain(" category,");
         assertThat(jdbcTemplate.capturedSql).contains("source = 'TOUR_API'");
         assertThat(jdbcTemplate.capturedSql).contains("is_deleted = false");
         assertThat(jdbcTemplate.capturedSql).contains("detail_common_synced = false");
@@ -82,6 +84,9 @@ class TourApiDetailItemReaderTest {
 
         TourApiItemDto dto = (TourApiItemDto) reader.read();
 
+        assertThat(dto.lclsSystm1()).isNull();
+        assertThat(dto.lclsSystm2()).isNull();
+        assertThat(dto.lclsSystm3()).isEqualTo("A0101");
         assertThat(dto.overview()).isEmpty();
         assertThat(dto.homepage()).isEmpty();
         assertThat(dto.detailCommonSynced()).isTrue();
@@ -108,7 +113,7 @@ class TourApiDetailItemReaderTest {
             try {
                 when(rs.getString("external_id")).thenReturn("12345");
                 when(rs.getString("source")).thenReturn("TOUR_API");
-                when(rs.getString("category")).thenReturn("A0101");
+                when(rs.getString("category_code")).thenReturn("A0101");
                 when(rs.getString("name")).thenReturn("Test Place");
                 when(rs.getString("sanitized_address")).thenReturn("Seoul");
                 when(rs.getString("thumbnail_url")).thenReturn("https://image.example/test.jpg");

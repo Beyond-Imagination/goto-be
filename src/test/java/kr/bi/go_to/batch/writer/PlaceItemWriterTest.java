@@ -1,5 +1,6 @@
 package kr.bi.go_to.batch.writer;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyInt;
@@ -21,6 +22,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.batch.infrastructure.item.Chunk;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.util.ReflectionTestUtils;
 
 class PlaceItemWriterTest {
 
@@ -32,6 +34,17 @@ class PlaceItemWriterTest {
         jdbcTemplate = mock(JdbcTemplate.class);
         TourApiBfDetailsNormalizer bfDetailsNormalizer = mock(TourApiBfDetailsNormalizer.class);
         writer = new PlaceItemWriter(jdbcTemplate, bfDetailsNormalizer);
+    }
+
+    @Test
+    @DisplayName("카테고리 upsert는 current category_code를 사용하고 tombstone에서는 기존 코드를 보존한다")
+    void upsertUsesCurrentCategoryCodeAndPreservesItForTombstone() {
+        String sql = (String) ReflectionTestUtils.getField(PlaceItemWriter.class, "UPSERT_SQL");
+
+        assertThat(sql).contains("category_code");
+        assertThat(sql).contains("CASE WHEN EXCLUDED.is_deleted THEN places.category_code");
+        assertThat(sql).doesNotContain(" category,");
+        assertThat(sql).doesNotContain("category =");
     }
 
     @Test

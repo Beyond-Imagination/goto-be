@@ -42,7 +42,7 @@ springdoc:
     tags-sorter: alpha
 
 tour-api:
-  base-url: "http://apis.data.go.kr/B551011/KorWithService2"
+  base-url: "https://apis.data.go.kr/B551011/KorService2"
   mobile-os: "ETC"
   mobile-app: "Goto"
   detail-quota: 250

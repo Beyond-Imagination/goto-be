@@ -6,8 +6,10 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import kr.bi.go_to.batch.category.validation.TourApiPlaceCategoryValidator;
 import kr.bi.go_to.batch.client.TourApiClient;
 import kr.bi.go_to.batch.dto.PlaceProcessingResult;
 import kr.bi.go_to.batch.dto.TourApiItemDto;
@@ -22,6 +24,7 @@ class TourApiIncrementalItemProcessorTest {
 
     private TourApiIncrementalItemProcessor processor;
     private TourApiClient tourApiClient;
+    private TourApiPlaceCategoryValidator categoryValidator;
 
     @BeforeEach
     void setUp() {
@@ -31,7 +34,9 @@ class TourApiIncrementalItemProcessorTest {
         when(tourApiClient.extractFieldOrEmpty(any(JsonNode.class), anyString()))
                 .thenReturn("");
 
-        processor = new TourApiIncrementalItemProcessor(mock(EtlFailureLogger.class), tourApiClient);
+        categoryValidator = mock(TourApiPlaceCategoryValidator.class);
+        when(categoryValidator.requireActiveLeaf(any(TourApiItemDto.class))).thenReturn("A0101");
+        processor = new TourApiIncrementalItemProcessor(mock(EtlFailureLogger.class), categoryValidator, tourApiClient);
     }
 
     @Test
@@ -41,6 +46,8 @@ class TourApiIncrementalItemProcessorTest {
 
         assertThat(result).isNotNull();
         assertThat(result.place().isDeleted()).isTrue();
+        assertThat(result.place().getCategoryCode()).isNull();
+        verifyNoInteractions(categoryValidator);
     }
 
     @Test

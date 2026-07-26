@@ -55,7 +55,7 @@ public class TourApiDetailItemReader implements ItemReader<TourApiItemDto> {
         log.info("상세 정보 보충이 필요한 장소를 최대 {}개까지 조회합니다...", detailQuota);
 
         String sql =
-                "SELECT external_id, source, category, name, sanitized_address, location_point, thumbnail_url, content_type_id, tel "
+                "SELECT external_id, source, category_code, name, sanitized_address, location_point, thumbnail_url, content_type_id, tel "
                         + "FROM places WHERE source = 'TOUR_API' AND is_deleted = false "
                         + "AND (detail_common_synced = false OR detail_with_tour_synced = false OR detail_intro_synced = false) "
                         + "LIMIT ?";
@@ -66,7 +66,7 @@ public class TourApiDetailItemReader implements ItemReader<TourApiItemDto> {
                     return Place.builder()
                             .externalId(rs.getString("external_id"))
                             .source(rs.getString("source"))
-                            .category(rs.getString("category"))
+                            .categoryCode(rs.getString("category_code"))
                             .name(rs.getString("name"))
                             .sanitizedAddress(rs.getString("sanitized_address"))
                             .thumbnailUrl(rs.getString("thumbnail_url"))
@@ -126,9 +126,9 @@ public class TourApiDetailItemReader implements ItemReader<TourApiItemDto> {
                 null, // addr2
                 null, // mapx
                 null, // mapy
-                place.getCategory(), // cat1 etc mapped to category
-                null,
-                null,
+                null, // lclsSystm1 is not re-derived during detail enrichment
+                null, // lclsSystm2 is not re-derived during detail enrichment
+                place.getCategoryCode(), // explicit current leaf preserved from places.category_code
                 place.getThumbnailUrl(),
                 null,
                 null,

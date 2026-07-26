@@ -21,16 +21,23 @@ class SearchPlacesUseCaseTest {
                 .extracting(place -> place.distanceMeters())
                 .isSorted();
         assertThat(response.places().getFirst().name()).isEqualTo("서울도서관");
-        assertThat(response.filters().categories()).containsExactly("공공기관", "관광지", "숙박");
+        assertThat(response.filters().categoryCodes()).containsExactly("A01010100", "A05010100", "B02010100");
     }
 
     @Test
-    void filtersByCategoryBeforeApplyingLimit() {
-        PlaceSearchResponse response = useCase.execute(new PlaceSearchRequest(37.5665, 126.9780, 2, " 관광지 "));
+    void filtersByExactCategoryCodeBeforeApplyingLimit() {
+        PlaceSearchResponse response = useCase.execute(new PlaceSearchRequest(37.5665, 126.9780, 2, " A01010100 "));
 
         assertThat(response.places()).hasSize(2);
-        assertThat(response.places()).allMatch(place -> place.category().equals("관광지"));
+        assertThat(response.places()).allMatch(place -> place.categoryCode().equals("A01010100"));
         assertThat(response.places()).extracting(place -> place.name()).containsExactly("경복궁", "남산서울타워");
+    }
+
+    @Test
+    void doesNotMatchCategoryCodePrefixes() {
+        PlaceSearchResponse response = useCase.execute(new PlaceSearchRequest(37.5665, 126.9780, 10, "A0101"));
+
+        assertThat(response.places()).isEmpty();
     }
 
     @Test

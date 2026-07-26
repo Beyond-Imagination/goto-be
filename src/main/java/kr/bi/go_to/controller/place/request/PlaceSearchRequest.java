@@ -20,9 +20,9 @@ public record PlaceSearchRequest(
                 @DecimalMax("180.0")
                 Double lng,
         @Schema(description = "반환할 장소 수(기본 10, 최대 50)", example = "10", defaultValue = "10") @Min(1) @Max(50) Integer k,
-        @Schema(description = "필터링할 카테고리", example = "관광지") String category) {
+        @Schema(description = "필터링할 한국관광공사 현재 분류체계 소분류 코드", example = "A01010100") String categoryCode) {
     public PlaceSearchRequest {
         k = k == null ? 10 : k;
-        category = category == null || category.isBlank() ? null : category.trim();
+        categoryCode = categoryCode == null || categoryCode.isBlank() ? null : categoryCode.trim();
     }
 }

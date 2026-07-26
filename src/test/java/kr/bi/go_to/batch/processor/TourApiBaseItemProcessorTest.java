@@ -1,9 +1,12 @@
 package kr.bi.go_to.batch.processor;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+import kr.bi.go_to.batch.category.validation.TourApiPlaceCategoryValidator;
 import kr.bi.go_to.batch.dto.PlaceProcessingResult;
 import kr.bi.go_to.batch.dto.TourApiItemDto;
 import kr.bi.go_to.batch.listener.EtlFailureLogger;
@@ -21,7 +24,11 @@ class TourApiBaseItemProcessorTest {
     @BeforeEach
     void setUp() {
         etlFailureLogger = mock(EtlFailureLogger.class);
-        processor = new TourApiBaseItemProcessor(etlFailureLogger);
+        TourApiPlaceCategoryValidator categoryValidator = mock(TourApiPlaceCategoryValidator.class);
+        when(categoryValidator.requireActiveLeaf(any(TourApiItemDto.class)))
+                .thenAnswer(
+                        invocation -> invocation.<TourApiItemDto>getArgument(0).lclsSystm3());
+        processor = new TourApiBaseItemProcessor(etlFailureLogger, categoryValidator);
     }
 
     private TourApiItemDto createDto(
@@ -35,7 +42,7 @@ class TourApiBaseItemProcessorTest {
             String firstimage2,
             String tel,
             String contenttypeid,
-            String cat3) {
+            String lclsSystm3) {
         return new TourApiItemDto(
                 contentid,
                 contenttypeid,
@@ -44,9 +51,9 @@ class TourApiBaseItemProcessorTest {
                 addr2,
                 mapx,
                 mapy,
-                null, // cat1
-                null, // cat2
-                cat3,
+                null, // lclsSystm1
+                null, // lclsSystm2
+                lclsSystm3,
                 firstimage,
                 firstimage2,
                 null, // areacode
@@ -97,7 +104,7 @@ class TourApiBaseItemProcessorTest {
         assertThat(place.getThumbnailUrl()).isEqualTo("http://image1.jpg");
         assertThat(place.getTel()).isEqualTo("02-123-4567");
         assertThat(place.getContentTypeId()).isEqualTo("12");
-        assertThat(place.getCategory()).isEqualTo("A0101");
+        assertThat(place.getCategoryCode()).isEqualTo("A0101");
     }
 
     @Test
@@ -226,8 +233,8 @@ class TourApiBaseItemProcessorTest {
                 "Gangnam",
                 "127.0",
                 "37.0",
-                null, // cat1
-                null, // cat2
+                null, // lclsSystm1
+                null, // lclsSystm2
                 "A0101",
                 null, // firstimage
                 null, // firstimage2

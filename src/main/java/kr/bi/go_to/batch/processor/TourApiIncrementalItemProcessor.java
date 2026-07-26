@@ -2,6 +2,7 @@ package kr.bi.go_to.batch.processor;
 
 import java.util.ArrayList;
 import java.util.List;
+import kr.bi.go_to.batch.category.validation.TourApiPlaceCategoryValidator;
 import kr.bi.go_to.batch.client.TourApiClient;
 import kr.bi.go_to.batch.dto.PlaceProcessingResult;
 import kr.bi.go_to.batch.dto.TourApiItemDto;
@@ -27,6 +28,7 @@ public class TourApiIncrementalItemProcessor implements ItemProcessor<TourApiIte
 
     private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
     private final EtlFailureLogger etlFailureLogger;
+    private final TourApiPlaceCategoryValidator categoryValidator;
     private final TourApiClient tourApiClient;
 
     private static final String FAILURE_LOG_TEMPLATE = "[%s] %s, --> contentId: %s";
@@ -55,6 +57,8 @@ public class TourApiIncrementalItemProcessor implements ItemProcessor<TourApiIte
             handleFailure("EXCEED_MAX_LENGTH", "Title length > 255", dto.contentid());
             return null;
         }
+
+        String categoryCode = "0".equals(dto.showflag()) ? null : categoryValidator.requireActiveLeaf(dto);
 
         Point location = null;
         if (StringUtils.hasText(dto.mapx()) && StringUtils.hasText(dto.mapy())) {
@@ -133,7 +137,7 @@ public class TourApiIncrementalItemProcessor implements ItemProcessor<TourApiIte
                 .overview(overview)
                 .homepage(homepage)
                 .contentTypeId(dto.contenttypeid())
-                .category(dto.cat3())
+                .categoryCode(categoryCode)
                 .isDeleted(isDeleted)
                 .detailCommonSynced(detailCommonSynced)
                 .detailWithTourSynced(detailWithTourSynced)

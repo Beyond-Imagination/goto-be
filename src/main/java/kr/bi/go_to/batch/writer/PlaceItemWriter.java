@@ -30,11 +30,11 @@ public class PlaceItemWriter implements ItemWriter<PlaceProcessingResult> {
 
     private static final String UPSERT_SQL =
             """
-            INSERT INTO places (external_id, source, category, name, sanitized_address, location_point, thumbnail_url, overview, homepage, tel, content_type_id, is_deleted, detail_common_synced, detail_with_tour_synced, detail_intro_synced, created_at, updated_at)
+            INSERT INTO places (external_id, source, category_code, name, sanitized_address, location_point, thumbnail_url, overview, homepage, tel, content_type_id, is_deleted, detail_common_synced, detail_with_tour_synced, detail_intro_synced, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ST_GeomFromText(?, 4326), ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
             ON CONFLICT (external_id, source)
             DO UPDATE SET
-                category = COALESCE(EXCLUDED.category, places.category),
+                category_code = CASE WHEN EXCLUDED.is_deleted THEN places.category_code ELSE EXCLUDED.category_code END,
                 name = COALESCE(EXCLUDED.name, places.name),
                 sanitized_address = COALESCE(EXCLUDED.sanitized_address, places.sanitized_address),
                 location_point = COALESCE(EXCLUDED.location_point, places.location_point),
@@ -81,7 +81,7 @@ public class PlaceItemWriter implements ItemWriter<PlaceProcessingResult> {
         jdbcTemplate.batchUpdate(UPSERT_SQL, items, items.size(), (PreparedStatement ps, Place place) -> {
             ps.setString(1, place.getExternalId());
             ps.setString(2, place.getSource());
-            ps.setString(3, place.getCategory());
+            ps.setString(3, place.getCategoryCode());
             ps.setString(4, place.getName());
             ps.setString(5, place.getSanitizedAddress());
 
