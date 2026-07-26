@@ -122,8 +122,8 @@ class IndoorMapControllerIntegrationTest {
     }
 
     @Test
-    @DisplayName("조회 결과를 캐싱해서 DB가 직접 바뀌어도 캐시된 값을 반환한다")
-    void cachesIndoorMapSoDirectDbChangeIsNotReflectedImmediately() throws Exception {
+    @DisplayName("캐시에 저장된 값이 있으면 DB를 다시 조회하지 않고 재사용한다")
+    void reusesCachedValueInsteadOfQueryingDbAgain() throws Exception {
         mockMvc.perform(
                         put("/api/v1/admin/places/{placeId}/floors/{floor}", place.getId(), 1)
                                 .header(HttpHeaders.AUTHORIZATION, bearer(token))
@@ -144,6 +144,7 @@ class IndoorMapControllerIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.features[0].properties.node_id").value("elevator-1"));
 
+        // 캐시가 실제로 재사용되는지 검증하기 위해 서비스 계층(캐시 evict)을 거치지 않고 DB를 직접 변경한다.
         FloorMap floorMap =
                 floorMapRepository.findByPlace_IdAndFloorLevel(place.getId(), 1).orElseThrow();
         FloorGeoJson emptyGeoJson = new FloorGeoJson();
