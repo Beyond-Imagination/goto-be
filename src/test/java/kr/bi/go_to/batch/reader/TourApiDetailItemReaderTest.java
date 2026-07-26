@@ -1,6 +1,7 @@
 package kr.bi.go_to.batch.reader;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
@@ -55,6 +56,8 @@ class TourApiDetailItemReaderTest {
     void selectsNotDeletedAndIncompleteDetailPlacesForLazyDetailEnrichment() throws Exception {
         reader.read();
 
+        assertThat(jdbcTemplate.capturedSql).contains("category_code");
+        assertThat(jdbcTemplate.capturedSql).doesNotContain(" category,");
         assertThat(jdbcTemplate.capturedSql).contains("source = 'TOUR_API'");
         assertThat(jdbcTemplate.capturedSql).contains("is_deleted = false");
         assertThat(jdbcTemplate.capturedSql).contains("detail_common_synced = false");
@@ -82,9 +85,23 @@ class TourApiDetailItemReaderTest {
 
         TourApiItemDto dto = (TourApiItemDto) reader.read();
 
+        assertThat(dto.lclsSystm1()).isNull();
+        assertThat(dto.lclsSystm2()).isNull();
+        assertThat(dto.lclsSystm3()).isEqualTo("A0101");
         assertThat(dto.overview()).isEmpty();
         assertThat(dto.homepage()).isEmpty();
         assertThat(dto.detailCommonSynced()).isTrue();
+    }
+
+    @Test
+    @DisplayName("비동기 상세 조회 인프라 예외를 로그 후 무시하지 않고 step으로 전파한다")
+    void propagatesAsyncDetailInfrastructureFailure() {
+        jdbcTemplate.returnSinglePlaceRow();
+        RuntimeException failure = new RuntimeException("provider unavailable");
+        when(tourApiClient.fetchDetail(eq("detailCommon2"), eq("12345"), isNull()))
+                .thenThrow(failure);
+
+        assertThatThrownBy(reader::read).hasRootCause(failure);
     }
 
     private static final class CapturingJdbcTemplate extends JdbcTemplate {
@@ -108,7 +125,7 @@ class TourApiDetailItemReaderTest {
             try {
                 when(rs.getString("external_id")).thenReturn("12345");
                 when(rs.getString("source")).thenReturn("TOUR_API");
-                when(rs.getString("category")).thenReturn("A0101");
+                when(rs.getString("category_code")).thenReturn("A0101");
                 when(rs.getString("name")).thenReturn("Test Place");
                 when(rs.getString("sanitized_address")).thenReturn("Seoul");
                 when(rs.getString("thumbnail_url")).thenReturn("https://image.example/test.jpg");

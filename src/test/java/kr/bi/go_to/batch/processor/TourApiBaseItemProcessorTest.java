@@ -1,12 +1,15 @@
 package kr.bi.go_to.batch.processor;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import kr.bi.go_to.batch.dto.PlaceProcessingResult;
 import kr.bi.go_to.batch.dto.TourApiItemDto;
 import kr.bi.go_to.batch.listener.EtlFailureLogger;
+import kr.bi.go_to.batch.validation.TourApiPlaceCategoryValidator;
 import kr.bi.go_to.enums.PlaceSource;
 import kr.bi.go_to.model.place.Place;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,7 +24,11 @@ class TourApiBaseItemProcessorTest {
     @BeforeEach
     void setUp() {
         etlFailureLogger = mock(EtlFailureLogger.class);
-        processor = new TourApiBaseItemProcessor(etlFailureLogger);
+        TourApiPlaceCategoryValidator categoryValidator = mock(TourApiPlaceCategoryValidator.class);
+        when(categoryValidator.requireActiveLeaf(any(TourApiItemDto.class)))
+                .thenAnswer(
+                        invocation -> invocation.<TourApiItemDto>getArgument(0).lclsSystm3());
+        processor = new TourApiBaseItemProcessor(etlFailureLogger, categoryValidator);
     }
 
     private TourApiItemDto createDto(
@@ -35,7 +42,7 @@ class TourApiBaseItemProcessorTest {
             String firstimage2,
             String tel,
             String contenttypeid,
-            String cat3) {
+            String lclsSystm3) {
         return new TourApiItemDto(
                 contentid,
                 contenttypeid,
@@ -44,28 +51,27 @@ class TourApiBaseItemProcessorTest {
                 addr2,
                 mapx,
                 mapy,
-                null, // cat1
-                null, // cat2
-                cat3,
+                null, // 대분류 코드
+                null, // 중분류 코드
+                lclsSystm3,
                 firstimage,
                 firstimage2,
-                null, // areacode
-                null, // sigungucode
+                null, // 지역 코드
+                null, // 시군구 코드
                 tel,
-                null, // zipcode
-                null, // modifiedtime
-                null, // overview
-                null, // homepage
-                null, // bfDetails
-                null, // introDetails
-                "1" // showflag
+                null, // 우편번호
+                null, // 수정 시각
+                null, // 개요
+                null, // 홈페이지
+                null, // 무장애 상세 정보
+                null, // 소개 상세 정보
+                "1" // 공개 상태
                 );
     }
 
     @Test
     @DisplayName("정상 DTO를 process하면 Place 엔티티로 변환한다")
     void process_validDto_returnsPlace() throws Exception {
-        // given
         TourApiItemDto dto = createDto(
                 "12345",
                 "Test Place",
@@ -79,10 +85,8 @@ class TourApiBaseItemProcessorTest {
                 "12",
                 "A0101");
 
-        // when
         PlaceProcessingResult result = processor.process(dto);
 
-        // then
         assertThat(result).isNotNull();
         Place place = result.place();
         assertThat(place).isNotNull();
@@ -97,46 +101,37 @@ class TourApiBaseItemProcessorTest {
         assertThat(place.getThumbnailUrl()).isEqualTo("http://image1.jpg");
         assertThat(place.getTel()).isEqualTo("02-123-4567");
         assertThat(place.getContentTypeId()).isEqualTo("12");
-        assertThat(place.getCategory()).isEqualTo("A0101");
+        assertThat(place.getCategoryCode()).isEqualTo("A0101");
     }
 
     @Test
     @DisplayName("contentid가 없으면 process하면 null을 반환한다")
     void process_emptyContentId_returnsNull() throws Exception {
-        // given
         TourApiItemDto dto = createDto("", "Test Place", null, null, null, null, null, null, null, null, null);
 
-        // when
         PlaceProcessingResult result = processor.process(dto);
 
-        // then
         assertThat(result).isNull();
     }
 
     @Test
     @DisplayName("title이 없으면 process하면 null을 반환한다")
     void process_emptyTitle_returnsNull() throws Exception {
-        // given
         TourApiItemDto dto = createDto("12345", "", null, null, null, null, null, null, null, null, null);
 
-        // when
         PlaceProcessingResult result = processor.process(dto);
 
-        // then
         assertThat(result).isNull();
     }
 
     @Test
     @DisplayName("좌표가 유효 범위를 벗어나면 process하면 locationPoint는 null이고 ETL 실패 로그를 기록한다")
     void process_invalidCoordinateRange_locationPointIsNull() throws Exception {
-        // given
         TourApiItemDto dto =
                 createDto("12345", "Test Place", null, null, "200.0", "100.0", null, null, null, null, null);
 
-        // when
         PlaceProcessingResult result = processor.process(dto);
 
-        // then
         assertThat(result).isNotNull();
         Place place = result.place();
         assertThat(place).isNotNull();
@@ -150,14 +145,11 @@ class TourApiBaseItemProcessorTest {
     @Test
     @DisplayName("좌표 포맷이 잘못됐으면 process하면 locationPoint는 null이고 ETL 실패 로그를 기록한다")
     void process_invalidCoordinateFormat_locationPointIsNull() throws Exception {
-        // given
         TourApiItemDto dto =
                 createDto("12345", "Test Place", null, null, "invalid", "invalid", null, null, null, null, null);
 
-        // when
         PlaceProcessingResult result = processor.process(dto);
 
-        // then
         assertThat(result).isNotNull();
         Place place = result.place();
         assertThat(place).isNotNull();
@@ -171,14 +163,11 @@ class TourApiBaseItemProcessorTest {
     @Test
     @DisplayName("firstimage가 없고 firstimage2만 있으면 process하면 firstimage2를 썸네일로 사용한다")
     void process_fallbackImage() throws Exception {
-        // given
         TourApiItemDto dto =
                 createDto("12345", "Test Place", null, null, null, null, "", "http://image2.jpg", null, null, null);
 
-        // when
         PlaceProcessingResult result = processor.process(dto);
 
-        // then
         assertThat(result).isNotNull();
         Place place = result.place();
         assertThat(place).isNotNull();
@@ -188,13 +177,10 @@ class TourApiBaseItemProcessorTest {
     @Test
     @DisplayName("firstimage와 firstimage2가 모두 없으면 process하면 썸네일은 null이다")
     void process_noImage_returnsNullThumbnail() throws Exception {
-        // given
         TourApiItemDto dto = createDto("12345", "Test Place", null, null, null, null, "", "   ", null, null, null);
 
-        // when
         PlaceProcessingResult result = processor.process(dto);
 
-        // then
         assertThat(result).isNotNull();
         Place place = result.place();
         assertThat(place).isNotNull();
@@ -204,13 +190,10 @@ class TourApiBaseItemProcessorTest {
     @Test
     @DisplayName("주소가 하나뿐이면 process하면 쉼표 없이 해당 주소만 저장한다")
     void process_singleAddress() throws Exception {
-        // given
         TourApiItemDto dto = createDto("12345", "Test Place", "Seoul", "", null, null, null, null, null, null, null);
 
-        // when
         PlaceProcessingResult result = processor.process(dto);
 
-        // then
         assertThat(result).isNotNull();
         Place place = result.place();
         assertThat(place).isNotNull();
@@ -226,21 +209,21 @@ class TourApiBaseItemProcessorTest {
                 "Gangnam",
                 "127.0",
                 "37.0",
-                null, // cat1
-                null, // cat2
+                null, // 대분류 코드
+                null, // 중분류 코드
                 "A0101",
-                null, // firstimage
-                null, // firstimage2
-                null, // areacode
-                null, // sigungucode
-                null, // tel
-                null, // zipcode
-                null, // modifiedtime
-                null, // overview
+                null, // 대표 이미지
+                null, // 보조 이미지
+                null, // 지역 코드
+                null, // 시군구 코드
+                null, // 전화번호
+                null, // 우편번호
+                null, // 수정 시각
+                null, // 개요
                 homepage,
-                null, // bfDetails
-                null, // introDetails
-                "1" // showflag
+                null, // 무장애 상세 정보
+                null, // 소개 상세 정보
+                "1" // 공개 상태
                 );
     }
 

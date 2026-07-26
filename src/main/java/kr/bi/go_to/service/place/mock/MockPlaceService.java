@@ -16,7 +16,7 @@ public class MockPlaceService implements PlaceService {
             place(
                     1,
                     "tour-001",
-                    "관광지",
+                    "A01010100",
                     "국립중앙박물관",
                     "서울 용산구 서빙고로 137",
                     37.523850,
@@ -28,7 +28,7 @@ public class MockPlaceService implements PlaceService {
             place(
                     2,
                     "public-001",
-                    "공공기관",
+                    "B02010100",
                     "서울도서관",
                     "서울 중구 세종대로 110",
                     37.566317,
@@ -40,7 +40,7 @@ public class MockPlaceService implements PlaceService {
             place(
                     3,
                     "tour-002",
-                    "관광지",
+                    "A01010100",
                     "경복궁",
                     "서울 종로구 사직로 161",
                     37.579617,
@@ -52,7 +52,7 @@ public class MockPlaceService implements PlaceService {
             place(
                     4,
                     "stay-001",
-                    "숙박",
+                    "A05010100",
                     "서울 유스호스텔",
                     "서울 중구 퇴계로26가길 6",
                     37.558691,
@@ -64,7 +64,7 @@ public class MockPlaceService implements PlaceService {
             place(
                     5,
                     "tour-003",
-                    "관광지",
+                    "A01010100",
                     "남산서울타워",
                     "서울 용산구 남산공원길 105",
                     37.551169,
@@ -76,7 +76,7 @@ public class MockPlaceService implements PlaceService {
             place(
                     6,
                     "public-002",
-                    "공공기관",
+                    "B02010100",
                     "용산구청",
                     "서울 용산구 녹사평대로 150",
                     37.532389,
@@ -94,7 +94,7 @@ public class MockPlaceService implements PlaceService {
     private static PlaceData place(
             long id,
             String externalId,
-            String category,
+            String categoryCode,
             String name,
             String address,
             double latitude,
@@ -107,7 +107,7 @@ public class MockPlaceService implements PlaceService {
                 id,
                 externalId,
                 "MOCK",
-                category,
+                categoryCode,
                 name,
                 address,
                 latitude,

@@ -5,6 +5,7 @@ import org.springframework.http.HttpStatus;
 public enum ErrorCode {
     // 400 BAD_REQUEST
     INVALID_REQUEST(HttpStatus.BAD_REQUEST, "요청 값이 올바르지 않습니다."),
+    UNSUPPORTED_QUERY_PARAMETER(HttpStatus.BAD_REQUEST, "지원하지 않는 쿼리 파라미터입니다."),
     CANNOT_ACCEPT_OWN_HELP_REQUEST(HttpStatus.BAD_REQUEST, "자신의 도움 요청은 수락할 수 없습니다."),
     CANNOT_REJECT_OWN_HELP_REQUEST(HttpStatus.BAD_REQUEST, "자신의 도움 요청은 거절할 수 없습니다."),
     TARGET_FEATURE_NOT_FOUND(HttpStatus.BAD_REQUEST, "해당 층 도면에 존재하지 않는 targetFeatureId입니다."),

@@ -4,8 +4,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 
 @Schema(name = "PlaceFilterResponse", description = "장소 탐색에 사용 가능한 필터")
-public record PlaceFilterResponse(@Schema(description = "사용 가능한 카테고리 목록") List<String> categories) {
+public record PlaceFilterResponse(@Schema(description = "사용 가능한 소분류 코드 목록") List<String> categoryCodes) {
     public PlaceFilterResponse {
-        categories = List.copyOf(categories);
+        categoryCodes = List.copyOf(categoryCodes);
     }
 }

@@ -9,9 +9,24 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.env.YamlPropertySourceLoader;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.web.client.RestClient;
 
 class TourApiRestClientConfigTest {
+
+    @Test
+    @DisplayName("기본 설정은 현재 KorService2 엔드포인트를 사용한다")
+    void defaultConfigurationTargetsCurrentKorService2() throws Exception {
+        Object baseUrl = new YamlPropertySourceLoader()
+                .load("application", new ClassPathResource("application.yaml")).stream()
+                        .map(source -> source.getProperty("tour-api.base-url"))
+                        .filter(java.util.Objects::nonNull)
+                        .findFirst()
+                        .orElse(null);
+
+        assertThat(baseUrl).isEqualTo("https://apis.data.go.kr/B551011/KorService2");
+    }
 
     @Test
     @DisplayName("Tour API RestClient customizer가 적용된 상태에서 GET 요청을 보내면 HTTP/2 Upgrade 헤더를 넣지 않는다")

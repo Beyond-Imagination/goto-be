@@ -1,17 +1,20 @@
 package kr.bi.go_to.batch.processor;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import kr.bi.go_to.batch.client.TourApiClient;
 import kr.bi.go_to.batch.dto.PlaceProcessingResult;
 import kr.bi.go_to.batch.dto.TourApiItemDto;
 import kr.bi.go_to.batch.listener.EtlFailureLogger;
+import kr.bi.go_to.batch.validation.TourApiPlaceCategoryValidator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -22,6 +25,7 @@ class TourApiIncrementalItemProcessorTest {
 
     private TourApiIncrementalItemProcessor processor;
     private TourApiClient tourApiClient;
+    private TourApiPlaceCategoryValidator categoryValidator;
 
     @BeforeEach
     void setUp() {
@@ -31,7 +35,9 @@ class TourApiIncrementalItemProcessorTest {
         when(tourApiClient.extractFieldOrEmpty(any(JsonNode.class), anyString()))
                 .thenReturn("");
 
-        processor = new TourApiIncrementalItemProcessor(mock(EtlFailureLogger.class), tourApiClient);
+        categoryValidator = mock(TourApiPlaceCategoryValidator.class);
+        when(categoryValidator.requireActiveLeaf(any(TourApiItemDto.class))).thenReturn("A0101");
+        processor = new TourApiIncrementalItemProcessor(mock(EtlFailureLogger.class), categoryValidator, tourApiClient);
     }
 
     @Test
@@ -41,6 +47,8 @@ class TourApiIncrementalItemProcessorTest {
 
         assertThat(result).isNotNull();
         assertThat(result.place().isDeleted()).isTrue();
+        assertThat(result.place().getCategoryCode()).isNull();
+        verifyNoInteractions(categoryValidator);
     }
 
     @Test
@@ -113,9 +121,18 @@ class TourApiIncrementalItemProcessorTest {
         assertThat(result.place().isDetailIntroSynced()).isTrue();
     }
 
+    @Test
+    @DisplayName("detail provider 인프라 예외는 source-data skip으로 변환하지 않고 전파한다")
+    void propagatesDetailProviderInfrastructureFailure() {
+        IllegalStateException infrastructureFailure = new IllegalStateException("provider unavailable");
+        when(tourApiClient.fetchDetail(eq("detailCommon2"), anyString(), nullable(String.class)))
+                .thenThrow(infrastructureFailure);
+
+        assertThatThrownBy(() -> processor.process(createDto("1"))).isSameAs(infrastructureFailure);
+    }
+
     private TourApiItemDto createDto(String showflag) {
-        // 한국관광공사 증분 API의 showflag는 공개/삭제 상태를 나타낸다.
-        // 0: 삭제 또는 비공개, 1: 공개 중인 데이터.
+        // 공개 상태 값은 0이면 삭제·비공개, 1이면 공개를 뜻한다.
         return new TourApiItemDto(
                 "12345",
                 "12",

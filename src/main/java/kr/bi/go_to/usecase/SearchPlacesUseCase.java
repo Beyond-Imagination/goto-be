@@ -24,21 +24,21 @@ public class SearchPlacesUseCase {
 
     public PlaceSearchResponse execute(PlaceSearchRequest request) {
         List<PlaceData> allPlaces = placeService.findAll();
-        List<String> categories = allPlaces.stream()
-                .map(PlaceData::category)
-                .filter(category -> category != null && !category.isBlank())
+        List<String> categoryCodes = allPlaces.stream()
+                .map(PlaceData::categoryCode)
+                .filter(categoryCode -> categoryCode != null && !categoryCode.isBlank())
                 .distinct()
                 .sorted()
                 .toList();
         List<PlaceSearchItemResponse> places = allPlaces.stream()
                 .filter(place ->
-                        request.category() == null || request.category().equals(place.category()))
+                        request.categoryCode() == null || request.categoryCode().equals(place.categoryCode()))
                 .map(place -> toResponse(place, request.lat(), request.lng()))
                 .sorted(Comparator.comparingDouble(PlaceSearchItemResponse::distanceMeters))
                 .limit(request.k())
                 .toList();
 
-        return new PlaceSearchResponse(places, new PlaceFilterResponse(categories));
+        return new PlaceSearchResponse(places, new PlaceFilterResponse(categoryCodes));
     }
 
     private PlaceSearchItemResponse toResponse(PlaceData place, double latitude, double longitude) {
@@ -46,7 +46,7 @@ public class SearchPlacesUseCase {
         return new PlaceSearchItemResponse(
                 place.id(),
                 place.name(),
-                place.category(),
+                place.categoryCode(),
                 place.sanitizedAddress(),
                 place.thumbnailUrl(),
                 place.latitude(),

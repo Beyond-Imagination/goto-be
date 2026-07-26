@@ -52,10 +52,10 @@ public class Place extends BaseAuditEntity {
     private String source;
 
     /**
-     * 장소 카테고리 (관광지, 숙박, 공공기관 등)
+     * 한국관광공사 현재 분류체계의 소분류 코드
      */
-    @Column(length = 50)
-    private String category;
+    @Column(name = "category_code")
+    private String categoryCode;
 
     /**
      * 장소명
