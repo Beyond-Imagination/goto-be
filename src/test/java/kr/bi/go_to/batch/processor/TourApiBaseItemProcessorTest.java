@@ -11,6 +11,8 @@ import kr.bi.go_to.batch.dto.TourApiItemDto;
 import kr.bi.go_to.batch.listener.EtlFailureLogger;
 import kr.bi.go_to.batch.validation.TourApiPlaceCategoryValidator;
 import kr.bi.go_to.enums.PlaceSource;
+import kr.bi.go_to.model.batch.CategoryResolutionStatus;
+import kr.bi.go_to.model.batch.DetailSyncStatus;
 import kr.bi.go_to.model.place.Place;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -263,7 +265,11 @@ class TourApiBaseItemProcessorTest {
                 "1",
                 true,
                 false,
-                false);
+                false,
+                CategoryResolutionStatus.RESOLVED,
+                DetailSyncStatus.SUCCESS,
+                DetailSyncStatus.PENDING,
+                DetailSyncStatus.PENDING);
 
         PlaceProcessingResult result = processor.process(dto);
 

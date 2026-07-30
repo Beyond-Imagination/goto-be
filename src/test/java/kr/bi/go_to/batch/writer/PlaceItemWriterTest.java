@@ -42,7 +42,9 @@ class PlaceItemWriterTest {
         String sql = (String) ReflectionTestUtils.getField(PlaceItemWriter.class, "UPSERT_SQL");
 
         assertThat(sql).contains("category_code");
-        assertThat(sql).contains("CASE WHEN EXCLUDED.is_deleted THEN places.category_code");
+        assertThat(sql)
+                .contains("WHEN EXCLUDED.is_deleted OR EXCLUDED.category_resolution_status = 'PENDING'")
+                .contains("THEN places.category_code");
         assertThat(sql).doesNotContain(" category,");
         assertThat(sql).doesNotContain("category =");
     }
