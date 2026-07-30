@@ -15,15 +15,18 @@ public class TourApiPlaceCategoryValidator {
     private final TourApiCategoryRepository categoryRepository;
 
     public String requireActiveLeaf(TourApiItemDto item) {
-        String categoryCode = item.lclsSystm3();
+        return requireActiveLeaf(item.contentid(), item.lclsSystm3());
+    }
+
+    public String requireActiveLeaf(String contentId, String categoryCode) {
         if (!StringUtils.hasText(categoryCode)) {
             throw new InvalidTourApiCategoryException(
-                    InvalidTourApiCategoryReason.MISSING_CURRENT_LEAF, item.contentid(), categoryCode);
+                    InvalidTourApiCategoryReason.MISSING_CURRENT_LEAF, contentId, categoryCode);
         }
 
         if (!categoryRepository.isActiveLeaf(categoryCode)) {
             throw new InvalidTourApiCategoryException(
-                    InvalidTourApiCategoryReason.UNKNOWN_INACTIVE_OR_NON_LEAF, item.contentid(), categoryCode);
+                    InvalidTourApiCategoryReason.UNKNOWN_INACTIVE_OR_NON_LEAF, contentId, categoryCode);
         }
         categoryRepository.findActiveLeafAncestry(categoryCode);
         return categoryCode;

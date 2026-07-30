@@ -2,13 +2,12 @@ package kr.bi.go_to.batch.processor;
 
 import java.util.ArrayList;
 import java.util.List;
-import kr.bi.go_to.batch.client.TourApiClient;
 import kr.bi.go_to.batch.dto.PlaceProcessingResult;
 import kr.bi.go_to.batch.dto.TourApiItemDto;
 import kr.bi.go_to.batch.listener.EtlFailureLogger;
-import kr.bi.go_to.batch.mapper.TourApiHomepageNormalizer;
 import kr.bi.go_to.batch.validation.TourApiPlaceCategoryValidator;
 import kr.bi.go_to.enums.PlaceSource;
+import kr.bi.go_to.model.batch.CategoryResolutionStatus;
 import kr.bi.go_to.model.place.Place;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,7 +18,6 @@ import org.locationtech.jts.geom.PrecisionModel;
 import org.springframework.batch.infrastructure.item.ItemProcessor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import tools.jackson.databind.JsonNode;
 
 @Slf4j
 @Component
@@ -29,7 +27,6 @@ public class TourApiIncrementalItemProcessor implements ItemProcessor<TourApiIte
     private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
     private final EtlFailureLogger etlFailureLogger;
     private final TourApiPlaceCategoryValidator categoryValidator;
-    private final TourApiClient tourApiClient;
 
     private static final String FAILURE_LOG_TEMPLATE = "[%s] %s, --> contentId: %s";
 
@@ -56,7 +53,11 @@ public class TourApiIncrementalItemProcessor implements ItemProcessor<TourApiIte
             return null;
         }
 
-        String categoryCode = "0".equals(dto.showflag()) ? null : categoryValidator.requireActiveLeaf(dto);
+        boolean isDeleted = "0".equals(dto.showflag());
+        boolean hasCategory = StringUtils.hasText(dto.lclsSystm3());
+        String categoryCode = !isDeleted && hasCategory ? categoryValidator.requireActiveLeaf(dto) : null;
+        CategoryResolutionStatus categoryResolutionStatus =
+                !isDeleted && hasCategory ? CategoryResolutionStatus.RESOLVED : CategoryResolutionStatus.PENDING;
 
         Point location = null;
         if (StringUtils.hasText(dto.mapx()) && StringUtils.hasText(dto.mapy())) {
@@ -88,36 +89,6 @@ public class TourApiIncrementalItemProcessor implements ItemProcessor<TourApiIte
 
         String tel = StringUtils.hasText(dto.tel()) ? dto.tel() : null;
 
-        boolean isDeleted = false;
-        String overview = null;
-        String homepage = null;
-        String bfDetails = null;
-        String introDetails = null;
-        boolean detailCommonSynced = false;
-        boolean detailWithTourSynced = false;
-        boolean detailIntroSynced = false;
-
-        if ("0".equals(dto.showflag())) {
-            isDeleted = true;
-        } else {
-            // 전송·인프라 예외는 원천 데이터 오류로 오분류되지 않도록 그대로 전파한다.
-            JsonNode common2 = tourApiClient.fetchDetail("detailCommon2", dto.contentid(), null);
-            detailCommonSynced = common2 != null;
-            if (detailCommonSynced) {
-                overview = tourApiClient.extractFieldOrEmpty(common2, "overview");
-                String rawHomepage = tourApiClient.extractFieldOrEmpty(common2, "homepage");
-                homepage = TourApiHomepageNormalizer.normalize(rawHomepage);
-            }
-
-            JsonNode withTour2 = tourApiClient.fetchDetail("detailWithTour2", dto.contentid(), null);
-            detailWithTourSynced = withTour2 != null;
-            bfDetails = withTour2 != null ? withTour2.toString() : null;
-
-            JsonNode intro2 = tourApiClient.fetchDetail("detailIntro2", dto.contentid(), dto.contenttypeid());
-            detailIntroSynced = intro2 != null;
-            introDetails = intro2 != null ? intro2.toString() : null;
-        }
-
         Place place = Place.builder()
                 .externalId(dto.contentid())
                 .source(PlaceSource.TOUR_API.name())
@@ -126,18 +97,13 @@ public class TourApiIncrementalItemProcessor implements ItemProcessor<TourApiIte
                 .locationPoint(location)
                 .thumbnailUrl(thumbnailUrl)
                 .tel(tel)
-                .overview(overview)
-                .homepage(homepage)
                 .contentTypeId(dto.contenttypeid())
                 .categoryCode(categoryCode)
                 .isDeleted(isDeleted)
-                .detailCommonSynced(detailCommonSynced)
-                .detailWithTourSynced(detailWithTourSynced)
-                .detailIntroSynced(detailIntroSynced)
+                .categoryResolutionStatus(categoryResolutionStatus)
                 .build();
 
-        return new PlaceProcessingResult(
-                place, bfDetails, introDetails, detailCommonSynced, detailWithTourSynced, detailIntroSynced);
+        return new PlaceProcessingResult(place, null, null, false, false, false);
     }
 
     private String constructAddress(String addr1, String addr2) {

@@ -3,6 +3,8 @@ package kr.bi.go_to.batch.dto;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import kr.bi.go_to.model.batch.CategoryResolutionStatus;
+import kr.bi.go_to.model.batch.DetailSyncStatus;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record TourApiItemDto(
@@ -30,7 +32,11 @@ public record TourApiItemDto(
         String showflag,
         boolean detailCommonSynced,
         boolean detailWithTourSynced,
-        boolean detailIntroSynced) {
+        boolean detailIntroSynced,
+        CategoryResolutionStatus categoryResolutionStatus,
+        DetailSyncStatus detailCommonStatus,
+        DetailSyncStatus detailWithTourStatus,
+        DetailSyncStatus detailIntroStatus) {
 
     @JsonCreator
     public TourApiItemDto(
@@ -81,7 +87,11 @@ public record TourApiItemDto(
                 showflag,
                 false,
                 false,
-                false);
+                false,
+                hasText(lclsSystm3) ? CategoryResolutionStatus.RESOLVED : CategoryResolutionStatus.PENDING,
+                DetailSyncStatus.PENDING,
+                DetailSyncStatus.PENDING,
+                DetailSyncStatus.PENDING);
     }
 
     public TourApiItemDto withDetails(String overview, String homepage, String bfDetails, String introDetails) {
@@ -121,6 +131,14 @@ public record TourApiItemDto(
                 this.showflag(),
                 detailCommonSynced,
                 detailWithTourSynced,
-                detailIntroSynced);
+                detailIntroSynced,
+                categoryResolutionStatus,
+                detailCommonSynced ? DetailSyncStatus.SUCCESS : detailCommonStatus,
+                detailWithTourSynced ? DetailSyncStatus.SUCCESS : detailWithTourStatus,
+                detailIntroSynced ? DetailSyncStatus.SUCCESS : detailIntroStatus);
+    }
+
+    private static boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 }
