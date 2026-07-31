@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.UUID;
 import kr.bi.go_to.config.security.AuthenticatedMember;
 import kr.bi.go_to.controller.help.request.CreateHelpRequestRequest;
+import kr.bi.go_to.controller.help.response.HelpPlaceContactsResponse;
 import kr.bi.go_to.controller.help.response.HelpRequestResponse;
 import kr.bi.go_to.controller.help.response.NearbyHelpRequestResponse;
 import kr.bi.go_to.service.HelpRequestService;
@@ -43,6 +44,17 @@ public class HelpRequestController implements HelpRequestApiSpec {
     public HelpRequestResponse create(
             @AuthenticationPrincipal AuthenticatedMember member, @Valid @RequestBody CreateHelpRequestRequest request) {
         return helpRequestService.create(member.id(), request);
+    }
+
+    @GetMapping("/place-contacts")
+    @Override
+    public HelpPlaceContactsResponse findPlaceContacts(
+            @RequestParam(required = false) @Min(1) Long placeId,
+            @RequestParam(required = false) @DecimalMin("-90.0") @DecimalMax("90.0") Double latitude,
+            @RequestParam(required = false) @DecimalMin("-180.0") @DecimalMax("180.0") Double longitude,
+            @RequestParam(defaultValue = "100") @Min(1) @Max(500) int radiusMeters,
+            @RequestParam(defaultValue = "5") @Min(1) @Max(10) int limit) {
+        return helpRequestService.findPlaceContacts(placeId, latitude, longitude, radiusMeters, limit);
     }
 
     @GetMapping("/nearby")

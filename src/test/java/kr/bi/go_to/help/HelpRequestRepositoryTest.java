@@ -72,7 +72,7 @@ class HelpRequestRepositoryTest {
 
         List<HelpRequest> result = helpRequestRepository.findNearbyOpenRequests(
                 helper.getId(),
-                HelpRequestStatus.REQUESTED.name(),
+                HelpRequestStatus.REQUESTED,
                 new BigDecimal("35.8294000"),
                 new BigDecimal("129.2286000"),
                 1_000,

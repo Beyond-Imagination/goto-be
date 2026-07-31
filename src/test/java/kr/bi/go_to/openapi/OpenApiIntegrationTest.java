@@ -35,6 +35,8 @@ class OpenApiIntegrationTest {
                 .andExpect(jsonPath("$.paths['/api/v1/auth/refresh']").exists())
                 .andExpect(jsonPath("$.paths['/api/v1/help-requests']").exists())
                 .andExpect(jsonPath("$.paths['/api/v1/help-requests/nearby']").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/help-requests/place-contacts']")
+                        .exists())
                 .andExpect(jsonPath("$.paths['/api/v1/places/search'].get.parameters[?(@.name == 'categoryCode')]")
                         .exists())
                 .andExpect(jsonPath("$.paths['/api/v1/places/search'].get.parameters[?(@.name == 'category')]")
@@ -52,6 +54,13 @@ class OpenApiIntegrationTest {
                 .andExpect(jsonPath("$.components.schemas.HelpRequestResponse").exists())
                 .andExpect(jsonPath("$.components.schemas.NearbyHelpRequestResponse")
                         .exists())
+                .andExpect(jsonPath("$.components.schemas.HelpPlaceContactsResponse")
+                        .exists())
+                .andExpect(jsonPath("$.components.schemas.PlaceContactResponse").exists())
+                .andExpect(
+                        jsonPath("$.components.schemas.ContactMethodResponse").exists())
+                .andExpect(
+                        jsonPath("$.components.schemas.LocationShareResponse").doesNotExist())
                 .andExpect(jsonPath("$.components.schemas.PlaceSearchItemResponse.properties.categoryCode")
                         .exists())
                 .andExpect(jsonPath("$.components.schemas.PlaceSearchItemResponse.properties.category")
