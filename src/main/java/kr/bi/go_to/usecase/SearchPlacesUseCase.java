@@ -52,7 +52,8 @@ public class SearchPlacesUseCase {
                 place.latitude(),
                 place.longitude(),
                 Math.round(distanceMeters * 10.0) / 10.0,
-                BfDetailsResponse.from(place.bfDetails()));
+                BfDetailsResponse.from(place.bfDetails()),
+                place.hasIndoorMap());
     }
 
     private double haversineDistance(double latitude1, double longitude1, double latitude2, double longitude2) {

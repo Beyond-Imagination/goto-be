@@ -12,4 +12,5 @@ public record PlaceSearchItemResponse(
         @Schema(description = "위도", example = "37.523850") double latitude,
         @Schema(description = "경도", example = "126.980470") double longitude,
         @Schema(description = "현재 위치로부터의 거리(m)", example = "4740.2") double distanceMeters,
-        BfDetailsResponse bfDetails) {}
+        BfDetailsResponse bfDetails,
+        @Schema(description = "실내 지도(FLOOR_MAP) 존재 여부") boolean hasIndoorMap) {}

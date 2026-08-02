@@ -24,6 +24,7 @@ public class MockPlaceService implements PlaceService {
                     "https://example.com/museum.jpg",
                     true,
                     true,
+                    true,
                     true),
             place(
                     2,
@@ -34,6 +35,7 @@ public class MockPlaceService implements PlaceService {
                     37.566317,
                     126.977829,
                     "https://example.com/library.jpg",
+                    true,
                     true,
                     true,
                     true),
@@ -48,7 +50,8 @@ public class MockPlaceService implements PlaceService {
                     "https://example.com/palace.jpg",
                     false,
                     true,
-                    true),
+                    true,
+                    false),
             place(
                     4,
                     "stay-001",
@@ -60,7 +63,8 @@ public class MockPlaceService implements PlaceService {
                     "https://example.com/hostel.jpg",
                     true,
                     true,
-                    true),
+                    true,
+                    false),
             place(
                     5,
                     "tour-003",
@@ -72,6 +76,7 @@ public class MockPlaceService implements PlaceService {
                     "https://example.com/tower.jpg",
                     true,
                     true,
+                    false,
                     false),
             place(
                     6,
@@ -84,7 +89,8 @@ public class MockPlaceService implements PlaceService {
                     "https://example.com/yongsan-office.jpg",
                     true,
                     true,
-                    true));
+                    true,
+                    false));
 
     @Override
     public List<PlaceData> findAll() {
@@ -102,7 +108,8 @@ public class MockPlaceService implements PlaceService {
             String thumbnailUrl,
             boolean hasElevator,
             boolean hasAccessibleToilet,
-            boolean hasRamp) {
+            boolean hasRamp,
+            boolean hasIndoorMap) {
         return new PlaceData(
                 id,
                 externalId,
@@ -114,6 +121,7 @@ public class MockPlaceService implements PlaceService {
                 longitude,
                 thumbnailUrl,
                 new BfDetailsData(hasElevator, hasAccessibleToilet, hasRamp),
-                LAST_SYNCED_AT);
+                LAST_SYNCED_AT,
+                hasIndoorMap);
     }
 }
