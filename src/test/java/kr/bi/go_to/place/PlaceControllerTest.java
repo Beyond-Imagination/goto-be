@@ -1,11 +1,13 @@
 package kr.bi.go_to.place;
 
+import static org.mockito.Mockito.mock;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import kr.bi.go_to.controller.place.PlaceController;
 import kr.bi.go_to.service.place.mock.MockPlaceService;
+import kr.bi.go_to.service.savedplace.SavedPlaceService;
 import kr.bi.go_to.usecase.SearchPlacesUseCase;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,7 +23,8 @@ class PlaceControllerTest {
     void setUp() {
         LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
-        PlaceController controller = new PlaceController(new SearchPlacesUseCase(new MockPlaceService()));
+        PlaceController controller =
+                new PlaceController(new SearchPlacesUseCase(new MockPlaceService()), mock(SavedPlaceService.class));
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setValidator(validator)
                 .build();
