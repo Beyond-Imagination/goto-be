@@ -57,4 +57,15 @@ public class Report extends BaseAuditEntity {
      */
     @Column(columnDefinition = "TEXT")
     private String description;
+
+    private Report(FacilityNode node, Member reporter, String issueType, String description) {
+        this.node = node;
+        this.reporter = reporter;
+        this.issueType = issueType;
+        this.description = description;
+    }
+
+    public static Report create(FacilityNode node, Member reporter, String issueType, String description) {
+        return new Report(node, reporter, issueType, description);
+    }
 }

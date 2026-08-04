@@ -9,9 +9,7 @@ import kr.bi.go_to.exception.ErrorCode;
 import kr.bi.go_to.service.report.ReportService;
 import kr.bi.go_to.service.report.model.FacilityNodeData;
 import kr.bi.go_to.service.report.model.ReportData;
-import org.springframework.stereotype.Service;
 
-@Service
 public class MockReportService implements ReportService {
 
     private static final List<FacilityNodeData> NODES = List.of(
