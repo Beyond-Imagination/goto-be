@@ -6,7 +6,9 @@ import kr.bi.go_to.batch.dto.PlaceProcessingResult;
 import kr.bi.go_to.batch.dto.TourApiItemDto;
 import kr.bi.go_to.batch.listener.EtlFailureLogger;
 import kr.bi.go_to.batch.mapper.TourApiHomepageNormalizer;
+import kr.bi.go_to.batch.validation.TourApiPlaceCategoryValidator;
 import kr.bi.go_to.enums.PlaceSource;
+import kr.bi.go_to.model.batch.CategoryResolutionStatus;
 import kr.bi.go_to.model.place.Place;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +27,7 @@ public class TourApiBaseItemProcessor implements ItemProcessor<TourApiItemDto, P
 
     private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
     private final EtlFailureLogger etlFailureLogger;
+    private final TourApiPlaceCategoryValidator categoryValidator;
 
     private static final String FAILURE_LOG_TEMPLATE = "[%s] %s, --> contentId: %s";
 
@@ -45,6 +48,12 @@ public class TourApiBaseItemProcessor implements ItemProcessor<TourApiItemDto, P
             log.warn("Skipping item with empty title: contentid={}", dto.contentid());
             return null;
         }
+
+        String categoryCode = "0".equals(dto.showflag())
+                ? null
+                : dto.categoryResolutionStatus() == CategoryResolutionStatus.RESOLVED
+                        ? categoryValidator.requireActiveLeaf(dto)
+                        : null;
 
         Point location = null;
         if (StringUtils.hasText(dto.mapx()) && StringUtils.hasText(dto.mapy())) {
@@ -84,10 +93,14 @@ public class TourApiBaseItemProcessor implements ItemProcessor<TourApiItemDto, P
                 .overview(overview)
                 .homepage(homepage)
                 .contentTypeId(dto.contenttypeid())
-                .category(dto.cat3())
+                .categoryCode(categoryCode)
                 .detailCommonSynced(dto.detailCommonSynced())
                 .detailWithTourSynced(dto.detailWithTourSynced())
                 .detailIntroSynced(dto.detailIntroSynced())
+                .categoryResolutionStatus(dto.categoryResolutionStatus())
+                .detailCommonStatus(dto.detailCommonStatus())
+                .detailWithTourStatus(dto.detailWithTourStatus())
+                .detailIntroStatus(dto.detailIntroStatus())
                 .build();
 
         return new PlaceProcessingResult(

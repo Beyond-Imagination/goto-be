@@ -6,7 +6,7 @@ public record PlaceData(
         long id,
         String externalId,
         String source,
-        String category,
+        String categoryCode,
         String name,
         String sanitizedAddress,
         double latitude,

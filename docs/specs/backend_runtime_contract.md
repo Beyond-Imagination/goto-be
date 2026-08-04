@@ -188,7 +188,12 @@ management:
   endpoint:
     health:
       show-details: never
+  health:
+    redis:
+      enabled: false
 ```
+
+Redis health indicator는 `/actuator/health` 집계 상태에서 제외합니다(`management.health.redis.enabled: false`). 캐시는 부가 기능으로 취급하며, Redis 가용성이 배포 헬스체크 결과에 영향을 주지 않아야 합니다. 상세 배경은 [0003_adr_indoor_map_redis_caching_scope.md](../adr/0003_adr_indoor_map_redis_caching_scope.md)를 참고하십시오.
 
 main module deploy workflow는 public HTTPS endpoint인 `https://${DEV_API_DOMAIN}/actuator/health`가 HTTP 200과 `UP` 상태를 반환해야 배포 성공으로 판단합니다. 이 값은 main module repository variable이며, Compose runtime에서는 Caddy의 `API_DOMAIN` 값으로 전달됩니다.
 
@@ -238,7 +243,7 @@ main module dev runtime에서도 `goto.batch.initial-load.auto-run-enabled=true`
 
 `tourApiInitialLoadJob`은 **목록(base) step만** 실행합니다. `areaBasedList2`로 전국 장소 목록을 페이징 수집하고 `places`에 upsert한 뒤 `COMPLETED`로 종료합니다.
 
-상세 보강(`detailCommon2`, `detailWithTour2`, `detailIntro2`)은 초기 적재 job에 포함하지 않습니다. `overview`, `homepage`, `place_bf_info` 등 detail 의존 필드는 `tourApiIncrementalSyncJob`의 Lazy Detail Fetch step과 증분 processor의 Eager Fetch로 점진 보강합니다.
+상세 보강(`detailCommon2`, `detailWithTour2`, `detailIntro2`)은 초기 적재 job에 포함하지 않습니다. `overview`, `homepage`, `place_bf_info` 등 detail 의존 필드는 `tourApiIncrementalSyncJob`의 quota-bound Lazy Detail Fetch step이 단독으로 점진 보강합니다.
 
 ### 13.2 Initial Load Completion & Scheduler Guard
 
@@ -248,7 +253,7 @@ main module dev runtime에서도 `goto.batch.initial-load.auto-run-enabled=true`
 
 ### 13.3 Incremental Sync Schedule
 
-증분 동기화 스케줄은 KST 기준 매일 03:00 실행을 전제로 합니다. Lazy Detail Fetch step은 실행당 최대 `tour-api.detail-quota`(기본 250)건의 미보강 장소만 처리합니다.
+증분 동기화 스케줄은 KST 기준 매일 03:00 실행을 전제로 합니다. 스케줄러는 PostgreSQL session advisory lock으로 다중 backend 인스턴스의 check/start 구간을 직렬화하고, lock 내부에서 Batch repository에 동일 `tourApiIncrementalSyncJob`의 실행 중 execution이 있는지 다시 확인합니다. Lazy Detail Fetch step은 실행당 최대 `tour-api.detail-quota`(기본 250)건의 `PENDING` 장소만 `updated_at ASC, id ASC` 순서로 처리합니다.
 
 ### 13.4 Deploy & Health Interaction
 

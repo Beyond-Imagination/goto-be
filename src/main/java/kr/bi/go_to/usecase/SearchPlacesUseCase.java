@@ -21,7 +21,7 @@ public class SearchPlacesUseCase {
 
     public PlaceSearchResponse execute(PlaceSearchRequest request) {
         List<PlaceSearchItemResponse> places =
-                placeService.searchNearby(request.lat(), request.lng(), request.k(), request.category()).stream()
+                placeService.searchNearby(request.lat(), request.lng(), request.k(), request.categoryCode()).stream()
                         .map(this::toResponse)
                         .toList();
         List<String> categories = placeService.findDistinctCategories();
@@ -33,7 +33,7 @@ public class SearchPlacesUseCase {
         return new PlaceSearchItemResponse(
                 place.id(),
                 place.name(),
-                place.category(),
+                place.categoryCode(),
                 place.sanitizedAddress(),
                 place.thumbnailUrl(),
                 place.latitude(),

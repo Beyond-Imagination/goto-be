@@ -14,7 +14,8 @@ docs/
 ├── adr/
 │   ├── 0000_adr_data_modeling.md  # [adr] 데이터 모델링 구조 결정 및 PostGIS, JSONB 트레이드오프
 │   ├── 0001_adr_etl_pipeline.md   # [adr] 초기 ETL 파이프라인 설계. 0002에 의해 부분 대체됨
-│   └── 0002_adr_incremental_sync_pipeline.md  # [adr] 증분 동기화, 자동 초기 적재, 스케줄러 가드
+│   ├── 0002_adr_incremental_sync_pipeline.md  # [adr] 증분 동기화, 자동 초기 적재, 스케줄러 가드
+│   └── 0003_adr_indoor_map_redis_caching_scope.md  # [adr] 실내 지도 Redis 캐싱 도입 범위(로컬 전용) 및 Actuator 헬스체크 격리
 ├── context_map.md                 # 본 문서 (전체 지도 및 도메인 컨텍스트 맵)
 └── specs/
     ├── backend_runtime_contract.md  # [spec] main module dev backend 런타임 계약
@@ -43,7 +44,8 @@ docs/
 * **해당 문서**:
   * [0000_adr_data_modeling.md](adr/0000_adr_data_modeling.md): 데이터 대리키 분리, JSONB 무장애 상세 스펙, 실내 지도 도면/시설 노드 이중화 분리, PDR 센서 보정을 위한 스냅점 설계 및 PostGIS 공간/GIN 인덱싱 전략 등.
   * [0001_adr_etl_pipeline.md](adr/0001_adr_etl_pipeline.md) **[Superseded]**: HTTP RestClient 적용, Spring Batch 프레임워크 선택, 에러 핸들링 등 초기 전체 데이터 적재 파이프라인의 동작 방식.
-  * [0002_adr_incremental_sync_pipeline.md](adr/0002_adr_incremental_sync_pipeline.md): 증분 동기화(Incremental Sync) 아키텍처, 자동 초기 적재, Eager-Lazy Fallback 전략, Soft Delete 및 스케줄러 가드 도입.
+  * [0002_adr_incremental_sync_pipeline.md](adr/0002_adr_incremental_sync_pipeline.md): 증분 동기화(Incremental Sync) 아키텍처, 자동 초기 적재, quota-bound detail 상태머신, Soft Delete 및 스케줄러 가드 도입.
+  * [0003_adr_indoor_map_redis_caching_scope.md](adr/0003_adr_indoor_map_redis_caching_scope.md): 실내 지도 API Redis 캐싱을 로컬 개발 전용으로 한정하고 prod 인프라 결정을 후속 ADR로 분리, Actuator `/actuator/health` 집계에서 Redis 헬스 인디케이터 제외.
 
 ### 1.2. `specs` 카테고리 (Implementation Specs)
 * **목적**: 실제 코드 구현과 물리 데이터베이스 설계에 반영되어야 하는 세부 물리 규격, API 상세 페이로드 포맷, ERD 명세를 보관하는 카테고리입니다.
@@ -124,8 +126,8 @@ flowchart TD
 
         subgraph Incremental_Steps [Incremental Sync Steps]
             IncrementalReader[areaBasedSyncList2 Reader]
-            IncrementalProcessor[Eager Detail Processor]
-            SharedDetailReader[Shared Lazy Detail Reader]
+            IncrementalProcessor[Base-only Incremental Processor]
+            SharedDetailReader[Quota-bound Lazy Detail Reader]
             DetailProcessor[Detail Processor]
             IncrementalSyncLogListener[Incremental Sync Log Listener]
         end
@@ -144,6 +146,7 @@ flowchart TD
     InitialStatus -.->|Read initial load status| BatchMeta
     InitialRunner -.-> InitialStatus
     Scheduler -.->|Skip until initial load COMPLETED| InitialStatus
+    Scheduler -.->|Advisory lock + running execution check| BatchMeta
     Scheduler -->|Trigger| IncrementalJob
     
     InitialJob --> BaseReader --> BaseProcessor --> Writer
@@ -152,8 +155,7 @@ flowchart TD
     
     BaseReader -->|areaBasedList2| KNTO_Barrier
     IncrementalReader -->|areaBasedSyncList2| KNTO_Barrier
-    SharedDetailReader -->|detailCommon2/detailWithTour2/detailIntro2 for is_deleted=false| KNTO_Barrier
-    IncrementalProcessor -->|Eager detail fetch| KNTO_Barrier
+    SharedDetailReader -->|detail APIs for non-deleted PENDING rows| KNTO_Barrier
     BaseProcessor -->|Error Detected| DlqTbl
     IncrementalProcessor -->|Error Detected| DlqTbl
     
@@ -168,9 +170,9 @@ flowchart TD
 
 현재 `batch_sync_log`는 증분 Reader가 마지막 성공 기준일을 조회하고, `TourApiIncrementalSyncLogListener`가 증분 Job 종료 후 `SUCCESS` 또는 `FAIL` 이력을 누적하는 용도로 사용합니다. Reader는 마지막 성공 `target_date`를 이번 실행의 `modifiedtime` 요청 기준일(`requestDate`)로 사용하고, KST 기준 실행일을 성공 시 저장할 다음 기준일(`targetDate`)로 Job context에 함께 등록합니다. `SUCCESS` 이력의 `target_date`만 다음 증분 실행의 `modifiedtime` 기준이 되며, `FAIL` 이력의 `target_date`는 실패한 실행이 실제 요청한 기준일을 기록합니다.
 
-Lazy Detail Fetch Step은 `tourApiIncrementalSyncJob`에서만 실행합니다. `tourApiInitialLoadJob`은 목록(base) step만 수행하며, 상세 보강은 03:00 KST 증분 job과 증분 processor의 Eager Fetch로 점진 보강합니다.
+Lazy Detail Fetch Step은 `tourApiIncrementalSyncJob`에서만 실행합니다. `tourApiInitialLoadJob`은 목록(base) step만 수행하며, 상세 보강은 03:00 KST 증분 job의 quota-bound detail step이 단독으로 수행합니다.
 
-Lazy Detail Fetch Step은 `is_deleted=false`이면서 `detail_common_synced`, `detail_with_tour_synced`, `detail_intro_synced` 중 하나라도 false인 Tour API 장소만 상세 보강 대상으로 삼습니다. 삭제된 장소(`is_deleted=true`)의 상세 정보 최신화가 향후 관리자/감사 요구사항이 된다면, 현재 detail step과 별도의 수집 정책을 설계해야 합니다.
+Lazy Detail Fetch Step은 `is_deleted=false`이면서 category/detail status 중 하나라도 `PENDING`인 Tour API 장소만 상세 보강 대상으로 삼습니다. category는 `PENDING`, `RESOLVED`, `NOT_FOUND`, 각 detail은 `PENDING`, `SUCCESS`, `NOT_FOUND`, `SKIPPED` 상태를 사용합니다. 삭제된 장소(`is_deleted=true`)의 상세 정보 최신화가 향후 관리자/감사 요구사항이 된다면, 현재 detail step과 별도의 수집 정책을 설계해야 합니다.
 
 ---
 

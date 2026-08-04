@@ -6,7 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 public record PlaceSearchItemResponse(
         @Schema(description = "장소 ID", example = "1") long placeId,
         @Schema(description = "장소명", example = "국립중앙박물관") String name,
-        @Schema(description = "카테고리", example = "관광지") String category,
+        @Schema(description = "한국관광공사 현재 분류체계 소분류 코드", example = "A01010100") String categoryCode,
         @Schema(description = "정제된 주소", example = "서울 용산구 서빙고로 137") String address,
         @Schema(description = "썸네일 URL") String thumbnailUrl,
         @Schema(description = "위도", example = "37.523850") double latitude,

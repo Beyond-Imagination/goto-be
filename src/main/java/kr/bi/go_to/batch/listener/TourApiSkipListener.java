@@ -5,6 +5,8 @@ import kr.bi.go_to.batch.dto.TourApiItemDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.listener.SkipListener;
+import org.springframework.batch.core.scope.context.StepContext;
+import org.springframework.batch.core.scope.context.StepSynchronizationManager;
 import org.springframework.stereotype.Component;
 
 @Slf4j
@@ -33,10 +35,11 @@ public class TourApiSkipListener implements SkipListener<TourApiItemDto, PlacePr
     }
 
     private void logFailure(String externalId, String errorMessage) {
-        try {
+        StepContext context = StepSynchronizationManager.getContext();
+        if (context == null || context.getJobInstanceId() == null) {
             failureLogger.logFailure(externalId, errorMessage);
-        } catch (Exception e) {
-            log.error("Failed to log error to etl_failure_log table", e);
+            return;
         }
+        failureLogger.logFailure(context.getJobInstanceId(), context.getStepName(), externalId, errorMessage);
     }
 }

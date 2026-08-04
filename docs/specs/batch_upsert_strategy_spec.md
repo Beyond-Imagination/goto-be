@@ -10,7 +10,7 @@
 본 문서는 "함께가길" (goto) 프로젝트의 Spring Batch 기반 ETL 파이프라인에서 장소(`Place`) 데이터 영속화, 상세 보강 상태 저장, 증분 동기화 메타데이터 기록을 효율적이고 안전하게 처리하기 위한 세부 구현 전략 및 아키텍처 의사결정을 정의합니다.
 
 ### 1.2 Scope
-*   **In-Scope:** Spring Batch의 `ItemWriter` 컴포넌트 데이터베이스 적재 로직, PostgreSQL 충돌 해결(Conflict Resolution) 전략, 상세 보강 flag 및 `place_bf_info` 저장 정책, 증분 동기화 이력(`batch_sync_log`) write-back 트랜잭션 경계, 성능 및 메모리 관리 최적화 방안, Tour API 목록 응답 DTO(`TourApiResponseDto`) 역직렬화 edge case(`body.items` 타입 불일치).
+*   **In-Scope:** Spring Batch의 `ItemWriter` 컴포넌트 데이터베이스 적재 로직, PostgreSQL 충돌 해결(Conflict Resolution) 전략, category/detail 상태머신과 호환용 sync flag 및 `place_bf_info` 저장 정책, 증분 동기화 이력(`batch_sync_log`) write-back 트랜잭션 경계, 성능 및 메모리 관리 최적화 방안, Tour API 목록 응답 DTO(`TourApiResponseDto`) 역직렬화 edge case(`body.items` 타입 불일치).
 *   **Out-of-Scope:** Tour API 호출 자체의 Extract 흐름(페이징/스케줄 트리거 제외), 스케줄링(Quartz/Spring Scheduler) 트리거 정책, 애플리케이션 사용자 트래픽 처리 로직.
 
 ---
@@ -49,12 +49,16 @@
 *   **Soft Delete Handling (논리 삭제 처리)**:
     *   `places.is_deleted`는 Tour API의 `showflag=0` 삭제 데이터를 반영하기 위한 명시 컬럼입니다. `PlaceItemWriter`는 장소 Upsert 시 `is_deleted`를 항상 `EXCLUDED.is_deleted` 값으로 갱신합니다.
     *   삭제된 장소(`is_deleted=true`)는 `place_bf_info` Upsert 대상에서 제외하여, 삭제 데이터에 대해 무장애 상세 정보를 갱신하지 않습니다.
-    *   Lazy Detail Fetch Step은 삭제된 장소를 상세 보강 대상으로 삼지 않습니다. 현재 상세 보강 대상 조회 조건은 `source = 'TOUR_API' AND is_deleted = false`이면서 `detail_common_synced`, `detail_with_tour_synced`, `detail_intro_synced` 중 하나라도 `false`인 row입니다.
+    *   Lazy Detail Fetch Step은 삭제된 장소를 상세 보강 대상으로 삼지 않습니다. 현재 상세 보강 대상 조회 조건은 `source = 'TOUR_API' AND is_deleted = false`이면서 `category_resolution_status`, `detail_common_status`, `detail_with_tour_status`, `detail_intro_status` 중 하나라도 `PENDING`인 row입니다.
     *   삭제/복구 상태 판단은 detail API가 아니라 `areaBasedSyncList2`의 `showflag`를 기준으로 합니다. 따라서 detail step은 `is_deleted` 상태를 복구하거나 변경하는 책임을 갖지 않습니다.
-*   **Detail Completion Flags (상세 보강 완료 상태)**:
-    *   상세 보강 완료는 `detailCommon2`, `detailWithTour2`, `detailIntro2` 세 API가 모두 성공했을 때만 성립합니다.
-    *   `places.detail_common_synced`, `places.detail_with_tour_synced`, `places.detail_intro_synced`는 각 API의 성공 여부를 저장합니다.
-    *   `detailWithTour2`와 `detailIntro2`가 모두 성공한 경우에만 `place_bf_info.bf_details`를 갱신합니다. `detailWithTour2` 응답은 `TourApiBfDetailsNormalizer`를 통해 `PlaceBfDetails` 스키마로 정규화하고, `detailIntro2` 응답은 앱에서 바로 쓰는 `intro` projection으로 저장합니다. 두 원천의 원문은 `sources.tour_api.detailWithTour`, `sources.tour_api.detailIntro`에도 보존합니다.
+*   **Category / Detail State Machine (상세 보강 상태머신)**:
+    *   `places.category_resolution_status`는 `PENDING`, `RESOLVED`, `NOT_FOUND`를 저장합니다. `NOT_FOUND -> RESOLVED` 복구는 허용하지만, 저장된 `RESOLVED`를 늦게 도착한 `NOT_FOUND` 결과로 후퇴시키지 않습니다.
+    *   각 detail status는 `PENDING`, `SUCCESS`, `NOT_FOUND`, `SKIPPED` 중 하나입니다. Writer는 저장된 값이 `PENDING`일 때만 incoming terminal을 수용하며, 이미 terminal인 값을 다른 terminal 또는 `PENDING`으로 덮지 않습니다.
+    *   `places.detail_common_synced`, `places.detail_with_tour_synced`, `places.detail_intro_synced`는 기존 소비자와의 호환을 위해 유지하는 파생 Boolean입니다. 대상 선택과 재시도는 status 컬럼만 사용합니다.
+    *   category가 `PENDING`이면 `detailCommon2` 응답의 `lclsSystm3`를 활성 leaf taxonomy로 검증합니다. 유효하지 않으면 category는 `NOT_FOUND`, 아직 `PENDING`인 종속 detail은 API 호출 없이 `SKIPPED`로 종결합니다.
+    *   일시적인 네트워크/API 장애는 해당 endpoint status만 `PENDING`으로 남깁니다. 다른 terminal endpoint는 다음 실행에서 재호출하지 않습니다.
+    *   성공한 `detailWithTour2`, `detailIntro2` 원문은 각각 `places.detail_with_tour_payload`, `places.detail_intro_payload` JSONB에 terminal 전이와 같은 조건으로 저장합니다. 늦게 도착한 stale 결과는 terminal 상태와 원문을 덮지 않습니다.
+    *   두 endpoint가 같은 처리 결과 또는 서로 다른 batch 실행에서 모두 `SUCCESS`가 되고 두 staging 원문이 모인 경우에만 `place_bf_info.bf_details`를 갱신합니다. `detailWithTour2` 응답은 `TourApiBfDetailsNormalizer`를 통해 `PlaceBfDetails` 스키마로 정규화하고, `detailIntro2` 응답은 앱에서 바로 쓰는 `intro` projection으로 저장합니다. 두 원천의 원문은 `sources.tour_api.detailWithTour`, `sources.tour_api.detailIntro`에도 보존합니다.
 *   **Barrier-free JSON Schema (bf_details 저장 스키마)**:
     *   `bf_details`의 최상위 key는 항상 `mobility`, `visual`, `hearing`, `infant_family`, `intro`, `sources`입니다.
     *   `mobility`, `visual`, `hearing`, `infant_family` 내부에는 현재 Tour API에서 매핑 대상으로 삼는 알려진 편의시설 field를 모두 생성합니다. 원본 응답에 값이 비어 있더라도 field 자체는 생략하지 않습니다.
@@ -155,12 +159,38 @@ typed 필드 `Items items`로 바로 매핑하면 Jackson 3가 빈 문자열을 
 * **테스트 공백:** `"items":{}`만 검증하면 `"items":""` 회귀를 잡지 못한다. 실측 0건 fixture가 필수다.
 
 ```sql
--- Place 벌크 Upsert 쿼리
-INSERT INTO places (external_id, source, category, name, sanitized_address, location_point, thumbnail_url, overview, homepage, tel, content_type_id, is_deleted, detail_common_synced, detail_with_tour_synced, detail_intro_synced, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ST_GeomFromText(?, 4326), ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+-- Place 벌크 Upsert의 상태 관련 핵심 부분
+INSERT INTO places (
+    external_id, source, category_code, name, sanitized_address,
+    location_point, thumbnail_url, overview, homepage, tel,
+    content_type_id, is_deleted,
+    detail_common_synced, detail_with_tour_synced, detail_intro_synced,
+    category_resolution_status,
+    detail_common_status, detail_with_tour_status, detail_intro_status,
+    detail_with_tour_payload, detail_intro_payload,
+    created_at, updated_at
+)
+VALUES (
+    ?, ?, ?, ?, ?,
+    ST_GeomFromText(?, 4326), ?, ?, ?, ?,
+    ?, ?,
+    ?, ?, ?,
+    ?,
+    ?, ?, ?,
+    ?::jsonb, ?::jsonb,
+    NOW(), NOW()
+)
 ON CONFLICT (external_id, source)
 DO UPDATE SET
-    category = COALESCE(EXCLUDED.category, places.category),
+    category_code = CASE
+        WHEN EXCLUDED.is_deleted
+             OR EXCLUDED.category_resolution_status = 'PENDING'
+            THEN places.category_code
+        WHEN places.category_resolution_status = 'RESOLVED'
+             AND EXCLUDED.category_resolution_status <> 'RESOLVED'
+            THEN places.category_code
+        ELSE EXCLUDED.category_code
+    END,
     name = COALESCE(EXCLUDED.name, places.name),
     sanitized_address = COALESCE(EXCLUDED.sanitized_address, places.sanitized_address),
     location_point = COALESCE(EXCLUDED.location_point, places.location_point),
@@ -170,24 +200,88 @@ DO UPDATE SET
     tel = COALESCE(EXCLUDED.tel, places.tel),
     content_type_id = COALESCE(EXCLUDED.content_type_id, places.content_type_id),
     is_deleted = EXCLUDED.is_deleted,
-    detail_common_synced = EXCLUDED.detail_common_synced,
-    detail_with_tour_synced = EXCLUDED.detail_with_tour_synced,
-    detail_intro_synced = EXCLUDED.detail_intro_synced,
+    category_resolution_status = CASE
+        WHEN EXCLUDED.category_resolution_status = 'PENDING'
+            THEN places.category_resolution_status
+        WHEN places.category_resolution_status = 'PENDING'
+             OR (
+                 places.category_resolution_status = 'NOT_FOUND'
+                 AND EXCLUDED.category_resolution_status = 'RESOLVED'
+             )
+            THEN EXCLUDED.category_resolution_status
+        ELSE places.category_resolution_status
+    END,
+    detail_common_status = CASE
+        WHEN places.detail_common_status = 'PENDING'
+             AND EXCLUDED.detail_common_status <> 'PENDING'
+            THEN EXCLUDED.detail_common_status
+        ELSE places.detail_common_status
+    END,
+    detail_with_tour_status = CASE
+        WHEN places.detail_with_tour_status = 'PENDING'
+             AND EXCLUDED.detail_with_tour_status <> 'PENDING'
+            THEN EXCLUDED.detail_with_tour_status
+        ELSE places.detail_with_tour_status
+    END,
+    detail_intro_status = CASE
+        WHEN places.detail_intro_status = 'PENDING'
+             AND EXCLUDED.detail_intro_status <> 'PENDING'
+            THEN EXCLUDED.detail_intro_status
+        ELSE places.detail_intro_status
+    END,
+    detail_with_tour_payload = CASE
+        WHEN places.detail_with_tour_status = 'PENDING'
+             AND EXCLUDED.detail_with_tour_status = 'SUCCESS'
+             AND EXCLUDED.detail_with_tour_payload IS NOT NULL
+            THEN EXCLUDED.detail_with_tour_payload
+        ELSE places.detail_with_tour_payload
+    END,
+    detail_intro_payload = CASE
+        WHEN places.detail_intro_status = 'PENDING'
+             AND EXCLUDED.detail_intro_status = 'SUCCESS'
+             AND EXCLUDED.detail_intro_payload IS NOT NULL
+            THEN EXCLUDED.detail_intro_payload
+        ELSE places.detail_intro_payload
+    END,
+    detail_common_synced = CASE
+        WHEN places.detail_common_status = 'PENDING'
+             AND EXCLUDED.detail_common_status <> 'PENDING'
+            THEN EXCLUDED.detail_common_status = 'SUCCESS'
+        ELSE places.detail_common_synced
+    END,
+    detail_with_tour_synced = CASE
+        WHEN places.detail_with_tour_status = 'PENDING'
+             AND EXCLUDED.detail_with_tour_status <> 'PENDING'
+            THEN EXCLUDED.detail_with_tour_status = 'SUCCESS'
+        ELSE places.detail_with_tour_synced
+    END,
+    detail_intro_synced = CASE
+        WHEN places.detail_intro_status = 'PENDING'
+             AND EXCLUDED.detail_intro_status <> 'PENDING'
+            THEN EXCLUDED.detail_intro_status = 'SUCCESS'
+        ELSE places.detail_intro_synced
+    END,
     updated_at = NOW();
 
 -- ID 매핑 조회를 위한 동적 Source SQL
 SELECT id, external_id FROM places WHERE external_id IN (:externalIds) AND source = :source;
 
 -- Lazy Detail Fetch 대상 조회
-SELECT external_id, source, category, name, sanitized_address, location_point, thumbnail_url, content_type_id, tel
+SELECT
+    external_id, source, category_code, name, sanitized_address,
+    location_point, thumbnail_url, content_type_id, tel,
+    category_resolution_status,
+    detail_common_status, detail_with_tour_status, detail_intro_status
 FROM places
 WHERE source = 'TOUR_API'
   AND is_deleted = false
   AND (
-      detail_common_synced = false
-      OR detail_with_tour_synced = false
-      OR detail_intro_synced = false
+      category_resolution_status = 'PENDING'
+      OR detail_common_status = 'PENDING'
+      OR detail_with_tour_status = 'PENDING'
+      OR detail_intro_status = 'PENDING'
   )
+ORDER BY updated_at ASC, id ASC
 LIMIT ?;
 
 -- 무장애 상세 정보 Upsert 쿼리
@@ -214,7 +308,9 @@ DO UPDATE SET
 *   **Sync Catch-up Dependency:** 삭제 후 복구 이벤트를 놓치면 삭제 상태가 장시간 유지될 수 있습니다. 현재는 `TourApiIncrementalSyncLogListener`가 성공/실패 이력을 `batch_sync_log`에 write-back하므로 정상 실행 간 기준일은 유지됩니다. 성공 이력의 `target_date`는 다음 실행의 `modifiedtime` watermark로 전진하고, 실패 이력의 `target_date`는 실패 실행이 요청한 기준일을 남깁니다. `processed_count`는 전체 Job 처리량이 아니라 증분 base step(`tourApiIncrementalBaseSyncStep`)의 write count입니다. 단, 로그 write-back 실패나 수동 이력 수정이 발생하면 증분 기준일이 틀어질 수 있습니다.
 *   **Sync Log Transaction Boundary:** `batch_sync_log` write-back은 배치 step의 chunk 트랜잭션과 별도로 커밋되어야 합니다. `BatchSyncLogWriter`는 `REQUIRES_NEW` 트랜잭션으로 실행되며, 외부 트랜잭션이 롤백되더라도 동기화 이력은 독립적으로 남아야 합니다.
 *   **Future Admin/Audit Requirements:** 삭제된 장소의 상세 정보를 관리자나 감사 목적으로 계속 최신화해야 한다면, 현재 앱 노출용 detail step과 별도의 삭제 row 수집 정책을 도입해야 합니다.
-*   **Detail Completion Coupling:** 상세 보강 완료 상태는 세 API flag와 `place_bf_info.bf_details` 저장 정책에 함께 의존합니다. 향후 detail API가 추가되면 flag, Lazy Detail Fetch 조건, JSONB 저장 구조를 함께 갱신해야 합니다.
+*   **Detail State Coupling:** 상세 보강 상태는 category/detail status, 호환용 sync flag, `place_bf_info.bf_details` 저장 정책에 함께 의존합니다. 향후 detail API가 추가되면 status 컬럼, Lazy Detail Fetch 조건, Writer 전이 규칙, JSONB 저장 구조를 함께 갱신해야 합니다.
+*   **Concurrent Execution:** `PlaceItemWriter`의 단조 전이는 늦게 도착한 결과가 terminal 상태와 staging 원문을 후퇴시키는 것을 막습니다. 스케줄러는 PostgreSQL advisory lock으로 다중 인스턴스의 check/start 구간을 직렬화하고, lock 내부에서 Batch repository의 동일 Job 실행 여부를 재확인합니다. 다만 운영자가 이 가드를 거치지 않는 entry point에서 Job을 동시에 수동 실행하면 API 호출 자체는 중복될 수 있으므로 운영 runbook에서 단일 실행을 보장해야 합니다.
+*   **Migration Backfill:** V15는 기존 `place_bf_info.bf_details.sources.tour_api` 원문을 staging 컬럼으로 역채웁니다. legacy sync Boolean이 `true`여도 복원 가능한 원문이 없는 Tour API row는 status/Boolean을 `PENDING`/`false`로 되돌려 재수집합니다. 배포 전 이 retry wave가 `tour-api.detail-quota` 안에서 점진 처리되는지 확인해야 합니다.
 
 ### 4.3 Alternative Considered
 *   **Hibernate `@SQLInsert` / `@SQLUpdate`:** JPA 엔티티 선언부에 직접 네이티브 쿼리를 오버라이드 하는 방식. 

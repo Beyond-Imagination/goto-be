@@ -2,11 +2,15 @@ package kr.bi.go_to.model.place;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import kr.bi.go_to.model.batch.CategoryResolutionStatus;
+import kr.bi.go_to.model.batch.DetailSyncStatus;
 import kr.bi.go_to.model.common.BaseAuditEntity;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -52,10 +56,10 @@ public class Place extends BaseAuditEntity {
     private String source;
 
     /**
-     * 장소 카테고리 (관광지, 숙박, 공공기관 등)
+     * 한국관광공사 현재 분류체계의 소분류 코드
      */
-    @Column(length = 50)
-    private String category;
+    @Column(name = "category_code")
+    private String categoryCode;
 
     /**
      * 장소명
@@ -132,4 +136,24 @@ public class Place extends BaseAuditEntity {
     @Column(name = "detail_intro_synced", nullable = false)
     @Builder.Default
     private boolean detailIntroSynced = false;
+
+    @Column(name = "category_resolution_status", nullable = false, length = 20)
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private CategoryResolutionStatus categoryResolutionStatus = CategoryResolutionStatus.PENDING;
+
+    @Column(name = "detail_common_status", nullable = false, length = 20)
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private DetailSyncStatus detailCommonStatus = DetailSyncStatus.PENDING;
+
+    @Column(name = "detail_with_tour_status", nullable = false, length = 20)
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private DetailSyncStatus detailWithTourStatus = DetailSyncStatus.PENDING;
+
+    @Column(name = "detail_intro_status", nullable = false, length = 20)
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private DetailSyncStatus detailIntroStatus = DetailSyncStatus.PENDING;
 }
