@@ -7,8 +7,11 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import kr.bi.go_to.controller.help.request.CreateHelpRequestRequest;
+import kr.bi.go_to.controller.help.response.ContactMethodResponse;
+import kr.bi.go_to.controller.help.response.HelpPlaceContactsResponse;
 import kr.bi.go_to.controller.help.response.HelpRequestResponse;
 import kr.bi.go_to.controller.help.response.NearbyHelpRequestResponse;
+import kr.bi.go_to.controller.help.response.PlaceContactResponse;
 import kr.bi.go_to.exception.BusinessException;
 import kr.bi.go_to.exception.ErrorCode;
 import kr.bi.go_to.model.help.HelpRequest;
@@ -19,6 +22,7 @@ import kr.bi.go_to.model.place.Place;
 import kr.bi.go_to.repository.HelpRequestRejectionRepository;
 import kr.bi.go_to.repository.HelpRequestRepository;
 import kr.bi.go_to.repository.PlaceRepository;
+import org.locationtech.jts.geom.Point;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +30,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class HelpRequestService {
 
     private static final int DEFAULT_EXPIRES_IN_MINUTES = 30;
+    private static final String SELECTED_PLACE = "SELECTED_PLACE";
+    private static final String NEARBY_PLACE = "NEARBY_PLACE";
+    private static final String PLACE_REPRESENTATIVE = "PLACE_REPRESENTATIVE";
+    private static final double EARTH_RADIUS_METERS = 6_371_000;
+    private static final ContactMethodResponse EMERGENCY_CONTACT =
+            new ContactMethodResponse("EMERGENCY", "긴급 신고", "119", "소방청");
 
     private final HelpRequestRepository helpRequestRepository;
     private final HelpRequestRejectionRepository rejectionRepository;
@@ -69,6 +79,35 @@ public class HelpRequestService {
     }
 
     @Transactional(readOnly = true)
+    public HelpPlaceContactsResponse findPlaceContacts(
+            Long placeId, Double latitude, Double longitude, int radiusMeters, int limit) {
+        if ((latitude == null) != (longitude == null)) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+
+        if (placeId != null) {
+            Place place = placeRepository
+                    .findByIdAndIsDeletedFalse(placeId)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.PLACE_NOT_FOUND));
+            Long distance = latitude != null && place.getLocationPoint() != null
+                    ? placeDistanceMeters(latitude, longitude, place)
+                    : null;
+            return placeContactsResponse(List.of(toPlaceContact(place, SELECTED_PLACE, distance)));
+        }
+
+        if (latitude == null || longitude == null) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+
+        List<PlaceContactResponse> contacts =
+                placeRepository.findNearbyActivePlaces(latitude, longitude, radiusMeters, limit).stream()
+                        .map(place ->
+                                toPlaceContact(place, NEARBY_PLACE, placeDistanceMeters(latitude, longitude, place)))
+                        .toList();
+        return placeContactsResponse(contacts);
+    }
+
+    @Transactional(readOnly = true)
     public List<NearbyHelpRequestResponse> findNearby(
             Long memberId, BigDecimal latitude, BigDecimal longitude, int radiusMeters) {
         Member member = memberService.getUser(memberId);
@@ -76,7 +115,7 @@ public class HelpRequestService {
 
         return helpRequestRepository
                 .findNearbyOpenRequests(
-                        member.getId(), HelpRequestStatus.REQUESTED.name(), latitude, longitude, radiusMeters, now)
+                        member.getId(), HelpRequestStatus.REQUESTED, latitude, longitude, radiusMeters, now)
                 .stream()
                 .map(request -> NearbyHelpRequestResponse.from(
                         request, distanceMeters(latitude, longitude, request.getLatitude(), request.getLongitude())))
@@ -203,6 +242,42 @@ public class HelpRequestService {
             return null;
         }
         return placeRepository.findById(placeId).orElseThrow(() -> new BusinessException(ErrorCode.PLACE_NOT_FOUND));
+    }
+
+    private PlaceContactResponse toPlaceContact(Place place, String matchType, Long distanceMeters) {
+        String telephone = trimToNull(place.getTel());
+        Point location = place.getLocationPoint();
+        List<ContactMethodResponse> contacts = telephone == null
+                ? List.of()
+                : List.of(new ContactMethodResponse(PLACE_REPRESENTATIVE, "대표 전화", telephone, place.getSource()));
+        return new PlaceContactResponse(
+                place.getId(),
+                place.getName(),
+                place.getSanitizedAddress(),
+                matchType,
+                location == null ? null : location.getY(),
+                location == null ? null : location.getX(),
+                distanceMeters,
+                !contacts.isEmpty(),
+                contacts,
+                trimToNull(place.getHomepage()));
+    }
+
+    private HelpPlaceContactsResponse placeContactsResponse(List<PlaceContactResponse> contacts) {
+        return new HelpPlaceContactsResponse(EMERGENCY_CONTACT, contacts);
+    }
+
+    private long placeDistanceMeters(double latitude, double longitude, Place place) {
+        Point location = place.getLocationPoint();
+        double targetLatitude = location.getY();
+        double targetLongitude = location.getX();
+        double latitudeDelta = Math.toRadians(targetLatitude - latitude);
+        double longitudeDelta = Math.toRadians(targetLongitude - longitude);
+        double startLatitude = Math.toRadians(latitude);
+        double endLatitude = Math.toRadians(targetLatitude);
+        double haversine = Math.pow(Math.sin(latitudeDelta / 2), 2)
+                + Math.cos(startLatitude) * Math.cos(endLatitude) * Math.pow(Math.sin(longitudeDelta / 2), 2);
+        return Math.round(2 * EARTH_RADIUS_METERS * Math.asin(Math.sqrt(haversine)));
     }
 
     private long distanceMeters(

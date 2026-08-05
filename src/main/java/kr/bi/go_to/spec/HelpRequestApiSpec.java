@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.UUID;
 import kr.bi.go_to.config.security.AuthenticatedMember;
 import kr.bi.go_to.controller.help.request.CreateHelpRequestRequest;
+import kr.bi.go_to.controller.help.response.HelpPlaceContactsResponse;
 import kr.bi.go_to.controller.help.response.HelpRequestResponse;
 import kr.bi.go_to.controller.help.response.NearbyHelpRequestResponse;
 import kr.bi.go_to.enums.SwaggerTag;
@@ -46,6 +47,36 @@ public interface HelpRequestApiSpec {
                 content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     HelpRequestResponse create(AuthenticatedMember member, @Valid @RequestBody CreateHelpRequestRequest request);
+
+    @Operation(
+            tags = SwaggerTag.HELP_REQUEST_NAME,
+            summary = "장소 대표 연락처 조회",
+            description =
+                    "도움 요청 생성 전에 장소 대표 연락처와 긴급 신고 정보를 조회합니다. placeId가 있으면 해당 장소를 우선하며, 없으면 위도와 경도로 주변 장소 후보를 반환합니다.")
+    @ApiResponses({
+        @ApiResponse(
+                responseCode = "200",
+                description = "장소 대표 연락처 조회 성공",
+                content = @Content(schema = @Schema(implementation = HelpPlaceContactsResponse.class))),
+        @ApiResponse(
+                responseCode = "400",
+                description = "placeId 없이 좌표가 누락되었거나 요청 값 검증 실패",
+                content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+        @ApiResponse(
+                responseCode = "401",
+                description = "인증 필요",
+                content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+        @ApiResponse(
+                responseCode = "404",
+                description = "선택한 장소를 찾을 수 없음",
+                content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    HelpPlaceContactsResponse findPlaceContacts(
+            @RequestParam(required = false) @Min(1) Long placeId,
+            @RequestParam(required = false) @DecimalMin("-90.0") @DecimalMax("90.0") Double latitude,
+            @RequestParam(required = false) @DecimalMin("-180.0") @DecimalMax("180.0") Double longitude,
+            @RequestParam(defaultValue = "100") @Min(1) @Max(500) int radiusMeters,
+            @RequestParam(defaultValue = "5") @Min(1) @Max(10) int limit);
 
     @Operation(
             tags = SwaggerTag.HELP_REQUEST_NAME,
