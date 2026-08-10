@@ -4,7 +4,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 
 @Schema(name = "PlaceSearchResponse", description = "장소 탐색 응답")
-public record PlaceSearchResponse(List<PlaceSearchItemResponse> places, PlaceFilterResponse filters) {
+public record PlaceSearchResponse(
+        List<PlaceSearchItemResponse> places, PlaceFilterResponse filters, AppliedFiltersResponse appliedFilters) {
     public PlaceSearchResponse {
         places = List.copyOf(places);
     }

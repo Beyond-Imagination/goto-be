@@ -89,6 +89,31 @@ class ObstacleReportRepositoryTest {
     }
 
     @Test
+    @DisplayName("반경 내부의 ACTIVE 제보만 반환한다")
+    void findsActiveReportsWithinRadius() {
+        ObstacleReport inside =
+                obstacleReportRepository.save(newReport(37.5665, 126.9780, Set.of(MobilityType.WHEELCHAIR)));
+        obstacleReportRepository.save(newReport(37.6, 127.1, Set.of(MobilityType.WHEELCHAIR)));
+
+        List<ObstacleReport> found = obstacleReportRepository.findActiveWithinRadius(126.9780, 37.5665, 1_000);
+
+        assertThat(found).extracting(ObstacleReport::getId).containsExactly(inside.getId());
+    }
+
+    @Test
+    @DisplayName("반경 내부여도 RESOLVED 상태면 반환하지 않는다")
+    void excludesResolvedReportsWithinRadius() {
+        ObstacleReport resolved =
+                obstacleReportRepository.save(newReport(37.5665, 126.9780, Set.of(MobilityType.WHEELCHAIR)));
+        resolved.resolve();
+        obstacleReportRepository.save(resolved);
+
+        List<ObstacleReport> found = obstacleReportRepository.findActiveWithinRadius(126.9780, 37.5665, 1_000);
+
+        assertThat(found).isEmpty();
+    }
+
+    @Test
     @DisplayName("같은 회원-제보 조합을 중복 확인하면 유니크 제약 위반이 발생한다")
     void throwsWhenConfirmingDuplicateMemberAndReport() {
         ObstacleReport report = obstacleReportRepository.save(newReport(37.55, 127.0, Set.of(MobilityType.WHEELCHAIR)));

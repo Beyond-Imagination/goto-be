@@ -8,7 +8,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import kr.bi.go_to.config.security.AuthenticatedMember;
+import kr.bi.go_to.controller.place.request.NearbyAccessibilitySummaryRequest;
 import kr.bi.go_to.controller.place.request.PlaceSearchRequest;
+import kr.bi.go_to.controller.place.response.NearbyAccessibilitySummaryResponse;
 import kr.bi.go_to.controller.place.response.PlaceSearchResponse;
 import kr.bi.go_to.enums.SwaggerTag;
 import kr.bi.go_to.exception.ErrorResponse;
@@ -22,7 +24,9 @@ public interface PlaceApiSpec {
     @Operation(
             tags = SwaggerTag.PLACE_NAME,
             summary = "현재 위치 기반 장소 탐색",
-            description = "현재 위치에서 가까운 순으로 장소를 조회하며 카테고리 필터 정보를 함께 반환합니다.")
+            description =
+                    "현재 위치에서 가까운 순으로 장소를 조회하며 카테고리 필터 정보를 함께 반환합니다. "
+                            + "categoryPrefixes/mobilityType/avoid는 요청/echo만 지원하며 DbPlaceService 구현 전까지는 필터링에 실제로 반영되지 않습니다(ADR-0004).")
     @ApiResponses({
         @ApiResponse(
                 responseCode = "200",
@@ -31,6 +35,20 @@ public interface PlaceApiSpec {
         @ApiResponse(responseCode = "400", description = "요청 파라미터 검증 실패", content = @Content)
     })
     PlaceSearchResponse search(@Valid @ParameterObject @ModelAttribute PlaceSearchRequest request);
+
+    @Operation(
+            tags = SwaggerTag.PLACE_NAME,
+            summary = "내 주변 접근성 정보 요약",
+            description = "현재 위치 기준 고정 반경 내 장애물 리포트를 우회권장/주의/안전/확인필요 4개 카운트로 집계합니다(ADR-0005).")
+    @ApiResponses({
+        @ApiResponse(
+                responseCode = "200",
+                description = "요약 조회 성공",
+                content = @Content(schema = @Schema(implementation = NearbyAccessibilitySummaryResponse.class))),
+        @ApiResponse(responseCode = "400", description = "요청 파라미터 검증 실패", content = @Content)
+    })
+    NearbyAccessibilitySummaryResponse nearbySummary(
+            @Valid @ParameterObject @ModelAttribute NearbyAccessibilitySummaryRequest request);
 
     @Operation(
             tags = SwaggerTag.PLACE_NAME,

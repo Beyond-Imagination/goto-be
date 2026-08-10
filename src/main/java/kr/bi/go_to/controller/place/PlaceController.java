@@ -2,10 +2,13 @@ package kr.bi.go_to.controller.place;
 
 import jakarta.validation.Valid;
 import kr.bi.go_to.config.security.AuthenticatedMember;
+import kr.bi.go_to.controller.place.request.NearbyAccessibilitySummaryRequest;
 import kr.bi.go_to.controller.place.request.PlaceSearchRequest;
+import kr.bi.go_to.controller.place.response.NearbyAccessibilitySummaryResponse;
 import kr.bi.go_to.controller.place.response.PlaceSearchResponse;
 import kr.bi.go_to.service.savedplace.SavedPlaceService;
 import kr.bi.go_to.spec.PlaceApiSpec;
+import kr.bi.go_to.usecase.GetNearbyAccessibilitySummaryUseCase;
 import kr.bi.go_to.usecase.SearchPlacesUseCase;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpStatus;
@@ -24,10 +27,15 @@ import org.springframework.web.bind.annotation.RestController;
 public class PlaceController implements PlaceApiSpec {
 
     private final SearchPlacesUseCase searchPlacesUseCase;
+    private final GetNearbyAccessibilitySummaryUseCase getNearbyAccessibilitySummaryUseCase;
     private final SavedPlaceService savedPlaceService;
 
-    public PlaceController(SearchPlacesUseCase searchPlacesUseCase, SavedPlaceService savedPlaceService) {
+    public PlaceController(
+            SearchPlacesUseCase searchPlacesUseCase,
+            GetNearbyAccessibilitySummaryUseCase getNearbyAccessibilitySummaryUseCase,
+            SavedPlaceService savedPlaceService) {
         this.searchPlacesUseCase = searchPlacesUseCase;
+        this.getNearbyAccessibilitySummaryUseCase = getNearbyAccessibilitySummaryUseCase;
         this.savedPlaceService = savedPlaceService;
     }
 
@@ -35,6 +43,13 @@ public class PlaceController implements PlaceApiSpec {
     @GetMapping("/search")
     public PlaceSearchResponse search(@Valid @ParameterObject @ModelAttribute PlaceSearchRequest request) {
         return searchPlacesUseCase.execute(request);
+    }
+
+    @Override
+    @GetMapping("/nearby-summary")
+    public NearbyAccessibilitySummaryResponse nearbySummary(
+            @Valid @ParameterObject @ModelAttribute NearbyAccessibilitySummaryRequest request) {
+        return getNearbyAccessibilitySummaryUseCase.execute(request);
     }
 
     @Override

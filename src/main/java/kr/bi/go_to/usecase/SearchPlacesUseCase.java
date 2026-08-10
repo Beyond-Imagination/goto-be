@@ -3,6 +3,7 @@ package kr.bi.go_to.usecase;
 import java.util.Comparator;
 import java.util.List;
 import kr.bi.go_to.controller.place.request.PlaceSearchRequest;
+import kr.bi.go_to.controller.place.response.AppliedFiltersResponse;
 import kr.bi.go_to.controller.place.response.BfDetailsResponse;
 import kr.bi.go_to.controller.place.response.PlaceFilterResponse;
 import kr.bi.go_to.controller.place.response.PlaceSearchItemResponse;
@@ -30,15 +31,17 @@ public class SearchPlacesUseCase {
                 .distinct()
                 .sorted()
                 .toList();
+        // categoryPrefixes/mobilityTypes/avoid는 DbPlaceService 구현 전까지 no-op이다 (ADR-0004).
         List<PlaceSearchItemResponse> places = allPlaces.stream()
-                .filter(place ->
-                        request.category() == null || request.category().equals(place.category()))
                 .map(place -> toResponse(place, request.lat(), request.lng()))
                 .sorted(Comparator.comparingDouble(PlaceSearchItemResponse::distanceMeters))
                 .limit(request.k())
                 .toList();
 
-        return new PlaceSearchResponse(places, new PlaceFilterResponse(categories));
+        AppliedFiltersResponse appliedFilters =
+                new AppliedFiltersResponse(request.categoryPrefixes(), request.mobilityTypes(), request.avoid());
+
+        return new PlaceSearchResponse(places, new PlaceFilterResponse(categories), appliedFilters);
     }
 
     private PlaceSearchItemResponse toResponse(PlaceData place, double latitude, double longitude) {

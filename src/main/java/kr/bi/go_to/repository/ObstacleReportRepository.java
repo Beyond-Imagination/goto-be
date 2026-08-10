@@ -27,4 +27,19 @@ public interface ObstacleReportRepository extends JpaRepository<ObstacleReport, 
             @Param("maxLng") double maxLng,
             @Param("maxLat") double maxLat,
             @Param("mobilityType") String mobilityType);
+
+    @Query(
+            value =
+                    """
+                    SELECT r.* FROM obstacle_reports r
+                    WHERE r.status = 'ACTIVE'
+                    AND ST_DWithin(
+                        r.location_point_geography,
+                        ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography,
+                        :radiusMeters
+                    )
+                    """,
+            nativeQuery = true)
+    List<ObstacleReport> findActiveWithinRadius(
+            @Param("lng") double lng, @Param("lat") double lat, @Param("radiusMeters") double radiusMeters);
 }

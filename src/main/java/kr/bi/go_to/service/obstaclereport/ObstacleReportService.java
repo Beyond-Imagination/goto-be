@@ -98,6 +98,32 @@ public class ObstacleReportService {
     }
 
     @Transactional(readOnly = true)
+    public NearbyObstacleSummary getNearbySummary(double lat, double lng, double radiusMeters) {
+        List<ObstacleReport> reports = obstacleReportRepository.findActiveWithinRadius(lng, lat, radiusMeters);
+        Instant now = clock.instant();
+
+        int detourRecommendedCount = 0;
+        int cautionCount = 0;
+        int safeCount = 0;
+        int needsConfirmationCount = 0;
+
+        for (ObstacleReport report : reports) {
+            switch (report.getSeverity()) {
+                case IMPASSABLE -> detourRecommendedCount++;
+                case CAUTION -> cautionCount++;
+                case INFO -> safeCount++;
+                default -> throw new IllegalStateException("Unknown ObstacleSeverity: " + report.getSeverity());
+            }
+            // severity 축과 STALE 축은 독립이라, 하나의 리포트가 두 카운트에 동시에 잡힐 수 있다.
+            if (report.isStale(now)) {
+                needsConfirmationCount++;
+            }
+        }
+
+        return new NearbyObstacleSummary(detourRecommendedCount, cautionCount, safeCount, needsConfirmationCount);
+    }
+
+    @Transactional(readOnly = true)
     public List<ObstacleReportClusterResponse> getClusters(ObstacleReportClusterRequest request) {
         String mobilityType =
                 request.mobilityType() != null ? request.mobilityType().name() : null;
