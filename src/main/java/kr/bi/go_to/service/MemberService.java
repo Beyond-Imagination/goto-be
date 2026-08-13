@@ -1,6 +1,5 @@
 package kr.bi.go_to.service;
 
-import kr.bi.go_to.enums.Role;
 import kr.bi.go_to.exception.BusinessException;
 import kr.bi.go_to.exception.ErrorCode;
 import kr.bi.go_to.model.member.Member;
@@ -15,14 +14,6 @@ public class MemberService {
 
     public MemberService(MemberRepository memberRepository) {
         this.memberRepository = memberRepository;
-    }
-
-    @Transactional
-    public Member getOrCreateUser(String nickname) {
-        String normalizedNickname = nickname.trim();
-        return memberRepository
-                .findByNickname(normalizedNickname)
-                .orElseGet(() -> memberRepository.save(new Member(Role.USER, normalizedNickname)));
     }
 
     @Transactional(readOnly = true)

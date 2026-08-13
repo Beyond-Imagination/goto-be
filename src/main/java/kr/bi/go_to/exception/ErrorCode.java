@@ -9,9 +9,11 @@ public enum ErrorCode {
     CANNOT_ACCEPT_OWN_HELP_REQUEST(HttpStatus.BAD_REQUEST, "자신의 도움 요청은 수락할 수 없습니다."),
     CANNOT_REJECT_OWN_HELP_REQUEST(HttpStatus.BAD_REQUEST, "자신의 도움 요청은 거절할 수 없습니다."),
     TARGET_FEATURE_NOT_FOUND(HttpStatus.BAD_REQUEST, "해당 층 도면에 존재하지 않는 targetFeatureId입니다."),
+    REQUIRED_AGREEMENTS_NOT_ACCEPTED(HttpStatus.BAD_REQUEST, "필수 약관에 모두 동의해야 합니다."),
 
     // 401 UNAUTHORIZED
     INVALID_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "유효하지 않은 리프레시 토큰입니다."),
+    INVALID_OAUTH_TOKEN(HttpStatus.UNAUTHORIZED, "유효하지 않거나 만료된 OAuth access token입니다."),
     UNKNOWN_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "알 수 없는 리프레시 토큰입니다."),
     EXPIRED_OR_REVOKED_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "만료되었거나 폐기된 리프레시 토큰입니다."),
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증이 필요합니다."),
@@ -33,6 +35,9 @@ public enum ErrorCode {
     HELP_REQUEST_ALREADY_REJECTED(HttpStatus.CONFLICT, "이미 거절한 도움 요청입니다."),
     HELP_REQUEST_NOT_ACCEPTED(HttpStatus.CONFLICT, "수락된 도움 요청만 완료할 수 있습니다."),
     HELP_REQUEST_CANNOT_BE_CANCELED(HttpStatus.CONFLICT, "취소할 수 없는 도움 요청입니다."),
+    NICKNAME_ALREADY_IN_USE(HttpStatus.CONFLICT, "이미 사용 중인 닉네임입니다."),
+
+    OAUTH_PROVIDER_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "OAuth provider에 연결할 수 없습니다."),
 
     // 500 INTERNAL_SERVER_ERROR
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류가 발생했습니다.");
