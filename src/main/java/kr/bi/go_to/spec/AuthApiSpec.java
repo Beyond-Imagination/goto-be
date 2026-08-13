@@ -53,7 +53,7 @@ public interface AuthApiSpec {
                 content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
         @ApiResponse(
                 responseCode = "409",
-                description = "닉네임 중복",
+                description = "닉네임 중복 또는 이미 완료된 OAuth 가입. 후자의 경우 로그인 화면으로 이동해 OAuth 로그인을 다시 시도합니다.",
                 content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
     })
     OAuthAuthenticationResponse signup(@Valid @RequestBody OAuthSignupRequest request);

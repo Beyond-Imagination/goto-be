@@ -20,6 +20,7 @@ import kr.bi.go_to.repository.OAuthUserRepository;
 import kr.bi.go_to.repository.RefreshTokenRepository;
 import kr.bi.go_to.service.oauth.OAuthIdentity;
 import kr.bi.go_to.service.oauth.OAuthIdentityVerifier;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -64,6 +65,11 @@ public class AuthService {
     @Transactional
     public OAuthAuthenticationResponse signup(OAuthSignupRequest request) {
         OAuthIdentity identity = oauthIdentityVerifier.verify(request.provider(), request.providerAccessToken());
+        if (oauthUserRepository
+                .findByProviderAndProviderId(identity.provider(), identity.providerId())
+                .isPresent()) {
+            throw new BusinessException(ErrorCode.OAUTH_SIGNUP_ALREADY_COMPLETED);
+        }
         if (!AgreementType.hasRequiredAgreements(request.agreementMask())) {
             throw new BusinessException(ErrorCode.REQUIRED_AGREEMENTS_NOT_ACCEPTED);
         }
@@ -73,8 +79,22 @@ public class AuthService {
             throw new BusinessException(ErrorCode.NICKNAME_ALREADY_IN_USE);
         }
 
-        return authenticated(
-                oauthRegistrationService.register(identity, nickname, request.agreementMask(), request.preferences()));
+        try {
+            return authenticated(oauthRegistrationService.register(
+                    identity, nickname, request.agreementMask(), request.preferences()));
+        } catch (DataIntegrityViolationException exception) {
+            // 사전 조회는 동시 가입 요청을 막지 못하므로 OAuth 연결 유니크 제약이 최종 보장 장치다.
+            // 먼저 커밋한 요청만 토큰을 받고, 충돌한 요청은 로그인 흐름으로 재시도하도록 토큰을 발급하지 않는다.
+            if (oauthUserRepository
+                    .findByProviderAndProviderId(identity.provider(), identity.providerId())
+                    .isPresent()) {
+                throw new BusinessException(ErrorCode.OAUTH_SIGNUP_ALREADY_COMPLETED);
+            }
+            if (memberRepository.existsByNickname(nickname)) {
+                throw new BusinessException(ErrorCode.NICKNAME_ALREADY_IN_USE);
+            }
+            throw exception;
+        }
     }
 
     private OAuthAuthenticationResponse authenticated(Member member) {

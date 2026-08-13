@@ -36,6 +36,7 @@ public enum ErrorCode {
     HELP_REQUEST_NOT_ACCEPTED(HttpStatus.CONFLICT, "수락된 도움 요청만 완료할 수 있습니다."),
     HELP_REQUEST_CANNOT_BE_CANCELED(HttpStatus.CONFLICT, "취소할 수 없는 도움 요청입니다."),
     NICKNAME_ALREADY_IN_USE(HttpStatus.CONFLICT, "이미 사용 중인 닉네임입니다."),
+    OAUTH_SIGNUP_ALREADY_COMPLETED(HttpStatus.CONFLICT, "이미 가입 처리된 OAuth 계정입니다. 로그인 후 다시 시도해주세요."),
 
     OAUTH_PROVIDER_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "OAuth provider에 연결할 수 없습니다."),
 
