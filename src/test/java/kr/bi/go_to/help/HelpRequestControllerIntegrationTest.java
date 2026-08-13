@@ -11,6 +11,8 @@ import kr.bi.go_to.repository.HelpRequestRejectionRepository;
 import kr.bi.go_to.repository.HelpRequestRepository;
 import kr.bi.go_to.repository.MemberRepository;
 import kr.bi.go_to.repository.RefreshTokenRepository;
+import kr.bi.go_to.service.JwtService;
+import kr.bi.go_to.support.TestMemberAuthentication;
 import kr.bi.go_to.support.TestcontainersConfiguration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -50,6 +52,9 @@ class HelpRequestControllerIntegrationTest {
 
     @Autowired
     MemberRepository memberRepository;
+
+    @Autowired
+    JwtService jwtService;
 
     @BeforeEach
     void setUp() {
@@ -163,23 +168,8 @@ class HelpRequestControllerIntegrationTest {
                 .andExpect(jsonPath("$").isEmpty());
     }
 
-    private String login(String nickname) throws Exception {
-        String body = mockMvc.perform(post("/api/v1/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(
-                                """
-                        {
-                          "nickname": "%s",
-                          "password": "password"
-                        }
-                        """
-                                        .formatted(nickname)))
-                .andExpect(status().isCreated())
-                .andReturn()
-                .getResponse()
-                .getContentAsString();
-
-        return (String) objectMapper.readValue(body, MAP_TYPE).get("accessToken");
+    private String login(String nickname) {
+        return TestMemberAuthentication.accessToken(memberRepository, jwtService, nickname);
     }
 
     private String bearer(String token) {

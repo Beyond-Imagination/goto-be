@@ -15,7 +15,7 @@ public interface PlaceSearchRepository extends JpaRepository<Place, Long> {
                         p.id AS id,
                         p.external_id AS externalId,
                         p.source AS source,
-                        p.category AS category,
+                        p.category_code AS category,
                         p.name AS name,
                         p.sanitized_address AS sanitizedAddress,
                         ST_Y(p.location_point) AS latitude,
@@ -33,7 +33,7 @@ public interface PlaceSearchRepository extends JpaRepository<Place, Long> {
                     LEFT JOIN place_bf_info pbi ON pbi.place_id = p.id
                     WHERE p.location_point IS NOT NULL
                       AND p.is_deleted = false
-                      AND (:category IS NULL OR p.category = :category)
+                      AND (:category IS NULL OR p.category_code = :category)
                     ORDER BY distanceMeters ASC
                     LIMIT :limit
                     """,
@@ -47,12 +47,12 @@ public interface PlaceSearchRepository extends JpaRepository<Place, Long> {
     @Query(
             value =
                     """
-                    SELECT DISTINCT p.category
+                    SELECT DISTINCT p.category_code
                     FROM places p
-                    WHERE p.category IS NOT NULL
-                      AND btrim(p.category) <> ''
+                    WHERE p.category_code IS NOT NULL
+                      AND btrim(p.category_code) <> ''
                       AND p.is_deleted = false
-                    ORDER BY p.category ASC
+                    ORDER BY p.category_code ASC
                     """,
             nativeQuery = true)
     List<String> findDistinctCategories();

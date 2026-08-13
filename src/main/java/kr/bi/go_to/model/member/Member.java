@@ -13,6 +13,8 @@ import kr.bi.go_to.model.common.BaseAuditEntity;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /**
  * 서비스 사용자(멤버) 정보를 관리하는 엔티티
@@ -43,8 +45,21 @@ public class Member extends BaseAuditEntity {
     @Column(nullable = false, unique = true, length = 100)
     private String nickname;
 
+    @Column(name = "agreement_mask", nullable = false)
+    private long agreementMask;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(nullable = false, columnDefinition = "jsonb")
+    private MemberPreferences preferences;
+
     public Member(Role role, String nickname) {
+        this(role, nickname, 15L, MemberPreferences.empty());
+    }
+
+    public Member(Role role, String nickname, long agreementMask, MemberPreferences preferences) {
         this.role = role;
         this.nickname = nickname;
+        this.agreementMask = agreementMask;
+        this.preferences = preferences;
     }
 }

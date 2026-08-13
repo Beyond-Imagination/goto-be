@@ -88,7 +88,7 @@ public class MockPlaceService implements PlaceService {
     @Override
     public List<PlaceData> searchNearby(double latitude, double longitude, int limit, String category) {
         return PLACES.stream()
-                .filter(place -> category == null || category.equals(place.category()))
+                .filter(place -> category == null || category.equals(place.categoryCode()))
                 .map(place -> withDistance(place, latitude, longitude))
                 .sorted((left, right) -> Double.compare(left.distanceMeters(), right.distanceMeters()))
                 .limit(limit)
@@ -98,7 +98,7 @@ public class MockPlaceService implements PlaceService {
     @Override
     public List<String> findDistinctCategories() {
         return PLACES.stream()
-                .map(PlaceData::category)
+                .map(PlaceData::categoryCode)
                 .filter(category -> category != null && !category.isBlank())
                 .distinct()
                 .sorted()
@@ -137,7 +137,7 @@ public class MockPlaceService implements PlaceService {
                 place.id(),
                 place.externalId(),
                 place.source(),
-                place.category(),
+                place.categoryCode(),
                 place.name(),
                 place.sanitizedAddress(),
                 place.latitude(),
