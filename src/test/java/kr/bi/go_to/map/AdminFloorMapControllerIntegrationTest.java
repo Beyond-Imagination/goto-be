@@ -1,13 +1,11 @@
 package kr.bi.go_to.map;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.List;
-import java.util.Map;
 import kr.bi.go_to.model.map.FloorMap;
 import kr.bi.go_to.model.place.Place;
 import kr.bi.go_to.repository.FacilityNodeRepository;
@@ -15,6 +13,8 @@ import kr.bi.go_to.repository.FloorMapRepository;
 import kr.bi.go_to.repository.MemberRepository;
 import kr.bi.go_to.repository.PlaceRepository;
 import kr.bi.go_to.repository.RefreshTokenRepository;
+import kr.bi.go_to.service.JwtService;
+import kr.bi.go_to.support.TestMemberAuthentication;
 import kr.bi.go_to.support.TestcontainersConfiguration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -27,8 +27,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
-import tools.jackson.core.type.TypeReference;
-import tools.jackson.databind.ObjectMapper;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -36,13 +34,8 @@ import tools.jackson.databind.ObjectMapper;
 @Import(TestcontainersConfiguration.class)
 class AdminFloorMapControllerIntegrationTest {
 
-    private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
-
     @Autowired
     MockMvc mockMvc;
-
-    @Autowired
-    ObjectMapper objectMapper;
 
     @Autowired
     FacilityNodeRepository facilityNodeRepository;
@@ -58,6 +51,9 @@ class AdminFloorMapControllerIntegrationTest {
 
     @Autowired
     MemberRepository memberRepository;
+
+    @Autowired
+    JwtService jwtService;
 
     Place place;
 
@@ -166,23 +162,8 @@ class AdminFloorMapControllerIntegrationTest {
                 .andExpect(status().isUnauthorized());
     }
 
-    private String login(String nickname) throws Exception {
-        String body = mockMvc.perform(post("/api/v1/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(
-                                """
-                        {
-                          "nickname": "%s",
-                          "password": "password"
-                        }
-                        """
-                                        .formatted(nickname)))
-                .andExpect(status().isCreated())
-                .andReturn()
-                .getResponse()
-                .getContentAsString();
-
-        return (String) objectMapper.readValue(body, MAP_TYPE).get("accessToken");
+    private String login(String nickname) {
+        return TestMemberAuthentication.accessToken(memberRepository, jwtService, nickname);
     }
 
     private String bearer(String token) {
