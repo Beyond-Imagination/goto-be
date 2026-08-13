@@ -50,6 +50,17 @@ class PlaceSearchRepositoryTest {
     void setUp() {
         entityManager.createNativeQuery("DELETE FROM place_bf_info").executeUpdate();
         placeRepository.deleteAll();
+        entityManager
+                .createNativeQuery(
+                        """
+                        INSERT INTO tour_api_categories (code, parent_code, depth, name, last_seen_sync_token)
+                        VALUES ('museum', NULL, 1, 'museum', gen_random_uuid()),
+                               ('hotel', NULL, 1, 'hotel', gen_random_uuid()),
+                               ('park', NULL, 1, 'park', gen_random_uuid()),
+                               (' ', NULL, 1, 'blank', gen_random_uuid())
+                        ON CONFLICT (code) DO NOTHING
+                        """)
+                .executeUpdate();
     }
 
     @Test
@@ -92,7 +103,7 @@ class PlaceSearchRepositoryTest {
         return placeRepository.save(Place.builder()
                 .externalId(externalId)
                 .source("TEST")
-                .category(category)
+                .categoryCode(category)
                 .name(name)
                 .sanitizedAddress(name + " address")
                 .locationPoint(GEOMETRY_FACTORY.createPoint(new Coordinate(longitude, latitude)))
