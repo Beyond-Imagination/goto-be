@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import kr.bi.go_to.controller.auth.request.OAuthLoginRequest;
 import kr.bi.go_to.controller.auth.request.OAuthSignupRequest;
@@ -56,7 +57,7 @@ public interface AuthApiSpec {
                 description = "닉네임 중복 또는 이미 완료된 OAuth 가입. 후자의 경우 로그인 화면으로 이동해 OAuth 로그인을 다시 시도합니다.",
                 content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
     })
-    OAuthAuthenticationResponse signup(@Valid @RequestBody OAuthSignupRequest request);
+    OAuthAuthenticationResponse signup(@Valid @RequestBody OAuthSignupRequest request, HttpServletRequest httpRequest);
 
     @Operation(tags = SwaggerTag.AUTH_NAME, summary = "액세스 토큰 갱신", description = "refreshToken으로 새 accessToken을 발급합니다.")
     @ApiResponses({

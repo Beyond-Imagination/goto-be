@@ -63,6 +63,11 @@ public class AuthService {
 
     @Transactional
     public OAuthAuthenticationResponse signup(OAuthSignupRequest request) {
+        return signup(request, null, null);
+    }
+
+    @Transactional
+    public OAuthAuthenticationResponse signup(OAuthSignupRequest request, String clientIp, String userAgent) {
         OAuthIdentity identity = oauthIdentityVerifier.verify(request.provider(), request.providerAccessToken());
         if (oauthUserRepository
                 .findByProviderAndProviderId(identity.provider(), identity.providerId())
@@ -80,7 +85,7 @@ public class AuthService {
 
         try {
             return authenticated(oauthRegistrationService.register(
-                    identity, nickname, request.agreementMask(), request.preferences()));
+                    identity, nickname, request.agreementMask(), request.preferences(), clientIp, userAgent));
         } catch (DataIntegrityViolationException exception) {
             // 사전 조회는 동시 가입 요청을 막지 못하므로 닉네임·OAuth 연결 유니크 제약이 최종 보장 장치다.
             // 먼저 커밋한 요청만 토큰을 받고, 충돌한 요청은 로그인 흐름으로 재시도하도록 토큰을 발급하지 않는다.

@@ -16,16 +16,31 @@ public class OAuthRegistrationService {
 
     private final MemberRepository memberRepository;
     private final OAuthUserRepository oauthUserRepository;
+    private final TermsService termsService;
 
-    public OAuthRegistrationService(MemberRepository memberRepository, OAuthUserRepository oauthUserRepository) {
+    public OAuthRegistrationService(
+            MemberRepository memberRepository, OAuthUserRepository oauthUserRepository, TermsService termsService) {
         this.memberRepository = memberRepository;
         this.oauthUserRepository = oauthUserRepository;
+        this.termsService = termsService;
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public Member register(
+            OAuthIdentity identity,
+            String nickname,
+            long agreementMask,
+            MemberPreferences preferences,
+            String clientIp,
+            String userAgent) {
+        Member member = memberRepository.save(new Member(Role.USER, nickname, agreementMask, preferences));
+        oauthUserRepository.saveAndFlush(new OAuthUser(member, identity.provider(), identity.providerId()));
+        termsService.recordUserAgreements(member.getId(), agreementMask, clientIp, userAgent);
+        return member;
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Member register(OAuthIdentity identity, String nickname, long agreementMask, MemberPreferences preferences) {
-        Member member = memberRepository.save(new Member(Role.USER, nickname, agreementMask, preferences));
-        oauthUserRepository.saveAndFlush(new OAuthUser(member, identity.provider(), identity.providerId()));
-        return member;
+        return register(identity, nickname, agreementMask, preferences, null, null);
     }
 }

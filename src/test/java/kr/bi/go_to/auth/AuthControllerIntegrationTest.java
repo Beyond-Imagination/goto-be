@@ -12,10 +12,12 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import kr.bi.go_to.enums.OAuthProvider;
 import kr.bi.go_to.model.member.OAuthUser;
 import kr.bi.go_to.repository.MemberRepository;
 import kr.bi.go_to.repository.OAuthUserRepository;
 import kr.bi.go_to.repository.RefreshTokenRepository;
+import kr.bi.go_to.repository.UserTermAgreementRepository;
 import kr.bi.go_to.support.OAuthIdentityTestConfiguration;
 import kr.bi.go_to.support.TestcontainersConfiguration;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,6 +29,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 
@@ -53,10 +56,14 @@ class AuthControllerIntegrationTest {
     @Autowired
     OAuthUserRepository oauthUserRepository;
 
+    @Autowired
+    UserTermAgreementRepository userTermAgreementRepository;
+
     @BeforeEach
     void setUp() {
         refreshTokenRepository.deleteAll();
         oauthUserRepository.deleteAll();
+        userTermAgreementRepository.deleteAll();
         memberRepository.deleteAll();
     }
 
@@ -129,13 +136,18 @@ class AuthControllerIntegrationTest {
                 .get()
                 .extracting(member -> member.getAgreementMask())
                 .isEqualTo(31L);
-        assertThat(oauthUserRepository.findByProviderAndProviderId(
-                        kr.bi.go_to.enums.OAuthProvider.NAVER, "naver-new-account"))
+        assertThat(oauthUserRepository.findByProviderAndProviderId(OAuthProvider.NAVER, "naver-new-account"))
                 .isPresent()
                 .get()
                 .extracting(OAuthUser::getMember)
                 .extracting(member -> member.getNickname())
                 .isEqualTo("tester");
+
+        assertThat(userTermAgreementRepository.findAll())
+                .hasSize(5)
+                .allMatch(agreement -> agreement.isAgreed())
+                .allMatch(agreement -> "203.0.113.195".equals(agreement.getClientIp()))
+                .allMatch(agreement -> "Test-Agent".equals(agreement.getUserAgent()));
 
         mockMvc.perform(post("/api/v1/auth/refresh")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -290,9 +302,11 @@ class AuthControllerIntegrationTest {
                 .getContentAsString();
     }
 
-    private org.springframework.test.web.servlet.ResultActions signupRequest(
+    private ResultActions signupRequest(
             String provider, String providerAccessToken, String nickname, long agreementMask) throws Exception {
         return mockMvc.perform(post("/api/v1/auth/oauth/signup")
+                .header("User-Agent", "Test-Agent")
+                .header("X-Forwarded-For", "203.0.113.195")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
                         """
