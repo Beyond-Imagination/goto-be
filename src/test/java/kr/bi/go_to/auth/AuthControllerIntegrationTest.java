@@ -1,6 +1,7 @@
 package kr.bi.go_to.auth;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -216,6 +217,53 @@ class AuthControllerIntegrationTest {
     }
 
     @Test
+    void 닉네임_사용_가능_여부는_인증_없이_조회한다() throws Exception {
+        mockMvc.perform(get("/api/v1/nicknames/{nickname}/availability", "available"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.available").value(true));
+
+        signup("KAKAO", "existing-nickname", "taken", 15);
+
+        mockMvc.perform(get("/api/v1/nicknames/{nickname}/availability", "taken"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.available").value(false));
+
+        mockMvc.perform(get("/api/v1/nicknames/{nickname}/availability", "x"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("INVALID_REQUEST"));
+    }
+
+    @Test
+    void 서로_다른_OAuth_계정이_같은_닉네임으로_동시_가입하면_하나만_성공한다() throws Exception {
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+
+        try (ExecutorService executorService = Executors.newFixedThreadPool(2)) {
+            Future<String> first = executorService.submit(
+                    () -> concurrentSignup(ready, start, "KAKAO", "nickname-race-kakao", "SameNick12"));
+            Future<String> second = executorService.submit(
+                    () -> concurrentSignup(ready, start, "GOOGLE", "nickname-race-google", "SameNick12"));
+
+            ready.await();
+            start.countDown();
+
+            List<Map<String, Object>> responses = List.of(
+                    objectMapper.readValue(first.get(), MAP_TYPE), objectMapper.readValue(second.get(), MAP_TYPE));
+
+            assertThat(responses)
+                    .filteredOn(response -> "AUTHENTICATED".equals(response.get("status")))
+                    .hasSize(1);
+            assertThat(responses)
+                    .filteredOn(response -> "NICKNAME_ALREADY_IN_USE".equals(response.get("errorCode")))
+                    .hasSize(1);
+        }
+
+        assertThat(memberRepository.count()).isOne();
+        assertThat(memberRepository.findByNickname("SameNick12")).isPresent();
+        assertThat(oauthUserRepository.count()).isOne();
+    }
+
+    @Test
     void 유효하지_않은_OAuth_토큰은_표준_에러_응답으로_거절한다() throws Exception {
         mockMvc.perform(
                         post("/api/v1/auth/oauth/login")
@@ -266,10 +314,16 @@ class AuthControllerIntegrationTest {
     }
 
     private String concurrentSignup(CountDownLatch ready, CountDownLatch start, String nickname) throws Exception {
+        return concurrentSignup(ready, start, "KAKAO", "concurrent-account", nickname);
+    }
+
+    private String concurrentSignup(
+            CountDownLatch ready, CountDownLatch start, String provider, String providerAccessToken, String nickname)
+            throws Exception {
         ready.countDown();
         start.await();
 
-        return signupRequest("KAKAO", "concurrent-account", nickname, 15)
+        return signupRequest(provider, providerAccessToken, nickname, 15)
                 .andReturn()
                 .getResponse()
                 .getContentAsString();

@@ -15,7 +15,6 @@ import kr.bi.go_to.exception.BusinessException;
 import kr.bi.go_to.exception.ErrorCode;
 import kr.bi.go_to.model.member.Member;
 import kr.bi.go_to.model.refreshToken.RefreshToken;
-import kr.bi.go_to.repository.MemberRepository;
 import kr.bi.go_to.repository.OAuthUserRepository;
 import kr.bi.go_to.repository.RefreshTokenRepository;
 import kr.bi.go_to.service.oauth.OAuthIdentity;
@@ -29,7 +28,7 @@ public class AuthService {
 
     private final RefreshTokenRepository refreshTokenRepository;
     private final OAuthUserRepository oauthUserRepository;
-    private final MemberRepository memberRepository;
+    private final NicknameService nicknameService;
     private final OAuthIdentityVerifier oauthIdentityVerifier;
     private final OAuthRegistrationService oauthRegistrationService;
     private final JwtService jwtService;
@@ -38,14 +37,14 @@ public class AuthService {
     public AuthService(
             RefreshTokenRepository refreshTokenRepository,
             OAuthUserRepository oauthUserRepository,
-            MemberRepository memberRepository,
+            NicknameService nicknameService,
             OAuthIdentityVerifier oauthIdentityVerifier,
             OAuthRegistrationService oauthRegistrationService,
             JwtService jwtService,
             Clock clock) {
         this.refreshTokenRepository = refreshTokenRepository;
         this.oauthUserRepository = oauthUserRepository;
-        this.memberRepository = memberRepository;
+        this.nicknameService = nicknameService;
         this.oauthIdentityVerifier = oauthIdentityVerifier;
         this.oauthRegistrationService = oauthRegistrationService;
         this.jwtService = jwtService;
@@ -74,8 +73,8 @@ public class AuthService {
             throw new BusinessException(ErrorCode.REQUIRED_AGREEMENTS_NOT_ACCEPTED);
         }
 
-        String nickname = request.nickname().trim();
-        if (memberRepository.existsByNickname(nickname)) {
+        String nickname = nicknameService.normalizeAndValidate(request.nickname());
+        if (!nicknameService.isAvailable(nickname)) {
             throw new BusinessException(ErrorCode.NICKNAME_ALREADY_IN_USE);
         }
 
@@ -83,14 +82,14 @@ public class AuthService {
             return authenticated(oauthRegistrationService.register(
                     identity, nickname, request.agreementMask(), request.preferences()));
         } catch (DataIntegrityViolationException exception) {
-            // 사전 조회는 동시 가입 요청을 막지 못하므로 OAuth 연결 유니크 제약이 최종 보장 장치다.
+            // 사전 조회는 동시 가입 요청을 막지 못하므로 닉네임·OAuth 연결 유니크 제약이 최종 보장 장치다.
             // 먼저 커밋한 요청만 토큰을 받고, 충돌한 요청은 로그인 흐름으로 재시도하도록 토큰을 발급하지 않는다.
             if (oauthUserRepository
                     .findByProviderAndProviderId(identity.provider(), identity.providerId())
                     .isPresent()) {
                 throw new BusinessException(ErrorCode.OAUTH_SIGNUP_ALREADY_COMPLETED);
             }
-            if (memberRepository.existsByNickname(nickname)) {
+            if (!nicknameService.isAvailable(nickname)) {
                 throw new BusinessException(ErrorCode.NICKNAME_ALREADY_IN_USE);
             }
             throw exception;
