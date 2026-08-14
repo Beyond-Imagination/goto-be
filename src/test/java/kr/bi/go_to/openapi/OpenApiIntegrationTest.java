@@ -34,6 +34,10 @@ class OpenApiIntegrationTest {
                 .andExpect(jsonPath("$.paths['/api/v1/auth/oauth/login']").exists())
                 .andExpect(jsonPath("$.paths['/api/v1/auth/oauth/signup']").exists())
                 .andExpect(jsonPath("$.paths['/api/v1/auth/refresh']").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/terms']").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/terms/{termId}']").exists())
+                .andExpect(
+                        jsonPath("$.paths['/api/v1/terms/{termId}/histories']").exists())
                 .andExpect(jsonPath("$.paths['/api/v1/help-requests']").exists())
                 .andExpect(jsonPath("$.paths['/api/v1/help-requests/nearby']").exists())
                 .andExpect(jsonPath("$.paths['/api/v1/help-requests/place-contacts']")

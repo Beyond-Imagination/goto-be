@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import kr.bi.go_to.model.place.PlaceBfDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -16,7 +17,7 @@ import tools.jackson.databind.ObjectMapper;
 /**
  * Tour API의 detailWithTour2 원본 flat JSON을 place_bf_info.bf_details JSONB 스키마로 정규화한다.
  *
- * <p>저장 스키마는 {@link kr.bi.go_to.model.place.PlaceBfDetails}와 맞춘다. 최상위 키는 항상
+ * <p>저장 스키마는 {@link PlaceBfDetails}와 맞춘다. 최상위 키는 항상
  * mobility, visual, hearing, infant_family, intro, sources를 가진다. 각 편의시설 카테고리는 이
  * 클래스에 정의된 알려진 Tour API 필드를 모두 포함한다.
  *

@@ -10,6 +10,7 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -291,7 +292,7 @@ class TourApiJobProductionFixtureManualE2ETest {
                 GROUP BY status
                 """,
                 resultSet -> {
-                    Map<String, Long> result = new java.util.HashMap<>();
+                    Map<String, Long> result = new HashMap<>();
                     while (resultSet.next()) {
                         result.put(resultSet.getString(1), resultSet.getLong(2));
                     }

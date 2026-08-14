@@ -6,6 +6,7 @@ import com.sun.net.httpserver.HttpServer;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -21,7 +22,7 @@ class TourApiRestClientConfigTest {
         Object baseUrl = new YamlPropertySourceLoader()
                 .load("application", new ClassPathResource("application.yaml")).stream()
                         .map(source -> source.getProperty("tour-api.base-url"))
-                        .filter(java.util.Objects::nonNull)
+                        .filter(Objects::nonNull)
                         .findFirst()
                         .orElse(null);
 
