@@ -6,12 +6,13 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.util.Map;
 import kr.bi.go_to.model.place.Place;
 import kr.bi.go_to.repository.MemberRepository;
 import kr.bi.go_to.repository.PlaceRepository;
 import kr.bi.go_to.repository.RefreshTokenRepository;
 import kr.bi.go_to.repository.SavedPlaceRepository;
+import kr.bi.go_to.service.JwtService;
+import kr.bi.go_to.support.TestMemberAuthentication;
 import kr.bi.go_to.support.TestcontainersConfiguration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -21,11 +22,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
-import tools.jackson.core.type.TypeReference;
-import tools.jackson.databind.ObjectMapper;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -33,13 +31,8 @@ import tools.jackson.databind.ObjectMapper;
 @Import(TestcontainersConfiguration.class)
 class SavedPlaceControllerIntegrationTest {
 
-    private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
-
     @Autowired
     MockMvc mockMvc;
-
-    @Autowired
-    ObjectMapper objectMapper;
 
     @Autowired
     SavedPlaceRepository savedPlaceRepository;
@@ -52,6 +45,9 @@ class SavedPlaceControllerIntegrationTest {
 
     @Autowired
     MemberRepository memberRepository;
+
+    @Autowired
+    JwtService jwtService;
 
     Place place;
     String token;
@@ -148,23 +144,8 @@ class SavedPlaceControllerIntegrationTest {
         mockMvc.perform(get("/api/v1/saved-places/me")).andExpect(status().isUnauthorized());
     }
 
-    private String login(String nickname) throws Exception {
-        String body = mockMvc.perform(post("/api/v1/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(
-                                """
-                        {
-                          "nickname": "%s",
-                          "password": "password"
-                        }
-                        """
-                                        .formatted(nickname)))
-                .andExpect(status().isCreated())
-                .andReturn()
-                .getResponse()
-                .getContentAsString();
-
-        return (String) objectMapper.readValue(body, MAP_TYPE).get("accessToken");
+    private String login(String nickname) {
+        return TestMemberAuthentication.accessToken(memberRepository, jwtService, nickname);
     }
 
     private String bearer(String token) {
