@@ -1,7 +1,6 @@
 package kr.bi.go_to.service.place;
 
 import java.util.List;
-import kr.bi.go_to.repository.FloorMapRepository;
 import kr.bi.go_to.repository.PlaceSearchProjection;
 import kr.bi.go_to.repository.PlaceSearchRepository;
 import kr.bi.go_to.service.place.model.BfDetailsData;
@@ -14,11 +13,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class DbPlaceService implements PlaceService {
 
     private final PlaceSearchRepository placeSearchRepository;
-    private final FloorMapRepository floorMapRepository;
 
-    public DbPlaceService(PlaceSearchRepository placeSearchRepository, FloorMapRepository floorMapRepository) {
+    public DbPlaceService(PlaceSearchRepository placeSearchRepository) {
         this.placeSearchRepository = placeSearchRepository;
-        this.floorMapRepository = floorMapRepository;
     }
 
     @Override
@@ -50,6 +47,6 @@ public class DbPlaceService implements PlaceService {
                         Boolean.TRUE.equals(place.getHasRamp())),
                 place.getBfLastSyncedAt(),
                 place.getDistanceMeters(),
-                floorMapRepository.existsByPlace_Id(place.getId()));
+                Boolean.TRUE.equals(place.getHasIndoorMap()));
     }
 }

@@ -1,6 +1,7 @@
 package kr.bi.go_to.place;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
 import jakarta.persistence.EntityManager;
 import java.util.List;
@@ -15,6 +16,7 @@ import kr.bi.go_to.repository.PlaceSearchProjection;
 import kr.bi.go_to.repository.PlaceSearchRepository;
 import kr.bi.go_to.support.TestcontainersConfiguration;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
@@ -85,6 +87,21 @@ class PlaceSearchRepositoryTest {
     }
 
     @Test
+    @DisplayName("FLOOR_MAP이 존재하는 장소만 hasIndoorMap을 true로 반환한다")
+    void returnsHasIndoorMapTrueOnlyForPlacesWithFloorMap() {
+        Place withFloorMap = savePlace("with-floor-map", "museum", "Museum With Floor Map", 37.5666, 126.9781, false);
+        savePlace("without-floor-map", "museum", "Museum Without Floor Map", 37.5667, 126.9782, false);
+        saveFloorMap(withFloorMap);
+
+        List<PlaceSearchProjection> result = placeSearchRepository.searchNearby(37.5665, 126.9780, 10, "museum");
+
+        assertThat(result)
+                .extracting(PlaceSearchProjection::getName, PlaceSearchProjection::getHasIndoorMap)
+                .containsExactlyInAnyOrder(
+                        tuple("Museum With Floor Map", true), tuple("Museum Without Floor Map", false));
+    }
+
+    @Test
     void findsDistinctCategoriesExcludingNullBlankAndDeletedPlaces() {
         savePlace("museum-1", "museum", "Museum 1", 37.5665, 126.9780, false);
         savePlace("museum-2", "museum", "Museum 2", 37.5666, 126.9781, false);
@@ -110,6 +127,13 @@ class PlaceSearchRepositoryTest {
                 .thumbnailUrl("https://example.com/" + externalId + ".jpg")
                 .isDeleted(deleted)
                 .build());
+    }
+
+    private void saveFloorMap(Place place) {
+        entityManager
+                .createNativeQuery("INSERT INTO floor_maps (place_id, floor_level) VALUES (:placeId, 1)")
+                .setParameter("placeId", place.getId())
+                .executeUpdate();
     }
 
     private void saveBfInfo(Place place, boolean elevator, boolean restroom, boolean route) {
