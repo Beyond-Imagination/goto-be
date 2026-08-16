@@ -1,11 +1,13 @@
 package kr.bi.go_to.spec;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import kr.bi.go_to.config.security.AuthenticatedMember;
 import kr.bi.go_to.controller.place.request.NearbyAccessibilitySummaryRequest;
@@ -32,9 +34,14 @@ public interface PlaceApiSpec {
                 responseCode = "200",
                 description = "장소 탐색 성공",
                 content = @Content(schema = @Schema(implementation = PlaceSearchResponse.class))),
-        @ApiResponse(responseCode = "400", description = "요청 파라미터 검증 실패", content = @Content)
+        @ApiResponse(
+                responseCode = "400",
+                description = "요청 파라미터 검증 실패 또는 지원하지 않는 파라미터",
+                content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
-    PlaceSearchResponse search(@Valid @ParameterObject @ModelAttribute PlaceSearchRequest request);
+    PlaceSearchResponse search(
+            @Valid @ParameterObject @ModelAttribute PlaceSearchRequest request,
+            @Parameter(hidden = true) HttpServletRequest servletRequest);
 
     @Operation(
             tags = SwaggerTag.PLACE_NAME,

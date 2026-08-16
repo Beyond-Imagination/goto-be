@@ -2,36 +2,31 @@ package kr.bi.go_to.batch.processor;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import kr.bi.go_to.batch.client.TourApiClient;
 import kr.bi.go_to.batch.dto.PlaceProcessingResult;
 import kr.bi.go_to.batch.dto.TourApiItemDto;
 import kr.bi.go_to.batch.listener.EtlFailureLogger;
+import kr.bi.go_to.batch.validation.TourApiPlaceCategoryValidator;
+import kr.bi.go_to.model.batch.CategoryResolutionStatus;
+import kr.bi.go_to.model.batch.DetailSyncStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import tools.jackson.databind.JsonNode;
 
 @DisplayName("TourApiIncrementalItemProcessor 증분 동기화 처리 테스트")
 class TourApiIncrementalItemProcessorTest {
 
     private TourApiIncrementalItemProcessor processor;
-    private TourApiClient tourApiClient;
+    private TourApiPlaceCategoryValidator categoryValidator;
 
     @BeforeEach
     void setUp() {
-        tourApiClient = mock(TourApiClient.class);
-        when(tourApiClient.fetchDetail(anyString(), anyString(), nullable(String.class)))
-                .thenReturn(null);
-        when(tourApiClient.extractFieldOrEmpty(any(JsonNode.class), anyString()))
-                .thenReturn("");
-
-        processor = new TourApiIncrementalItemProcessor(mock(EtlFailureLogger.class), tourApiClient);
+        categoryValidator = mock(TourApiPlaceCategoryValidator.class);
+        when(categoryValidator.requireActiveLeaf(any(TourApiItemDto.class))).thenReturn("A0101");
+        processor = new TourApiIncrementalItemProcessor(mock(EtlFailureLogger.class), categoryValidator);
     }
 
     @Test
@@ -41,6 +36,8 @@ class TourApiIncrementalItemProcessorTest {
 
         assertThat(result).isNotNull();
         assertThat(result.place().isDeleted()).isTrue();
+        assertThat(result.place().getCategoryCode()).isNull();
+        verifyNoInteractions(categoryValidator);
     }
 
     @Test
@@ -53,69 +50,68 @@ class TourApiIncrementalItemProcessorTest {
     }
 
     @Test
-    @DisplayName("세 detail API가 모두 성공하면 process 결과를 상세 보강 완료 상태로 표시한다")
-    void marksDetailCompleteOnlyWhenAllDetailApisSucceed() throws Exception {
-        JsonNode common2 = mock(JsonNode.class);
-        JsonNode withTour2 = mock(JsonNode.class);
-        JsonNode intro2 = mock(JsonNode.class);
-        when(tourApiClient.fetchDetail(eq("detailCommon2"), anyString(), nullable(String.class)))
-                .thenReturn(common2);
-        when(tourApiClient.fetchDetail(eq("detailWithTour2"), anyString(), nullable(String.class)))
-                .thenReturn(withTour2);
-        when(tourApiClient.fetchDetail(eq("detailIntro2"), anyString(), nullable(String.class)))
-                .thenReturn(intro2);
-
+    @DisplayName("증분 base step은 detail API를 호출하지 않고 quota가 적용되는 detail step에 PENDING 상태를 인계한다")
+    void defersDetailCallsToQuotaBoundDetailStep() throws Exception {
         PlaceProcessingResult result = processor.process(createDto("1"));
 
-        assertThat(result.detailCommonSynced()).isTrue();
-        assertThat(result.detailWithTourSynced()).isTrue();
-        assertThat(result.detailIntroSynced()).isTrue();
-        assertThat(result.place().isDetailCommonSynced()).isTrue();
-        assertThat(result.place().isDetailWithTourSynced()).isTrue();
-        assertThat(result.place().isDetailIntroSynced()).isTrue();
-    }
-
-    @Test
-    @DisplayName("detailCommon2는 성공했지만 overview/homepage가 없으면 process 결과를 빈 문자열로 매핑한다")
-    void mapsMissingCommonDetailFieldsToEmptyStringsWhenDetailCommonSucceeds() throws Exception {
-        JsonNode common2 = mock(JsonNode.class);
-        when(tourApiClient.fetchDetail(eq("detailCommon2"), anyString(), nullable(String.class)))
-                .thenReturn(common2);
-        when(tourApiClient.extractFieldOrEmpty(common2, "overview")).thenReturn("");
-        when(tourApiClient.extractFieldOrEmpty(common2, "homepage")).thenReturn("");
-
-        PlaceProcessingResult result = processor.process(createDto("1"));
-
-        assertThat(result.detailCommonSynced()).isTrue();
-        assertThat(result.place().getOverview()).isEmpty();
-        assertThat(result.place().getHomepage()).isEmpty();
-    }
-
-    @Test
-    @DisplayName("detail API 중 하나라도 실패하면 process 결과 상세 보강 미완료 상태를 유지한다")
-    void leavesDetailIncompleteWhenAnyDetailApiFails() throws Exception {
-        JsonNode common2 = mock(JsonNode.class);
-        JsonNode intro2 = mock(JsonNode.class);
-        when(tourApiClient.fetchDetail(eq("detailCommon2"), anyString(), nullable(String.class)))
-                .thenReturn(common2);
-        when(tourApiClient.fetchDetail(eq("detailWithTour2"), anyString(), nullable(String.class)))
-                .thenReturn(null);
-        when(tourApiClient.fetchDetail(eq("detailIntro2"), anyString(), nullable(String.class)))
-                .thenReturn(intro2);
-
-        PlaceProcessingResult result = processor.process(createDto("1"));
-
-        assertThat(result.detailCommonSynced()).isTrue();
+        assertThat(result.place().getCategoryResolutionStatus()).isEqualTo(CategoryResolutionStatus.RESOLVED);
+        assertThat(result.place().getDetailCommonStatus()).isEqualTo(DetailSyncStatus.PENDING);
+        assertThat(result.place().getDetailWithTourStatus()).isEqualTo(DetailSyncStatus.PENDING);
+        assertThat(result.place().getDetailIntroStatus()).isEqualTo(DetailSyncStatus.PENDING);
+        assertThat(result.detailCommonSynced()).isFalse();
         assertThat(result.detailWithTourSynced()).isFalse();
-        assertThat(result.detailIntroSynced()).isTrue();
-        assertThat(result.place().isDetailCommonSynced()).isTrue();
+        assertThat(result.detailIntroSynced()).isFalse();
+    }
+
+    @Test
+    @DisplayName("category가 없는 증분 item은 skip하지 않고 PENDING으로 저장해 detail step의 복구 대상으로 남긴다")
+    void keepsMissingCategoryPendingForRecoveryInTheDetailStep() throws Exception {
+        PlaceProcessingResult result = processor.process(createDto("1", null));
+
+        assertThat(result).isNotNull();
+        assertThat(result.place().getCategoryCode()).isNull();
+        assertThat(result.place().getCategoryResolutionStatus()).isEqualTo(CategoryResolutionStatus.PENDING);
+        verifyNoInteractions(categoryValidator);
+    }
+
+    @Test
+    @DisplayName("증분 base 결과는 detail endpoint 상태를 모두 PENDING으로 유지한다")
+    void keepsEveryDetailEndpointPendingForTheDetailStep() throws Exception {
+        PlaceProcessingResult result = processor.process(createDto("1"));
+
+        assertThat(result.place().getDetailCommonStatus()).isEqualTo(DetailSyncStatus.PENDING);
+        assertThat(result.place().getDetailWithTourStatus()).isEqualTo(DetailSyncStatus.PENDING);
+        assertThat(result.place().getDetailIntroStatus()).isEqualTo(DetailSyncStatus.PENDING);
+    }
+
+    @Test
+    @DisplayName("증분 base 결과는 lazy detail fetch 전 overview와 homepage를 덮어쓰지 않는다")
+    void leavesDetailTextAbsentUntilTheDetailStep() throws Exception {
+        PlaceProcessingResult result = processor.process(createDto("1"));
+
+        assertThat(result.place().getOverview()).isNull();
+        assertThat(result.place().getHomepage()).isNull();
+    }
+
+    @Test
+    @DisplayName("증분 base 처리 결과는 상세 동기화 완료를 선반영하지 않는다")
+    void doesNotPredeclareAnyDetailEndpointAsSynchronized() throws Exception {
+        PlaceProcessingResult result = processor.process(createDto("1"));
+
+        assertThat(result.detailCommonSynced()).isFalse();
+        assertThat(result.detailWithTourSynced()).isFalse();
+        assertThat(result.detailIntroSynced()).isFalse();
+        assertThat(result.place().isDetailCommonSynced()).isFalse();
         assertThat(result.place().isDetailWithTourSynced()).isFalse();
-        assertThat(result.place().isDetailIntroSynced()).isTrue();
+        assertThat(result.place().isDetailIntroSynced()).isFalse();
     }
 
     private TourApiItemDto createDto(String showflag) {
-        // 한국관광공사 증분 API의 showflag는 공개/삭제 상태를 나타낸다.
-        // 0: 삭제 또는 비공개, 1: 공개 중인 데이터.
+        return createDto(showflag, "A0101");
+    }
+
+    private TourApiItemDto createDto(String showflag, String categoryCode) {
+        // 공개 상태 값은 0이면 삭제·비공개, 1이면 공개를 뜻한다.
         return new TourApiItemDto(
                 "12345",
                 "12",
@@ -126,7 +122,7 @@ class TourApiIncrementalItemProcessorTest {
                 "37.0",
                 null,
                 null,
-                "A0101",
+                categoryCode,
                 null,
                 null,
                 null,

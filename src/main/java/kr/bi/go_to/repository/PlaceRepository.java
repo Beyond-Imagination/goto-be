@@ -6,6 +6,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface PlaceRepository extends JpaRepository<Place, Long> {
+public interface PlaceRepository extends JpaRepository<Place, Long>, PlaceRepositoryCustom {
     Optional<Place> findByExternalIdAndSource(String externalId, String source);
+
+    Optional<Place> findByIdAndIsDeletedFalse(Long id);
 }

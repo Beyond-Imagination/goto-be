@@ -23,6 +23,7 @@ public record PlaceSearchRequest(
                 @DecimalMax("180.0")
                 Double lng,
         @Schema(description = "반환할 장소 수(기본 10, 최대 50)", example = "10", defaultValue = "10") @Min(1) @Max(50) Integer k,
+        @Schema(description = "필터링할 한국관광공사 현재 분류체계 소분류 코드", example = "A01010100") String categoryCode,
         @Schema(
                         description = "장소유형 필터(다중 선택) — places.category(Tour API cat3, 9자리)에 대한 prefix 매칭. "
                                 + "3자리면 대분류(cat1), 5자리면 중분류(cat2) 필터가 된다. "
@@ -34,6 +35,7 @@ public record PlaceSearchRequest(
                 Set<ObstacleIssueType> avoid) {
     public PlaceSearchRequest {
         k = k == null ? 10 : k;
+        categoryCode = categoryCode == null || categoryCode.isBlank() ? null : categoryCode.trim();
         categoryPrefixes = categoryPrefixes == null ? Set.of() : Set.copyOf(categoryPrefixes);
         mobilityTypes = mobilityTypes == null ? Set.of() : Set.copyOf(mobilityTypes);
         avoid = avoid == null ? Set.of() : Set.copyOf(avoid);

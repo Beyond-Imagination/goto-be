@@ -17,20 +17,31 @@ class SearchPlacesUseCaseTest {
 
     @Test
     void returnsPlacesInDistanceOrderAndAppliesLimit() {
-        PlaceSearchResponse response = useCase.execute(new PlaceSearchRequest(37.5665, 126.9780, 3, null, null, null));
+        PlaceSearchResponse response =
+                useCase.execute(new PlaceSearchRequest(37.5665, 126.9780, 3, null, null, null, null));
 
         assertThat(response.places()).hasSize(3);
         assertThat(response.places())
                 .extracting(place -> place.distanceMeters())
                 .isSorted();
         assertThat(response.places().getFirst().name()).isEqualTo("서울도서관");
-        assertThat(response.filters().categories()).containsExactly("공공기관", "관광지", "숙박");
+        assertThat(response.filters().categoryCodes()).containsExactly("A01010100", "A05010100", "B02010100");
+    }
+
+    @Test
+    void filtersByExactCategoryCodeBeforeApplyingLimit() {
+        PlaceSearchResponse response =
+                useCase.execute(new PlaceSearchRequest(37.5665, 126.9780, 2, " A01010100 ", null, null, null));
+
+        assertThat(response.places()).hasSize(2);
+        assertThat(response.places()).allMatch(place -> place.categoryCode().equals("A01010100"));
+        assertThat(response.places()).extracting(place -> place.name()).containsExactly("경복궁", "남산서울타워");
     }
 
     @Test
     void doesNotFilterResultsSinceCategoryPrefixesFilterIsNoOpUntilDbPlaceServiceExists() {
         PlaceSearchResponse response =
-                useCase.execute(new PlaceSearchRequest(37.5665, 126.9780, 10, Set.of("관광지"), null, null));
+                useCase.execute(new PlaceSearchRequest(37.5665, 126.9780, 10, null, Set.of("관광지"), null, null));
 
         assertThat(response.places()).hasSize(6);
     }
@@ -41,6 +52,7 @@ class SearchPlacesUseCaseTest {
                 37.5665,
                 126.9780,
                 10,
+                null,
                 Set.of("A02"),
                 Set.of(MobilityType.WHEELCHAIR),
                 Set.of(ObstacleIssueType.STAIRS)));
@@ -52,7 +64,8 @@ class SearchPlacesUseCaseTest {
 
     @Test
     void echoesEmptyAppliedFiltersWhenNoneProvided() {
-        PlaceSearchResponse response = useCase.execute(new PlaceSearchRequest(37.5665, 126.9780, 10, null, null, null));
+        PlaceSearchResponse response =
+                useCase.execute(new PlaceSearchRequest(37.5665, 126.9780, 10, null, null, null, null));
 
         assertThat(response.appliedFilters().categoryPrefixes()).isEmpty();
         assertThat(response.appliedFilters().mobilityTypes()).isEmpty();
@@ -60,8 +73,16 @@ class SearchPlacesUseCaseTest {
     }
 
     @Test
+    void doesNotMatchCategoryCodePrefixes() {
+        PlaceSearchResponse response =
+                useCase.execute(new PlaceSearchRequest(37.5665, 126.9780, 10, "A0101", null, null, null));
+
+        assertThat(response.places()).isEmpty();
+    }
+
+    @Test
     void usesTenAsDefaultLimit() {
-        PlaceSearchRequest request = new PlaceSearchRequest(37.5665, 126.9780, null, null, null, null);
+        PlaceSearchRequest request = new PlaceSearchRequest(37.5665, 126.9780, null, null, null, null, null);
 
         assertThat(request.k()).isEqualTo(10);
     }

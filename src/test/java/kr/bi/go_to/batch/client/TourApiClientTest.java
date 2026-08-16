@@ -1,23 +1,21 @@
 package kr.bi.go_to.batch.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.sun.net.httpserver.HttpServer;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicReference;
+import kr.bi.go_to.batch.exception.TourApiInfrastructureException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.springframework.boot.test.system.CapturedOutput;
-import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.http.MediaType;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestClient;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-@ExtendWith(OutputCaptureExtension.class)
 class TourApiClientTest {
 
     @Test
@@ -27,7 +25,7 @@ class TourApiClientTest {
         server.createContext("/detailCommon2", exchange -> {
             byte[] response =
                     """
-                    {"response":{"body":{"items":{"item":[{"contentid":"130376","overview":"ok"}]}}}}
+                    {"response":{"header":{"resultCode":"0000"},"body":{"items":{"item":[{"contentid":"130376","overview":"ok"}]}}}}
                     """
                             .getBytes(StandardCharsets.UTF_8);
             exchange.getResponseHeaders().add("Content-Type", MediaType.APPLICATION_JSON_VALUE);
@@ -63,7 +61,7 @@ class TourApiClientTest {
         server.createContext("/detailCommon2", exchange -> {
             byte[] response =
                     """
-                    {"response":{"body":{"items":{"item":{"contentid":"130376","overview":"ok"}}}}}
+                    {"response":{"header":{"resultCode":"0000"},"body":{"items":{"item":{"contentid":"130376","overview":"ok"}}}}}
                     """
                             .getBytes(StandardCharsets.UTF_8);
             exchange.getResponseHeaders().add("Content-Type", MediaType.APPLICATION_JSON_VALUE);
@@ -101,7 +99,7 @@ class TourApiClientTest {
             rawQuery.set(exchange.getRequestURI().getRawQuery());
             byte[] response =
                     """
-                    {"response":{"body":{"items":{"item":[{"contentid":"130376","contenttypeid":"12"}]}}}}
+                    {"response":{"header":{"resultCode":"0000"},"body":{"items":{"item":[{"contentid":"130376","contenttypeid":"12"}]}}}}
                     """
                             .getBytes(StandardCharsets.UTF_8);
             exchange.getResponseHeaders().add("Content-Type", MediaType.APPLICATION_JSON_VALUE);
@@ -145,7 +143,7 @@ class TourApiClientTest {
             rawQuery.set(exchange.getRequestURI().getRawQuery());
             byte[] response =
                     """
-                    {"response":{"body":{"items":{"item":[{"contentid":"130376","overview":"ok"}]}}}}
+                    {"response":{"header":{"resultCode":"0000"},"body":{"items":{"item":[{"contentid":"130376","overview":"ok"}]}}}}
                     """
                             .getBytes(StandardCharsets.UTF_8);
             exchange.getResponseHeaders().add("Content-Type", MediaType.APPLICATION_JSON_VALUE);
@@ -181,8 +179,8 @@ class TourApiClientTest {
     }
 
     @Test
-    @DisplayName("Tour API resultCode가 성공이 아니면 fetchDetail은 한국어 경고 로그를 남기고 null을 반환한다")
-    void fetchDetailLogsKoreanMessageAndReturnsNullWhenTourApiResultIsNotOk(CapturedOutput output) throws Exception {
+    @DisplayName("Tour API resultCode가 성공이 아니면 비스킵 인프라 예외를 발생시킨다")
+    void fetchDetailFailsImmediatelyWhenTourApiResultIsNotOk() throws Exception {
         HttpServer server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
         server.createContext("/detailCommon2", exchange -> {
             byte[] response =
@@ -207,15 +205,84 @@ class TourApiClientTest {
             ReflectionTestUtils.setField(client, "mobileOs", "ETC");
             ReflectionTestUtils.setField(client, "mobileApp", "Goto");
 
-            JsonNode detail = client.fetchDetail("detailCommon2", "130376", null);
+            assertThatThrownBy(() -> client.fetchDetail("detailCommon2", "130376", null))
+                    .isInstanceOf(TourApiInfrastructureException.class)
+                    .hasMessageContaining("apiName=detailCommon2")
+                    .hasMessageContaining("contentId=130376")
+                    .hasMessageContaining("resultCode=0003")
+                    .hasMessageContaining("resultMsg=인증키가 유효하지 않습니다.");
+        } finally {
+            server.stop(0);
+        }
+    }
 
-            assertThat(detail).isNull();
-            assertThat(output)
-                    .contains("Tour API 상세 조회 실패 응답입니다")
-                    .contains("apiName=detailCommon2")
-                    .contains("contentId=130376")
-                    .contains("resultCode=0003")
-                    .contains("resultMsg=인증키가 유효하지 않습니다.");
+    @Test
+    @DisplayName("Tour API resultCode가 누락되거나 공백이면 비스킵 인프라 예외를 발생시킨다")
+    void fetchDetailFailsImmediatelyWhenResultCodeIsMissingOrBlank() throws Exception {
+        AtomicReference<String> responseBody = new AtomicReference<>();
+        HttpServer server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
+        server.createContext("/detailCommon2", exchange -> {
+            byte[] response = responseBody.get().getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().add("Content-Type", MediaType.APPLICATION_JSON_VALUE);
+            exchange.sendResponseHeaders(200, response.length);
+            exchange.getResponseBody().write(response);
+            exchange.close();
+        });
+        server.start();
+
+        try {
+            TourApiClient client = new TourApiClient(RestClient.builder());
+            ReflectionTestUtils.setField(
+                    client,
+                    "baseUrl",
+                    "http://localhost:%d".formatted(server.getAddress().getPort()));
+            ReflectionTestUtils.setField(client, "serviceKey", "");
+            ReflectionTestUtils.setField(client, "mobileOs", "ETC");
+            ReflectionTestUtils.setField(client, "mobileApp", "Goto");
+
+            responseBody.set(
+                    """
+                    {"response":{"header":{},"body":{"items":{"item":[]}}}}
+                    """);
+            assertThatThrownBy(() -> client.fetchDetail("detailCommon2", "missing", null))
+                    .isInstanceOf(TourApiInfrastructureException.class)
+                    .hasMessageContaining("resultCode=");
+
+            responseBody.set(
+                    """
+                    {"response":{"header":{"resultCode":" "},"body":{"items":{"item":[]}}}}
+                    """);
+            assertThatThrownBy(() -> client.fetchDetail("detailCommon2", "blank", null))
+                    .isInstanceOf(TourApiInfrastructureException.class)
+                    .hasMessageContaining("resultCode= ");
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    @DisplayName("Tour API가 빈 HTTP 본문을 반환하면 비스킵 인프라 예외를 발생시킨다")
+    void fetchDetailFailsImmediatelyWhenResponseBodyIsEmpty() throws Exception {
+        HttpServer server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
+        server.createContext("/detailCommon2", exchange -> {
+            exchange.sendResponseHeaders(200, -1);
+            exchange.close();
+        });
+        server.start();
+
+        try {
+            TourApiClient client = new TourApiClient(RestClient.builder());
+            ReflectionTestUtils.setField(
+                    client,
+                    "baseUrl",
+                    "http://localhost:%d".formatted(server.getAddress().getPort()));
+            ReflectionTestUtils.setField(client, "serviceKey", "");
+            ReflectionTestUtils.setField(client, "mobileOs", "ETC");
+            ReflectionTestUtils.setField(client, "mobileApp", "Goto");
+
+            assertThatThrownBy(() -> client.fetchDetail("detailCommon2", "130376", null))
+                    .isInstanceOf(TourApiInfrastructureException.class)
+                    .hasMessageContaining("response body is empty");
         } finally {
             server.stop(0);
         }

@@ -3,9 +3,7 @@ package kr.bi.go_to.batch.writer;
 import java.sql.PreparedStatement;
 import java.sql.Types;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 import kr.bi.go_to.batch.dto.PlaceProcessingResult;
 import kr.bi.go_to.batch.exception.MixedSourceChunkException;
@@ -30,11 +28,37 @@ public class PlaceItemWriter implements ItemWriter<PlaceProcessingResult> {
 
     private static final String UPSERT_SQL =
             """
-            INSERT INTO places (external_id, source, category, name, sanitized_address, location_point, thumbnail_url, overview, homepage, tel, content_type_id, is_deleted, detail_common_synced, detail_with_tour_synced, detail_intro_synced, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ST_GeomFromText(?, 4326), ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+            INSERT INTO places (
+                external_id, source, category_code, name, sanitized_address,
+                location_point, thumbnail_url, overview, homepage, tel,
+                content_type_id, is_deleted,
+                detail_common_synced, detail_with_tour_synced, detail_intro_synced,
+                category_resolution_status,
+                detail_common_status, detail_with_tour_status, detail_intro_status,
+                detail_with_tour_payload, detail_intro_payload,
+                created_at, updated_at
+            )
+            VALUES (
+                ?, ?, ?, ?, ?,
+                ST_GeomFromText(?, 4326), ?, ?, ?, ?,
+                ?, ?,
+                ?, ?, ?,
+                ?,
+                ?, ?, ?,
+                ?::jsonb, ?::jsonb,
+                NOW(), NOW()
+            )
             ON CONFLICT (external_id, source)
             DO UPDATE SET
-                category = COALESCE(EXCLUDED.category, places.category),
+                -- Base fields
+                category_code = CASE
+                    WHEN EXCLUDED.is_deleted OR EXCLUDED.category_resolution_status = 'PENDING'
+                        THEN places.category_code
+                    WHEN places.category_resolution_status = 'RESOLVED'
+                         AND EXCLUDED.category_resolution_status <> 'RESOLVED'
+                        THEN places.category_code
+                    ELSE EXCLUDED.category_code
+                END,
                 name = COALESCE(EXCLUDED.name, places.name),
                 sanitized_address = COALESCE(EXCLUDED.sanitized_address, places.sanitized_address),
                 location_point = COALESCE(EXCLUDED.location_point, places.location_point),
@@ -44,9 +68,73 @@ public class PlaceItemWriter implements ItemWriter<PlaceProcessingResult> {
                 tel = COALESCE(EXCLUDED.tel, places.tel),
                 content_type_id = COALESCE(EXCLUDED.content_type_id, places.content_type_id),
                 is_deleted = EXCLUDED.is_deleted,
-                detail_common_synced = EXCLUDED.detail_common_synced,
-                detail_with_tour_synced = EXCLUDED.detail_with_tour_synced,
-                detail_intro_synced = EXCLUDED.detail_intro_synced,
+
+                -- Category may recover from NOT_FOUND, but never regresses from RESOLVED
+                category_resolution_status = CASE
+                    WHEN EXCLUDED.category_resolution_status = 'PENDING'
+                        THEN places.category_resolution_status
+                    WHEN places.category_resolution_status = 'PENDING'
+                         OR (places.category_resolution_status = 'NOT_FOUND'
+                             AND EXCLUDED.category_resolution_status = 'RESOLVED')
+                        THEN EXCLUDED.category_resolution_status
+                    ELSE places.category_resolution_status
+                END,
+
+                -- Detail states move only once from PENDING to a terminal value
+                detail_common_status = CASE
+                    WHEN places.detail_common_status = 'PENDING'
+                         AND EXCLUDED.detail_common_status <> 'PENDING'
+                        THEN EXCLUDED.detail_common_status
+                    ELSE places.detail_common_status
+                END,
+                detail_with_tour_status = CASE
+                    WHEN places.detail_with_tour_status = 'PENDING'
+                         AND EXCLUDED.detail_with_tour_status <> 'PENDING'
+                        THEN EXCLUDED.detail_with_tour_status
+                    ELSE places.detail_with_tour_status
+                END,
+                detail_intro_status = CASE
+                    WHEN places.detail_intro_status = 'PENDING'
+                         AND EXCLUDED.detail_intro_status <> 'PENDING'
+                        THEN EXCLUDED.detail_intro_status
+                    ELSE places.detail_intro_status
+                END,
+
+                -- Successful raw payloads survive until both sibling endpoints complete
+                detail_with_tour_payload = CASE
+                    WHEN places.detail_with_tour_status = 'PENDING'
+                         AND EXCLUDED.detail_with_tour_status = 'SUCCESS'
+                         AND EXCLUDED.detail_with_tour_payload IS NOT NULL
+                        THEN EXCLUDED.detail_with_tour_payload
+                    ELSE places.detail_with_tour_payload
+                END,
+                detail_intro_payload = CASE
+                    WHEN places.detail_intro_status = 'PENDING'
+                         AND EXCLUDED.detail_intro_status = 'SUCCESS'
+                         AND EXCLUDED.detail_intro_payload IS NOT NULL
+                        THEN EXCLUDED.detail_intro_payload
+                    ELSE places.detail_intro_payload
+                END,
+
+                -- Legacy booleans follow the same guarded transition
+                detail_common_synced = CASE
+                    WHEN places.detail_common_status = 'PENDING'
+                         AND EXCLUDED.detail_common_status <> 'PENDING'
+                        THEN EXCLUDED.detail_common_status = 'SUCCESS'
+                    ELSE places.detail_common_synced
+                END,
+                detail_with_tour_synced = CASE
+                    WHEN places.detail_with_tour_status = 'PENDING'
+                         AND EXCLUDED.detail_with_tour_status <> 'PENDING'
+                        THEN EXCLUDED.detail_with_tour_status = 'SUCCESS'
+                    ELSE places.detail_with_tour_synced
+                END,
+                detail_intro_synced = CASE
+                    WHEN places.detail_intro_status = 'PENDING'
+                         AND EXCLUDED.detail_intro_status <> 'PENDING'
+                        THEN EXCLUDED.detail_intro_status = 'SUCCESS'
+                    ELSE places.detail_intro_synced
+                END,
                 updated_at = NOW()
             """;
 
@@ -70,89 +158,96 @@ public class PlaceItemWriter implements ItemWriter<PlaceProcessingResult> {
             return;
         }
 
-        // 하나의 job에서 etl step 각각에 대해서는 항상 chunk 별로 datasource가 동일해야합니다.
-        // 즉 하나의 작업에서는 하나의 datasource에서 온다는 뜻
+        // 한 청크에는 동일한 데이터 출처의 장소만 포함되어야 한다.
         String source = items.get(0).getSource();
         boolean allSameSource = items.stream().allMatch(place -> source.equals(place.getSource()));
         if (!allSameSource) {
             throw new MixedSourceChunkException();
         }
 
-        jdbcTemplate.batchUpdate(UPSERT_SQL, items, items.size(), (PreparedStatement ps, Place place) -> {
-            ps.setString(1, place.getExternalId());
-            ps.setString(2, place.getSource());
-            ps.setString(3, place.getCategory());
-            ps.setString(4, place.getName());
-            ps.setString(5, place.getSanitizedAddress());
+        jdbcTemplate.batchUpdate(
+                UPSERT_SQL, results, results.size(), (PreparedStatement ps, PlaceProcessingResult result) -> {
+                    Place place = result.place();
+                    ps.setString(1, place.getExternalId());
+                    ps.setString(2, place.getSource());
+                    ps.setString(3, place.getCategoryCode());
+                    ps.setString(4, place.getName());
+                    ps.setString(5, place.getSanitizedAddress());
 
-            if (place.getLocationPoint() != null) {
-                ps.setString(6, place.getLocationPoint().toText());
-            } else {
-                ps.setNull(6, Types.VARCHAR);
-            }
+                    if (place.getLocationPoint() != null) {
+                        ps.setString(6, place.getLocationPoint().toText());
+                    } else {
+                        ps.setNull(6, Types.VARCHAR);
+                    }
 
-            ps.setString(7, place.getThumbnailUrl());
-            ps.setString(8, place.getOverview());
-            ps.setString(9, place.getHomepage());
-            ps.setString(10, place.getTel());
-            ps.setString(11, place.getContentTypeId());
-            ps.setBoolean(12, place.isDeleted());
-            ps.setBoolean(13, place.isDetailCommonSynced());
-            ps.setBoolean(14, place.isDetailWithTourSynced());
-            ps.setBoolean(15, place.isDetailIntroSynced());
-        });
+                    ps.setString(7, place.getThumbnailUrl());
+                    ps.setString(8, place.getOverview());
+                    ps.setString(9, place.getHomepage());
+                    ps.setString(10, place.getTel());
+                    ps.setString(11, place.getContentTypeId());
+                    ps.setBoolean(12, place.isDeleted());
+                    ps.setBoolean(13, place.isDetailCommonSynced());
+                    ps.setBoolean(14, place.isDetailWithTourSynced());
+                    ps.setBoolean(15, place.isDetailIntroSynced());
+                    ps.setString(16, place.getCategoryResolutionStatus().name());
+                    ps.setString(17, place.getDetailCommonStatus().name());
+                    ps.setString(18, place.getDetailWithTourStatus().name());
+                    ps.setString(19, place.getDetailIntroStatus().name());
+                    ps.setString(20, result.bfDetails());
+                    ps.setString(21, result.introDetails());
+                });
 
         log.info("Saved/Updated {} places to database using Native Upsert.", chunk.size());
 
-        List<String> externalIds = items.stream().map(Place::getExternalId).collect(Collectors.toList());
+        List<String> payloadUpdatedExternalIds = results.stream()
+                .filter(result -> !result.place().isDeleted())
+                .filter(result -> result.bfDetails() != null || result.introDetails() != null)
+                .map(result -> result.place().getExternalId())
+                .toList();
 
-        if (externalIds.isEmpty()) {
+        if (payloadUpdatedExternalIds.isEmpty()) {
             return;
         }
 
         NamedParameterJdbcTemplate namedJdbcTemplate = new NamedParameterJdbcTemplate(jdbcTemplate);
         MapSqlParameterSource parameters = new MapSqlParameterSource();
-        parameters.addValue("externalIds", externalIds);
+        parameters.addValue("externalIds", payloadUpdatedExternalIds);
         parameters.addValue("source", source);
 
-        String selectSql =
-                "SELECT id, external_id FROM places WHERE external_id IN (:externalIds) AND source = :source";
+        List<CompletedDetailPayload> completedPayloads = namedJdbcTemplate.query(
+                """
+                SELECT id, external_id,
+                       detail_with_tour_payload::text,
+                       detail_intro_payload::text
+                FROM places
+                WHERE external_id IN (:externalIds)
+                  AND source = :source
+                  AND is_deleted = false
+                  AND detail_with_tour_status = 'SUCCESS'
+                  AND detail_intro_status = 'SUCCESS'
+                  AND detail_with_tour_payload IS NOT NULL
+                  AND detail_intro_payload IS NOT NULL
+                """,
+                parameters,
+                (resultSet, rowNumber) -> new CompletedDetailPayload(
+                        resultSet.getLong(1), resultSet.getString(2), resultSet.getString(3), resultSet.getString(4)));
 
-        Map<String, Long> externalIdToIdMap = namedJdbcTemplate.query(selectSql, parameters, rs -> {
-            Map<String, Long> map = new HashMap<>();
-            while (rs.next()) {
-                map.put(rs.getString("external_id"), rs.getLong("id"));
-            }
-            return map;
-        });
-
-        if (externalIdToIdMap == null) {
-            return;
-        }
-
-        List<PlaceProcessingResult> resultsWithBfInfo = results.stream()
-                .filter(r -> !r.place().isDeleted())
-                .filter(r -> r.detailWithTourSynced() && r.detailIntroSynced())
-                .filter(r -> r.bfDetails() != null
-                        && r.introDetails() != null
-                        && externalIdToIdMap.containsKey(r.place().getExternalId()))
-                .collect(Collectors.toList());
-
-        if (resultsWithBfInfo.isEmpty()) {
+        if (completedPayloads.isEmpty()) {
             return;
         }
 
         jdbcTemplate.batchUpdate(
                 UPSERT_BF_INFO_SQL,
-                resultsWithBfInfo,
-                resultsWithBfInfo.size(),
-                (PreparedStatement ps, PlaceProcessingResult result) -> {
-                    Long placeId = externalIdToIdMap.get(result.place().getExternalId());
-                    String normalizedBfDetails = bfDetailsNormalizer.normalize(
-                            result.place().getExternalId(), result.bfDetails(), result.introDetails());
-                    ps.setLong(1, placeId);
+                completedPayloads,
+                completedPayloads.size(),
+                (PreparedStatement ps, CompletedDetailPayload payload) -> {
+                    String normalizedBfDetails =
+                            bfDetailsNormalizer.normalize(payload.externalId(), payload.withTour(), payload.intro());
+                    ps.setLong(1, payload.placeId());
                     ps.setString(2, normalizedBfDetails);
                 });
-        log.info("Saved/Updated {} place_bf_info records to database.", resultsWithBfInfo.size());
+        log.info("Saved/Updated {} place_bf_info records to database.", completedPayloads.size());
     }
+
+    private record CompletedDetailPayload(long placeId, String externalId, String withTour, String intro) {}
 }

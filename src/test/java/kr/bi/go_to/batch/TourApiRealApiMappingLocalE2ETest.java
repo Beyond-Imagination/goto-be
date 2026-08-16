@@ -2,11 +2,13 @@ package kr.bi.go_to.batch;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import kr.bi.go_to.batch.client.TourApiClient;
 import kr.bi.go_to.batch.dto.PlaceProcessingResult;
@@ -344,7 +346,7 @@ class TourApiRealApiMappingLocalE2ETest {
         }
 
         return items.entrySet().stream()
-                .collect(java.util.stream.Collectors.toMap(
+                .collect(Collectors.toMap(
                         Map.Entry::getKey,
                         entry -> "is_available=%s, count=%s, details=%s"
                                 .formatted(
@@ -352,7 +354,7 @@ class TourApiRealApiMappingLocalE2ETest {
                                         entry.getValue().getCount(),
                                         entry.getValue().getDetails()),
                         (left, right) -> left,
-                        java.util.LinkedHashMap::new));
+                        LinkedHashMap::new));
     }
 
     private void assertBfItemMapMatchesDataModelSchema(Map<String, PlaceBfDetails.BfItem> items) {

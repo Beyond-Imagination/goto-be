@@ -3,6 +3,8 @@ package kr.bi.go_to.batch.dto;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import kr.bi.go_to.model.batch.CategoryResolutionStatus;
+import kr.bi.go_to.model.batch.DetailSyncStatus;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record TourApiItemDto(
@@ -13,9 +15,9 @@ public record TourApiItemDto(
         String addr2,
         String mapx,
         String mapy,
-        String cat1,
-        String cat2,
-        String cat3,
+        String lclsSystm1,
+        String lclsSystm2,
+        String lclsSystm3,
         String firstimage,
         String firstimage2,
         String areacode,
@@ -30,7 +32,11 @@ public record TourApiItemDto(
         String showflag,
         boolean detailCommonSynced,
         boolean detailWithTourSynced,
-        boolean detailIntroSynced) {
+        boolean detailIntroSynced,
+        CategoryResolutionStatus categoryResolutionStatus,
+        DetailSyncStatus detailCommonStatus,
+        DetailSyncStatus detailWithTourStatus,
+        DetailSyncStatus detailIntroStatus) {
 
     @JsonCreator
     public TourApiItemDto(
@@ -41,9 +47,9 @@ public record TourApiItemDto(
             @JsonProperty("addr2") String addr2,
             @JsonProperty("mapx") String mapx,
             @JsonProperty("mapy") String mapy,
-            @JsonProperty("cat1") String cat1,
-            @JsonProperty("cat2") String cat2,
-            @JsonProperty("cat3") String cat3,
+            @JsonProperty("lclsSystm1") String lclsSystm1,
+            @JsonProperty("lclsSystm2") String lclsSystm2,
+            @JsonProperty("lclsSystm3") String lclsSystm3,
             @JsonProperty("firstimage") String firstimage,
             @JsonProperty("firstimage2") String firstimage2,
             @JsonProperty("areacode") String areacode,
@@ -64,9 +70,9 @@ public record TourApiItemDto(
                 addr2,
                 mapx,
                 mapy,
-                cat1,
-                cat2,
-                cat3,
+                lclsSystm1,
+                lclsSystm2,
+                lclsSystm3,
                 firstimage,
                 firstimage2,
                 areacode,
@@ -81,7 +87,11 @@ public record TourApiItemDto(
                 showflag,
                 false,
                 false,
-                false);
+                false,
+                hasText(lclsSystm3) ? CategoryResolutionStatus.RESOLVED : CategoryResolutionStatus.PENDING,
+                DetailSyncStatus.PENDING,
+                DetailSyncStatus.PENDING,
+                DetailSyncStatus.PENDING);
     }
 
     public TourApiItemDto withDetails(String overview, String homepage, String bfDetails, String introDetails) {
@@ -104,9 +114,9 @@ public record TourApiItemDto(
                 this.addr2(),
                 this.mapx(),
                 this.mapy(),
-                this.cat1(),
-                this.cat2(),
-                this.cat3(),
+                this.lclsSystm1(),
+                this.lclsSystm2(),
+                this.lclsSystm3(),
                 this.firstimage(),
                 this.firstimage2(),
                 this.areacode(),
@@ -121,6 +131,14 @@ public record TourApiItemDto(
                 this.showflag(),
                 detailCommonSynced,
                 detailWithTourSynced,
-                detailIntroSynced);
+                detailIntroSynced,
+                categoryResolutionStatus,
+                detailCommonSynced ? DetailSyncStatus.SUCCESS : detailCommonStatus,
+                detailWithTourSynced ? DetailSyncStatus.SUCCESS : detailWithTourStatus,
+                detailIntroSynced ? DetailSyncStatus.SUCCESS : detailIntroStatus);
+    }
+
+    private static boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 }

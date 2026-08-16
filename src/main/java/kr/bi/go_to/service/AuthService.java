@@ -4,16 +4,22 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.UUID;
 import kr.bi.go_to.config.security.JwtClaims;
-import kr.bi.go_to.controller.auth.request.LoginRequest;
+import kr.bi.go_to.controller.auth.request.OAuthLoginRequest;
+import kr.bi.go_to.controller.auth.request.OAuthSignupRequest;
 import kr.bi.go_to.controller.auth.request.RefreshRequest;
 import kr.bi.go_to.controller.auth.response.AccessTokenResponse;
-import kr.bi.go_to.controller.auth.response.LoginResponse;
+import kr.bi.go_to.controller.auth.response.OAuthAuthenticationResponse;
+import kr.bi.go_to.enums.AgreementType;
 import kr.bi.go_to.enums.TokenType;
 import kr.bi.go_to.exception.BusinessException;
 import kr.bi.go_to.exception.ErrorCode;
 import kr.bi.go_to.model.member.Member;
 import kr.bi.go_to.model.refreshToken.RefreshToken;
+import kr.bi.go_to.repository.OAuthUserRepository;
 import kr.bi.go_to.repository.RefreshTokenRepository;
+import kr.bi.go_to.service.oauth.OAuthIdentity;
+import kr.bi.go_to.service.oauth.OAuthIdentityVerifier;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,35 +27,89 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthService {
 
     private final RefreshTokenRepository refreshTokenRepository;
+    private final OAuthUserRepository oauthUserRepository;
+    private final NicknameService nicknameService;
+    private final OAuthIdentityVerifier oauthIdentityVerifier;
+    private final OAuthRegistrationService oauthRegistrationService;
     private final JwtService jwtService;
-    private final MemberService memberService;
     private final Clock clock;
 
     public AuthService(
             RefreshTokenRepository refreshTokenRepository,
+            OAuthUserRepository oauthUserRepository,
+            NicknameService nicknameService,
+            OAuthIdentityVerifier oauthIdentityVerifier,
+            OAuthRegistrationService oauthRegistrationService,
             JwtService jwtService,
-            MemberService memberService,
             Clock clock) {
         this.refreshTokenRepository = refreshTokenRepository;
+        this.oauthUserRepository = oauthUserRepository;
+        this.nicknameService = nicknameService;
+        this.oauthIdentityVerifier = oauthIdentityVerifier;
+        this.oauthRegistrationService = oauthRegistrationService;
         this.jwtService = jwtService;
-        this.memberService = memberService;
         this.clock = clock;
     }
 
     @Transactional
-    public LoginResponse login(LoginRequest request) {
-        String nickname = request.nickname().trim();
-        // TODO: 지금은 회원가입 플로우가 없으니 그냥 이름 기준으로 바로바로 생성해서 쓰지만 추후 회원가입이 생기면 수정할것
-        Member member = memberService.getOrCreateUser(nickname);
+    public OAuthAuthenticationResponse login(OAuthLoginRequest request) {
+        OAuthIdentity identity = oauthIdentityVerifier.verify(request.provider(), request.providerAccessToken());
+        return oauthUserRepository
+                .findByProviderAndProviderId(identity.provider(), identity.providerId())
+                .map(oauthUser -> authenticated(oauthUser.getMember()))
+                .orElseGet(() ->
+                        OAuthAuthenticationResponse.signUpRequired(identity.provider(), identity.suggestedNickname()));
+    }
+
+    @Transactional
+    public OAuthAuthenticationResponse signup(OAuthSignupRequest request) {
+        return signup(request, null, null);
+    }
+
+    @Transactional
+    public OAuthAuthenticationResponse signup(OAuthSignupRequest request, String clientIp, String userAgent) {
+        OAuthIdentity identity = oauthIdentityVerifier.verify(request.provider(), request.providerAccessToken());
+        if (oauthUserRepository
+                .findByProviderAndProviderId(identity.provider(), identity.providerId())
+                .isPresent()) {
+            throw new BusinessException(ErrorCode.OAUTH_SIGNUP_ALREADY_COMPLETED);
+        }
+        if (!AgreementType.hasRequiredAgreements(request.agreementMask())) {
+            throw new BusinessException(ErrorCode.REQUIRED_AGREEMENTS_NOT_ACCEPTED);
+        }
+
+        String nickname = nicknameService.normalizeAndValidate(request.nickname());
+        if (!nicknameService.isAvailable(nickname)) {
+            throw new BusinessException(ErrorCode.NICKNAME_ALREADY_IN_USE);
+        }
+
+        try {
+            return authenticated(oauthRegistrationService.register(
+                    identity, nickname, request.agreementMask(), request.preferences(), clientIp, userAgent));
+        } catch (DataIntegrityViolationException exception) {
+            // 사전 조회는 동시 가입 요청을 막지 못하므로 닉네임·OAuth 연결 유니크 제약이 최종 보장 장치다.
+            // 먼저 커밋한 요청만 토큰을 받고, 충돌한 요청은 로그인 흐름으로 재시도하도록 토큰을 발급하지 않는다.
+            if (oauthUserRepository
+                    .findByProviderAndProviderId(identity.provider(), identity.providerId())
+                    .isPresent()) {
+                throw new BusinessException(ErrorCode.OAUTH_SIGNUP_ALREADY_COMPLETED);
+            }
+            if (!nicknameService.isAvailable(nickname)) {
+                throw new BusinessException(ErrorCode.NICKNAME_ALREADY_IN_USE);
+            }
+            throw exception;
+        }
+    }
+
+    private OAuthAuthenticationResponse authenticated(Member member) {
         String subject = member.getId().toString();
         UUID refreshTokenId = UUID.randomUUID();
 
         refreshTokenRepository.save(new RefreshToken(refreshTokenId, subject, jwtService.refreshTokenExpiresAt()));
 
-        return new LoginResponse(
+        return OAuthAuthenticationResponse.authenticated(
                 jwtService.createAccessToken(subject),
                 jwtService.createRefreshToken(subject, refreshTokenId),
-                "Bearer",
                 jwtService.accessTokenExpiresInSeconds());
     }
 

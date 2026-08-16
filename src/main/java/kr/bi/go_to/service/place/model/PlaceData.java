@@ -6,7 +6,7 @@ public record PlaceData(
         long id,
         String externalId,
         String source,
-        String category,
+        String categoryCode,
         String name,
         String sanitizedAddress,
         double latitude,
@@ -14,4 +14,5 @@ public record PlaceData(
         String thumbnailUrl,
         BfDetailsData bfDetails,
         Instant bfLastSyncedAt,
+        double distanceMeters,
         boolean hasIndoorMap) {}
