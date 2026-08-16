@@ -11,7 +11,7 @@ import org.locationtech.jts.geom.Point;
 public record SavedPlaceResponse(
         @Schema(description = "장소 ID", example = "1") long placeId,
         @Schema(description = "장소명", example = "국립중앙박물관") String name,
-        @Schema(description = "한국관광공사 현재 분류체계 소분류 코드", example = "A01010100") String categoryCode,
+        @Schema(description = "카테고리", example = "관광지") String category,
         @Schema(description = "정제된 주소", example = "서울 용산구 서빙고로 137") String address,
         @Schema(description = "썸네일 URL") String thumbnailUrl,
         @Schema(description = "위도 (좌표 정보가 없는 장소면 null)", example = "37.523850") Double latitude,
