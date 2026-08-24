@@ -31,4 +31,6 @@ public interface PlaceSearchProjection {
     Instant getBfLastSyncedAt();
 
     Double getDistanceMeters();
+
+    Boolean getHasIndoorMap();
 }

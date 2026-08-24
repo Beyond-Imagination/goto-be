@@ -13,6 +13,8 @@ public interface FloorMapRepository extends JpaRepository<FloorMap, Long> {
 
     Optional<FloorMap> findByPlace_IdAndFloorLevel(Long placeId, Integer floorLevel);
 
+    boolean existsByPlace_Id(Long placeId);
+
     @Query("select fm.floorLevel from FloorMap fm where fm.place.id = :placeId order by fm.floorLevel asc")
     List<Integer> findFloorLevelByPlace_IdOrderByFloorLevelAsc(@Param("placeId") Long placeId);
 }

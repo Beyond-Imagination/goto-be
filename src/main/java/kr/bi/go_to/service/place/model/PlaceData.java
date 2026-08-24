@@ -14,4 +14,5 @@ public record PlaceData(
         String thumbnailUrl,
         BfDetailsData bfDetails,
         Instant bfLastSyncedAt,
-        double distanceMeters) {}
+        double distanceMeters,
+        boolean hasIndoorMap) {}

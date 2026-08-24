@@ -28,6 +28,7 @@ public enum ErrorCode {
     HELP_REQUEST_NOT_FOUND(HttpStatus.NOT_FOUND, "도움 요청을 찾을 수 없습니다."),
     FLOOR_MAP_NOT_FOUND(HttpStatus.NOT_FOUND, "층 도면을 찾을 수 없습니다."),
     FACILITY_NODE_NOT_FOUND(HttpStatus.NOT_FOUND, "시설물 노드를 찾을 수 없습니다."),
+    OBSTACLE_REPORT_NOT_FOUND(HttpStatus.NOT_FOUND, "장애물 제보를 찾을 수 없습니다."),
     TERM_NOT_FOUND(HttpStatus.NOT_FOUND, "약관을 찾을 수 없습니다."),
 
     // 409 CONFLICT
@@ -36,6 +37,7 @@ public enum ErrorCode {
     HELP_REQUEST_ALREADY_REJECTED(HttpStatus.CONFLICT, "이미 거절한 도움 요청입니다."),
     HELP_REQUEST_NOT_ACCEPTED(HttpStatus.CONFLICT, "수락된 도움 요청만 완료할 수 있습니다."),
     HELP_REQUEST_CANNOT_BE_CANCELED(HttpStatus.CONFLICT, "취소할 수 없는 도움 요청입니다."),
+    OBSTACLE_REPORT_ALREADY_RESOLVED(HttpStatus.CONFLICT, "이미 해결 처리된 제보입니다. 문제가 남아있다면 새로 제보해 주세요."),
     NICKNAME_ALREADY_IN_USE(HttpStatus.CONFLICT, "이미 사용 중인 닉네임입니다."),
     OAUTH_SIGNUP_ALREADY_COMPLETED(HttpStatus.CONFLICT, "이미 가입 처리된 OAuth 계정입니다. 로그인 후 다시 시도해주세요."),
 

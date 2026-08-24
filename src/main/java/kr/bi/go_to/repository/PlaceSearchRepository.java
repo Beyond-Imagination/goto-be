@@ -28,7 +28,8 @@ public interface PlaceSearchRepository extends JpaRepository<Place, Long> {
                         ST_Distance(
                             p.location_point::geography,
                             ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)::geography
-                        ) AS distanceMeters
+                        ) AS distanceMeters,
+                        EXISTS(SELECT 1 FROM floor_maps fm WHERE fm.place_id = p.id) AS hasIndoorMap
                     FROM places p
                     LEFT JOIN place_bf_info pbi ON pbi.place_id = p.id
                     WHERE p.location_point IS NOT NULL

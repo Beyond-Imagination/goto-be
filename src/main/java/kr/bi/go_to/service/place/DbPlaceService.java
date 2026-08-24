@@ -46,6 +46,7 @@ public class DbPlaceService implements PlaceService {
                         Boolean.TRUE.equals(place.getHasAccessibleToilet()),
                         Boolean.TRUE.equals(place.getHasRamp())),
                 place.getBfLastSyncedAt(),
-                place.getDistanceMeters());
+                place.getDistanceMeters(),
+                Boolean.TRUE.equals(place.getHasIndoorMap()));
     }
 }
