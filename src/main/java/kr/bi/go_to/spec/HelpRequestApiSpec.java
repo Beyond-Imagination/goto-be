@@ -19,6 +19,7 @@ import kr.bi.go_to.controller.help.request.CreateHelpRequestRequest;
 import kr.bi.go_to.controller.help.response.HelpPlaceContactsResponse;
 import kr.bi.go_to.controller.help.response.HelpRequestResponse;
 import kr.bi.go_to.controller.help.response.NearbyHelpRequestResponse;
+import kr.bi.go_to.controller.help.response.PendingHelpCountResponse;
 import kr.bi.go_to.enums.SwaggerTag;
 import kr.bi.go_to.exception.ErrorResponse;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -77,6 +78,22 @@ public interface HelpRequestApiSpec {
             @RequestParam(required = false) @DecimalMin("-180.0") @DecimalMax("180.0") Double longitude,
             @RequestParam(defaultValue = "100") @Min(1) @Max(500) int radiusMeters,
             @RequestParam(defaultValue = "5") @Min(1) @Max(10) int limit);
+
+    @Operation(
+            tags = SwaggerTag.HELP_REQUEST_NAME,
+            summary = "대기 중인 도움 요청 건수 조회",
+            description = "인증된 사용자가 도울 수 있는 현재 대기 중(REQUESTED)인 도움 요청의 총 건수를 조회합니다.")
+    @ApiResponses({
+        @ApiResponse(
+                responseCode = "200",
+                description = "대기 건수 조회 성공",
+                content = @Content(schema = @Schema(implementation = PendingHelpCountResponse.class))),
+        @ApiResponse(
+                responseCode = "401",
+                description = "인증 필요",
+                content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    PendingHelpCountResponse countPending(AuthenticatedMember member);
 
     @Operation(
             tags = SwaggerTag.HELP_REQUEST_NAME,

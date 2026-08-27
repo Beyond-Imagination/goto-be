@@ -11,6 +11,7 @@ import kr.bi.go_to.controller.help.response.ContactMethodResponse;
 import kr.bi.go_to.controller.help.response.HelpPlaceContactsResponse;
 import kr.bi.go_to.controller.help.response.HelpRequestResponse;
 import kr.bi.go_to.controller.help.response.NearbyHelpRequestResponse;
+import kr.bi.go_to.controller.help.response.PendingHelpCountResponse;
 import kr.bi.go_to.controller.help.response.PlaceContactResponse;
 import kr.bi.go_to.exception.BusinessException;
 import kr.bi.go_to.exception.ErrorCode;
@@ -19,10 +20,12 @@ import kr.bi.go_to.model.help.HelpRequestRejection;
 import kr.bi.go_to.model.help.HelpRequestStatus;
 import kr.bi.go_to.model.member.Member;
 import kr.bi.go_to.model.place.Place;
+import kr.bi.go_to.properties.CacheProperties;
 import kr.bi.go_to.repository.HelpRequestRejectionRepository;
 import kr.bi.go_to.repository.HelpRequestRepository;
 import kr.bi.go_to.repository.PlaceRepository;
 import org.locationtech.jts.geom.Point;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -105,6 +108,15 @@ public class HelpRequestService {
                                 toPlaceContact(place, NEARBY_PLACE, placeDistanceMeters(latitude, longitude, place)))
                         .toList();
         return placeContactsResponse(contacts);
+    }
+
+    @Transactional(readOnly = true)
+    @Cacheable(value = CacheProperties.HELP_REQUESTS_PENDING_COUNT, key = "#memberId")
+    public PendingHelpCountResponse countPending(Long memberId) {
+        Member member = memberService.getUser(memberId);
+        Instant now = Instant.now(clock);
+        long count = helpRequestRepository.countPendingRequests(member.getId(), now);
+        return new PendingHelpCountResponse(count);
     }
 
     @Transactional(readOnly = true)

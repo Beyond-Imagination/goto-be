@@ -13,6 +13,7 @@ import kr.bi.go_to.controller.help.request.CreateHelpRequestRequest;
 import kr.bi.go_to.controller.help.response.HelpPlaceContactsResponse;
 import kr.bi.go_to.controller.help.response.HelpRequestResponse;
 import kr.bi.go_to.controller.help.response.NearbyHelpRequestResponse;
+import kr.bi.go_to.controller.help.response.PendingHelpCountResponse;
 import kr.bi.go_to.service.HelpRequestService;
 import kr.bi.go_to.spec.HelpRequestApiSpec;
 import org.springframework.http.HttpStatus;
@@ -55,6 +56,12 @@ public class HelpRequestController implements HelpRequestApiSpec {
             @RequestParam(defaultValue = "100") @Min(1) @Max(500) int radiusMeters,
             @RequestParam(defaultValue = "5") @Min(1) @Max(10) int limit) {
         return helpRequestService.findPlaceContacts(placeId, latitude, longitude, radiusMeters, limit);
+    }
+
+    @GetMapping("/pending-count")
+    @Override
+    public PendingHelpCountResponse countPending(@AuthenticationPrincipal AuthenticatedMember member) {
+        return helpRequestService.countPending(member.id());
     }
 
     @GetMapping("/nearby")
