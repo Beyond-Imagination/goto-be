@@ -30,3 +30,9 @@ gradle-app.setting
 # System files
 **/.DS_Store
 
+
+bin/**
+.vscode
+.settings
+tmp
+.factorypath
