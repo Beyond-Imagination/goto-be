@@ -61,6 +61,21 @@ public class HelpRequestRepositoryImpl implements HelpRequestRepositoryCustom {
     }
 
     @Override
+    public long countPendingRequests(Long memberId, Instant now) {
+        QHelpRequest request = QHelpRequest.helpRequest;
+        Long count = queryFactory
+                .select(request.count())
+                .from(request)
+                .where(
+                        request.status.eq(HelpRequestStatus.REQUESTED),
+                        request.expiresAt.gt(now),
+                        request.requester.id.ne(memberId),
+                        notRejectedBy(request, memberId))
+                .fetchOne();
+        return count == null ? 0L : count;
+    }
+
+    @Override
     public Optional<HelpRequest> findByIdForUpdate(UUID id) {
         QHelpRequest request = QHelpRequest.helpRequest;
         return Optional.ofNullable(queryFactory

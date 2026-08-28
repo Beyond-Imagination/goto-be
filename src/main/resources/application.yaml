@@ -55,6 +55,15 @@ goto:
   batch:
     initial-load:
       auto-run-enabled: true
+  cache:
+    default-ttl: 24h
+    caches:
+      help-requests-pending-count:
+        name: "help-requests:pending-count"
+        ttl: 10s
+      indoor-map:
+        name: "indoor-map"
+        ttl: 24h
 
 management:
   endpoints:

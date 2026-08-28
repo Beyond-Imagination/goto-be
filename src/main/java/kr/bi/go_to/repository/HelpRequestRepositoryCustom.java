@@ -18,6 +18,8 @@ public interface HelpRequestRepositoryCustom {
             int radiusMeters,
             Instant now);
 
+    long countPendingRequests(Long memberId, Instant now);
+
     Optional<HelpRequest> findByIdForUpdate(UUID id);
 
     int expireRequestedRequests(HelpRequestStatus requestedStatus, HelpRequestStatus expiredStatus, Instant now);

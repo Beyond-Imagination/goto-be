@@ -113,6 +113,103 @@ class HelpRequestRepositoryTest {
                 .isEqualTo(HelpRequestStatus.ACCEPTED);
     }
 
+    @Test
+    void 대기_중인_도움_요청_건수를_정확하게_집계한다() {
+        saveRequest(requester, "첫 번째 요청", "35.8294371", "129.2286552", NOW.minusSeconds(60), NOW.plusSeconds(600));
+        saveRequest(requester, "두 번째 요청", "35.8300000", "129.2290000", NOW.minusSeconds(30), NOW.plusSeconds(300));
+
+        long count = helpRequestRepository.countPendingRequests(helper.getId(), NOW);
+
+        assertThat(count).isEqualTo(2);
+    }
+
+    @Test
+    void 대기_중인_도움_요청이_없으면_0을_반환한다() {
+        long count = helpRequestRepository.countPendingRequests(helper.getId(), NOW);
+
+        assertThat(count).isEqualTo(0);
+    }
+
+    @Test
+    void 만료된_도움_요청은_대기_건수_집계에서_제외한다() {
+        saveRequest(requester, "만료된 요청", "35.8294371", "129.2286552", NOW.minusSeconds(600), NOW.minusSeconds(60));
+
+        long count = helpRequestRepository.countPendingRequests(helper.getId(), NOW);
+
+        assertThat(count).isEqualTo(0);
+    }
+
+    @Test
+    void 대기_상태가_아닌_요청은_집계에서_제외한다() {
+        HelpRequest accepted = saveRequest(
+                requester, "수락된 요청", "35.8294371", "129.2286552", NOW.minusSeconds(60), NOW.plusSeconds(600));
+        accepted.accept(helper, NOW.minusSeconds(30));
+
+        HelpRequest completed = saveRequest(
+                requester, "완료된 요청", "35.8294371", "129.2286552", NOW.minusSeconds(60), NOW.plusSeconds(600));
+        completed.accept(helper, NOW.minusSeconds(30));
+        completed.complete(NOW.minusSeconds(10));
+
+        HelpRequest canceled = saveRequest(
+                requester, "취소된 요청", "35.8294371", "129.2286552", NOW.minusSeconds(60), NOW.plusSeconds(600));
+        canceled.cancel(NOW.minusSeconds(10));
+
+        helpRequestRepository.saveAll(List.of(accepted, completed, canceled));
+
+        long count = helpRequestRepository.countPendingRequests(helper.getId(), NOW);
+
+        assertThat(count).isEqualTo(0);
+    }
+
+    @Test
+    void 본인이_생성한_도움_요청은_집계에서_제외한다() {
+        saveRequest(helper, "본인 요청", "35.8294371", "129.2286552", NOW.minusSeconds(60), NOW.plusSeconds(600));
+
+        long count = helpRequestRepository.countPendingRequests(helper.getId(), NOW);
+
+        assertThat(count).isEqualTo(0);
+    }
+
+    @Test
+    void 본인이_거절한_도움_요청은_집계에서_제외한다() {
+        HelpRequest rejected = saveRequest(
+                requester, "거절할 요청", "35.8294371", "129.2286552", NOW.minusSeconds(60), NOW.plusSeconds(600));
+        rejectionRepository.save(new HelpRequestRejection(rejected, helper, NOW));
+
+        long count = helpRequestRepository.countPendingRequests(helper.getId(), NOW);
+
+        assertThat(count).isEqualTo(0);
+    }
+
+    @Test
+    void 복합_상태에서_도움_가능한_대기_요청만_정확히_카운트한다() {
+        // 1. 유효한 요청 2건 (카운트 대상)
+        saveRequest(requester, "유효 요청 1", "35.8294371", "129.2286552", NOW.minusSeconds(60), NOW.plusSeconds(600));
+        saveRequest(requester, "유효 요청 2", "35.8300000", "129.2290000", NOW.minusSeconds(30), NOW.plusSeconds(300));
+
+        // 2. 만료된 요청 1건 (제외)
+        saveRequest(requester, "만료 요청", "35.8294371", "129.2286552", NOW.minusSeconds(600), NOW.minusSeconds(60));
+
+        // 3. 본인 생성 요청 1건 (제외)
+        saveRequest(helper, "본인 요청", "35.8294371", "129.2286552", NOW.minusSeconds(60), NOW.plusSeconds(600));
+
+        // 4. 거절한 요청 1건 (제외)
+        HelpRequest rejected = saveRequest(
+                requester, "거절 요청", "35.8294371", "129.2286552", NOW.minusSeconds(60), NOW.plusSeconds(600));
+        rejectionRepository.save(new HelpRequestRejection(rejected, helper, NOW));
+
+        // 5. 완료된 요청 1건 (제외)
+        HelpRequest completed = saveRequest(
+                requester, "완료 요청", "35.8294371", "129.2286552", NOW.minusSeconds(60), NOW.plusSeconds(600));
+        completed.accept(requester, NOW.minusSeconds(30));
+        completed.complete(NOW.minusSeconds(10));
+        helpRequestRepository.save(completed);
+
+        long count = helpRequestRepository.countPendingRequests(helper.getId(), NOW);
+
+        assertThat(count).isEqualTo(2);
+    }
+
     private HelpRequest saveRequest(
             Member requester,
             String locationLabel,

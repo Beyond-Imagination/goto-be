@@ -1,8 +1,10 @@
 package kr.bi.go_to.exception;
 
 import jakarta.validation.ConstraintViolationException;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -26,6 +28,11 @@ public class GlobalExceptionHandler {
     ResponseEntity<ErrorResponse> handleValidationException(Exception exception) {
         return ResponseEntity.status(ErrorCode.INVALID_REQUEST.getHttpStatus())
                 .body(ErrorResponse.from(ErrorCode.INVALID_REQUEST));
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    ResponseEntity<ErrorResponse> handleMethodNotSupportedException(HttpRequestMethodNotSupportedException exception) {
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(ErrorResponse.from(ErrorCode.INVALID_REQUEST));
     }
 
     @ExceptionHandler(Exception.class)

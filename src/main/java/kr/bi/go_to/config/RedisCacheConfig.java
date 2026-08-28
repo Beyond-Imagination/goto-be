@@ -1,6 +1,9 @@
 package kr.bi.go_to.config;
 
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
+import kr.bi.go_to.properties.CacheProperties;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CachingConfigurer;
 import org.springframework.cache.annotation.EnableCaching;
@@ -20,9 +23,11 @@ import tools.jackson.databind.jsontype.PolymorphicTypeValidator;
 public class RedisCacheConfig implements CachingConfigurer {
 
     private final RedisConnectionFactory connectionFactory;
+    private final CacheProperties cacheProperties;
 
-    public RedisCacheConfig(RedisConnectionFactory connectionFactory) {
+    public RedisCacheConfig(RedisConnectionFactory connectionFactory, CacheProperties cacheProperties) {
         this.connectionFactory = connectionFactory;
+        this.cacheProperties = cacheProperties;
     }
 
     @Override
@@ -35,12 +40,21 @@ public class RedisCacheConfig implements CachingConfigurer {
                 .enableDefaultTyping(typeValidator)
                 .build();
 
-        RedisCacheConfiguration cacheConfiguration = RedisCacheConfiguration.defaultCacheConfig()
-                .entryTtl(Duration.ofHours(24))
+        RedisCacheConfiguration defaultConfiguration = RedisCacheConfiguration.defaultCacheConfig()
+                .entryTtl(cacheProperties.getDefaultTtl())
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(serializer));
 
+        Map<String, RedisCacheConfiguration> initialCacheConfigurations = new HashMap<>();
+        cacheProperties.getCaches().values().forEach(setting -> {
+            if (setting.getName() != null) {
+                Duration ttl = setting.getTtl() != null ? setting.getTtl() : cacheProperties.getDefaultTtl();
+                initialCacheConfigurations.put(setting.getName(), defaultConfiguration.entryTtl(ttl));
+            }
+        });
+
         return RedisCacheManager.builder(connectionFactory)
-                .cacheDefaults(cacheConfiguration)
+                .cacheDefaults(defaultConfiguration)
+                .withInitialCacheConfigurations(initialCacheConfigurations)
                 .build();
     }
 
