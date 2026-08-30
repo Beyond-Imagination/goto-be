@@ -51,6 +51,11 @@ tour-api:
   detail-queue-capacity: 250
   detail-await-termination-seconds: 60
 
+# client-id/client-secret은 Parameter Store(/goto/naver-reverse-geocoding.*)에서 주입된다.
+# 둘 다 비어있으면 NaverReverseGeocodingClient가 호출 자체를 건너뛰고 Optional.empty()를 반환한다.
+naver-reverse-geocoding:
+  base-url: "https://naveropenapi.apigw.ntruss.com/map-reversegeocode/v2/gc"
+
 goto:
   batch:
     initial-load:

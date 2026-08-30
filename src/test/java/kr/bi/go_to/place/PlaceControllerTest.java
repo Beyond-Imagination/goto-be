@@ -1,5 +1,6 @@
 package kr.bi.go_to.place;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -30,7 +31,7 @@ class PlaceControllerTest {
         LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
         ObstacleReportService obstacleReportService = mock(ObstacleReportService.class);
-        when(obstacleReportService.getNearbySummary(anyDouble(), anyDouble(), anyDouble()))
+        when(obstacleReportService.getNearbySummary(anyDouble(), anyDouble(), anyDouble(), any(), any()))
                 .thenReturn(new NearbyObstacleSummary(0, 0, 0, 0));
         PlaceController controller = new PlaceController(
                 new SearchPlacesUseCase(new MockPlaceService()),

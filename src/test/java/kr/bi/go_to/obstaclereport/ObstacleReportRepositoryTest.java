@@ -67,25 +67,54 @@ class ObstacleReportRepositoryTest {
     @Test
     @DisplayName("bbox 내부의 제보만 반환한다")
     void findsReportsWithinBbox() {
-        ObstacleReport inside = obstacleReportRepository.save(newReport(37.55, 127.0, Set.of(MobilityType.WHEELCHAIR)));
-        obstacleReportRepository.save(newReport(38.0, 128.0, Set.of(MobilityType.WHEELCHAIR)));
+        ObstacleReport inside = obstacleReportRepository.save(
+                newReport(37.55, 127.0, Set.of(MobilityType.WHEELCHAIR), ObstacleIssueType.SIDEWALK_DAMAGE));
+        obstacleReportRepository.save(
+                newReport(38.0, 128.0, Set.of(MobilityType.WHEELCHAIR), ObstacleIssueType.SIDEWALK_DAMAGE));
 
-        List<ObstacleReport> found = obstacleReportRepository.findWithinBbox(126.9, 37.5, 127.1, 37.6, null);
+        List<ObstacleReport> found =
+                obstacleReportRepository.findWithinBbox(126.9, 37.5, 127.1, 37.6, false, Set.of(), false, Set.of());
 
         assertThat(found).extracting(ObstacleReport::getId).containsExactly(inside.getId());
     }
 
     @Test
-    @DisplayName("mobilityType으로 필터링하면 해당 이동조건을 포함하는 제보만 반환한다")
-    void filtersByMobilityType() {
-        ObstacleReport wheelchairReport =
-                obstacleReportRepository.save(newReport(37.55, 127.0, Set.of(MobilityType.WHEELCHAIR)));
-        obstacleReportRepository.save(newReport(37.55, 127.0, Set.of(MobilityType.SLOW_WALKER)));
+    @DisplayName("mobilityTypes로 필터링하면 그 중 하나라도 포함하는 제보만 반환한다")
+    void filtersByMobilityTypes() {
+        ObstacleReport wheelchairReport = obstacleReportRepository.save(
+                newReport(37.55, 127.0, Set.of(MobilityType.WHEELCHAIR), ObstacleIssueType.SIDEWALK_DAMAGE));
+        ObstacleReport strollerReport = obstacleReportRepository.save(
+                newReport(37.55, 127.0, Set.of(MobilityType.STROLLER), ObstacleIssueType.SIDEWALK_DAMAGE));
+        obstacleReportRepository.save(
+                newReport(37.55, 127.0, Set.of(MobilityType.SLOW_WALKER), ObstacleIssueType.SIDEWALK_DAMAGE));
 
-        List<ObstacleReport> found =
-                obstacleReportRepository.findWithinBbox(126.9, 37.5, 127.1, 37.6, MobilityType.WHEELCHAIR.name());
+        List<ObstacleReport> found = obstacleReportRepository.findWithinBbox(
+                126.9,
+                37.5,
+                127.1,
+                37.6,
+                true,
+                Set.of(MobilityType.WHEELCHAIR.name(), MobilityType.STROLLER.name()),
+                false,
+                Set.of());
 
-        assertThat(found).extracting(ObstacleReport::getId).containsExactly(wheelchairReport.getId());
+        assertThat(found)
+                .extracting(ObstacleReport::getId)
+                .containsExactlyInAnyOrder(wheelchairReport.getId(), strollerReport.getId());
+    }
+
+    @Test
+    @DisplayName("avoid로 필터링하면 해당 장애물 유형은 제외하고 반환한다")
+    void excludesByAvoidIssueTypes() {
+        ObstacleReport keptReport = obstacleReportRepository.save(
+                newReport(37.55, 127.0, Set.of(MobilityType.WHEELCHAIR), ObstacleIssueType.SIDEWALK_DAMAGE));
+        obstacleReportRepository.save(
+                newReport(37.55, 127.0, Set.of(MobilityType.WHEELCHAIR), ObstacleIssueType.HIGH_CURB));
+
+        List<ObstacleReport> found = obstacleReportRepository.findWithinBbox(
+                126.9, 37.5, 127.1, 37.6, false, Set.of(), true, Set.of(ObstacleIssueType.HIGH_CURB.name()));
+
+        assertThat(found).extracting(ObstacleReport::getId).containsExactly(keptReport.getId());
     }
 
     @Test
@@ -95,7 +124,8 @@ class ObstacleReportRepositoryTest {
                 obstacleReportRepository.save(newReport(37.5665, 126.9780, Set.of(MobilityType.WHEELCHAIR)));
         obstacleReportRepository.save(newReport(37.6, 127.1, Set.of(MobilityType.WHEELCHAIR)));
 
-        List<ObstacleReport> found = obstacleReportRepository.findActiveWithinRadius(126.9780, 37.5665, 1_000);
+        List<ObstacleReport> found = obstacleReportRepository.findActiveWithinRadius(
+                126.9780, 37.5665, 1_000, false, Set.of(), false, Set.of());
 
         assertThat(found).extracting(ObstacleReport::getId).containsExactly(inside.getId());
     }
@@ -108,9 +138,32 @@ class ObstacleReportRepositoryTest {
         resolved.resolve();
         obstacleReportRepository.save(resolved);
 
-        List<ObstacleReport> found = obstacleReportRepository.findActiveWithinRadius(126.9780, 37.5665, 1_000);
+        List<ObstacleReport> found = obstacleReportRepository.findActiveWithinRadius(
+                126.9780, 37.5665, 1_000, false, Set.of(), false, Set.of());
 
         assertThat(found).isEmpty();
+    }
+
+    @Test
+    @DisplayName("반경 내부여도 이동조건/회피구간 필터에 맞지 않으면 반환하지 않는다")
+    void filtersWithinRadiusByMobilityTypeAndAvoid() {
+        ObstacleReport kept = obstacleReportRepository.save(
+                newReport(37.5665, 126.9780, Set.of(MobilityType.WHEELCHAIR), ObstacleIssueType.HIGH_CURB));
+        obstacleReportRepository.save(
+                newReport(37.5665, 126.9780, Set.of(MobilityType.STROLLER), ObstacleIssueType.HIGH_CURB));
+        obstacleReportRepository.save(
+                newReport(37.5665, 126.9780, Set.of(MobilityType.WHEELCHAIR), ObstacleIssueType.STAIRS));
+
+        List<ObstacleReport> found = obstacleReportRepository.findActiveWithinRadius(
+                126.9780,
+                37.5665,
+                1_000,
+                true,
+                Set.of(MobilityType.WHEELCHAIR.name()),
+                true,
+                Set.of(ObstacleIssueType.STAIRS.name()));
+
+        assertThat(found).extracting(ObstacleReport::getId).containsExactly(kept.getId());
     }
 
     @Test
@@ -141,11 +194,16 @@ class ObstacleReportRepositoryTest {
     }
 
     private ObstacleReport newReport(double lat, double lng, Set<MobilityType> mobilityTypes) {
+        return newReport(lat, lng, mobilityTypes, ObstacleIssueType.SIDEWALK_DAMAGE);
+    }
+
+    private ObstacleReport newReport(
+            double lat, double lng, Set<MobilityType> mobilityTypes, ObstacleIssueType issueType) {
         Point point = GEOMETRY_FACTORY.createPoint(new Coordinate(lng, lat));
         return ObstacleReport.builder()
                 .reporter(reporter)
                 .locationPoint(point)
-                .issueType(ObstacleIssueType.SIDEWALK_DAMAGE)
+                .issueType(issueType)
                 .severity(ObstacleSeverity.CAUTION)
                 .affectedMobilityTypes(mobilityTypes)
                 .build();

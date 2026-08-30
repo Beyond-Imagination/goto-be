@@ -11,6 +11,7 @@ public class CacheProperties {
     public static final String HELP_REQUESTS_PENDING_COUNT =
             "${goto.cache.caches.help-requests-pending-count.name:help-requests:pending-count}";
     public static final String INDOOR_MAP = "${goto.cache.caches.indoor-map.name:indoor-map}";
+    public static final String NEARBY_PLACE_LABEL = "${goto.cache.caches.nearby-place-label.name:nearby-place-label}";
 
     private Duration defaultTtl = Duration.ofHours(24);
     private Map<String, CacheSetting> caches = new HashMap<>();

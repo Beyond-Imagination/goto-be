@@ -6,7 +6,9 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import java.util.Set;
 import kr.bi.go_to.enums.MobilityType;
+import kr.bi.go_to.model.obstaclereport.ObstacleIssueType;
 
 @Schema(name = "ObstacleReportClusterRequest", description = "장애물 제보 클러스터 조회 요청")
 public record ObstacleReportClusterRequest(
@@ -35,4 +37,14 @@ public record ObstacleReportClusterRequest(
                 @Min(0)
                 @Max(21)
                 Integer zoom,
-        @Schema(description = "이동조건 필터 (홈 지도 상단 이동조건 선택과 대응, 생략 시 전체)") MobilityType mobilityType) {}
+        @Schema(description = "이동조건 필터(다중 선택, 생략 시 전체) — 홈 지도 상단에서 동시에 여러 개 선택 가능 (docs/adr/0006)")
+                Set<MobilityType> mobilityTypes,
+        @Schema(
+                        description =
+                                "회피구간 필터(다중 선택, 생략 시 전체) — 이 유형의 제보는 클러스터 결과에서 제외. PlaceSearchRequest.avoid와 동일한 값 집합 재사용")
+                Set<ObstacleIssueType> avoid) {
+    public ObstacleReportClusterRequest {
+        mobilityTypes = mobilityTypes == null ? Set.of() : Set.copyOf(mobilityTypes);
+        avoid = avoid == null ? Set.of() : Set.copyOf(avoid);
+    }
+}
