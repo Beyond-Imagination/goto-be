@@ -5,7 +5,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface ObstacleReportConfirmationRepository extends JpaRepository<ObstacleReportConfirmation, Long> {
+public interface ObstacleReportConfirmationRepository
+        extends JpaRepository<ObstacleReportConfirmation, Long>, ObstacleReportConfirmationRepositoryCustom {
 
     boolean existsByObstacleReport_IdAndMember_Id(Long obstacleReportId, Long memberId);
 }

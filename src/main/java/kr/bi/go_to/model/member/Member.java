@@ -62,4 +62,12 @@ public class Member extends BaseAuditEntity {
         this.agreementMask = agreementMask;
         this.preferences = preferences;
     }
+
+    /**
+     * 접근성 프로필과 알림·보기 설정을 담은 preferences를 통째로 교체한다.
+     * JSONB 컬럼이라 부분 갱신이 불가능하므로 호출부에서 기존 값을 읽어 병합한 뒤 넘긴다.
+     */
+    public void updatePreferences(MemberPreferences preferences) {
+        this.preferences = preferences;
+    }
 }
