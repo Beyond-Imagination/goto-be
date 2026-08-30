@@ -6,9 +6,12 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
+import java.util.Set;
+import kr.bi.go_to.model.help.HelpKind;
 
 @Schema(name = "CreateHelpRequestRequest", description = "도움 요청 생성 요청")
 public record CreateHelpRequestRequest(
@@ -25,5 +28,8 @@ public record CreateHelpRequestRequest(
         @Schema(description = "층수. 실외 요청이면 null 가능", nullable = true, example = "1") Integer floorLevel,
         @Schema(description = "요청 상세 메시지", nullable = true, example = "보도 턱 앞에서 이동 도움이 필요해요.") @Size(max = 500)
                 String message,
+        @Schema(description = "요청자가 고른 도움 유형 목록. 복수 선택할 수 있다", example = "[\"MOBILITY_ASSIST\", \"DOOR_ASSIST\"]")
+                @NotEmpty
+                Set<HelpKind> kinds,
         @Schema(description = "요청 만료까지 남은 시간(분). 미입력 시 30분", nullable = true, example = "30") @Min(5) @Max(120)
                 Integer expiresInMinutes) {}

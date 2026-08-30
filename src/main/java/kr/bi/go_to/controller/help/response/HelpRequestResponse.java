@@ -3,7 +3,9 @@ package kr.bi.go_to.controller.help.response;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Set;
 import java.util.UUID;
+import kr.bi.go_to.model.help.HelpKind;
 import kr.bi.go_to.model.help.HelpRequest;
 
 @Schema(name = "HelpRequestResponse", description = "도움 요청 상세 응답")
@@ -17,6 +19,7 @@ public record HelpRequestResponse(
         @Schema(description = "도움 요청 발생 경도", example = "129.2286552") BigDecimal longitude,
         @Schema(description = "층수. 실외 요청이면 null 가능", nullable = true, example = "1") Integer floorLevel,
         @Schema(description = "요청 상세 메시지", nullable = true, example = "보도 턱 앞에서 이동 도움이 필요해요.") String message,
+        @Schema(description = "요청자가 고른 도움 유형 목록", example = "[\"MOBILITY_ASSIST\"]") Set<HelpKind> kinds,
         @Schema(description = "요청자 닉네임", example = "requester") String requesterNickname,
         @Schema(description = "도우미 닉네임. 아직 수락 전이면 null", nullable = true, example = "helper") String helperNickname,
         @Schema(description = "요청 생성 시각") Instant requestedAt,
@@ -24,8 +27,7 @@ public record HelpRequestResponse(
         @Schema(description = "도우미 수락 시각", nullable = true) Instant acceptedAt,
         @Schema(description = "도움 완료 시각", nullable = true) Instant completedAt,
         @Schema(description = "요청 취소 시각", nullable = true) Instant canceledAt,
-        @Schema(description = "공유용 도움 요청 메시지", example = "현재 국립경주박물관 앞 보도 근처에서 이동 도움이 필요합니다.") String shareMessage,
-        @Schema(description = "긴급 신고 권고 여부", example = "false") boolean emergencyCallRecommended) {
+        @Schema(description = "공유용 도움 요청 메시지", example = "현재 국립경주박물관 앞 보도 근처에서 이동 도움이 필요합니다.") String shareMessage) {
 
     public static HelpRequestResponse from(HelpRequest helpRequest) {
         return new HelpRequestResponse(
@@ -38,6 +40,7 @@ public record HelpRequestResponse(
                 helpRequest.getLongitude(),
                 helpRequest.getFloorLevel(),
                 helpRequest.getMessage(),
+                Set.copyOf(helpRequest.getKinds()),
                 helpRequest.getRequester().getNickname(),
                 helpRequest.getHelper() == null ? null : helpRequest.getHelper().getNickname(),
                 helpRequest.getRequestedAt(),
@@ -45,8 +48,7 @@ public record HelpRequestResponse(
                 helpRequest.getAcceptedAt(),
                 helpRequest.getCompletedAt(),
                 helpRequest.getCanceledAt(),
-                shareMessage(helpRequest),
-                false);
+                shareMessage(helpRequest));
     }
 
     private static String shareMessage(HelpRequest helpRequest) {
