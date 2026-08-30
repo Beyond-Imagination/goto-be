@@ -22,8 +22,8 @@ public class GetNearbyAccessibilitySummaryUseCase {
     }
 
     public NearbyAccessibilitySummaryResponse execute(NearbyAccessibilitySummaryRequest request) {
-        NearbyObstacleSummary summary =
-                obstacleReportService.getNearbySummary(request.lat(), request.lng(), NEARBY_RADIUS_METERS);
+        NearbyObstacleSummary summary = obstacleReportService.getNearbySummary(
+                request.lat(), request.lng(), NEARBY_RADIUS_METERS, request.mobilityTypes(), request.avoid());
 
         return new NearbyAccessibilitySummaryResponse(
                 summary.detourRecommendedCount(),

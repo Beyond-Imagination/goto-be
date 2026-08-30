@@ -204,8 +204,8 @@ class ObstacleReportControllerIntegrationTest {
     }
 
     @Test
-    @DisplayName("mobilityType으로 클러스터를 필터링하면 해당 이동조건을 포함하지 않는 제보는 제외된다")
-    void filtersClustersByMobilityType() throws Exception {
+    @DisplayName("mobilityTypes로 클러스터를 필터링하면 그 중 하나도 포함하지 않는 제보는 제외된다")
+    void filtersClustersByMobilityTypes() throws Exception {
         createReportAndGetId();
 
         mockMvc.perform(get("/api/v1/obstacle-reports/clusters")
@@ -215,7 +215,24 @@ class ObstacleReportControllerIntegrationTest {
                         .param("maxLat", "37.6")
                         .param("maxLng", "127.1")
                         .param("zoom", "14")
-                        .param("mobilityType", "SLOW_WALKER"))
+                        .param("mobilityTypes", "SLOW_WALKER"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    @DisplayName("avoid로 클러스터를 필터링하면 해당 장애물 유형의 제보는 제외된다")
+    void filtersClustersByAvoidIssueTypes() throws Exception {
+        createReportAndGetId();
+
+        mockMvc.perform(get("/api/v1/obstacle-reports/clusters")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(reporterToken))
+                        .param("minLat", "37.5")
+                        .param("minLng", "126.9")
+                        .param("maxLat", "37.6")
+                        .param("maxLng", "127.1")
+                        .param("zoom", "14")
+                        .param("avoid", "SIDEWALK_DAMAGE"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
     }

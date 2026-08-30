@@ -5,26 +5,34 @@ import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import kr.bi.go_to.controller.obstaclereport.request.CreateObstacleReportRequest;
 import kr.bi.go_to.controller.obstaclereport.request.ObstacleReportClusterRequest;
 import kr.bi.go_to.controller.obstaclereport.request.UpdateObstacleReportStatusRequest;
 import kr.bi.go_to.controller.obstaclereport.response.ObstacleReportClusterResponse;
 import kr.bi.go_to.controller.obstaclereport.response.ObstacleReportResponse;
+import kr.bi.go_to.enums.MobilityType;
 import kr.bi.go_to.exception.BusinessException;
 import kr.bi.go_to.exception.ErrorCode;
 import kr.bi.go_to.model.member.Member;
+import kr.bi.go_to.model.obstaclereport.ObstacleIssueType;
 import kr.bi.go_to.model.obstaclereport.ObstacleReport;
 import kr.bi.go_to.model.obstaclereport.ObstacleReportConfirmation;
+import kr.bi.go_to.model.place.Place;
 import kr.bi.go_to.repository.ObstacleReportConfirmationRepository;
 import kr.bi.go_to.repository.ObstacleReportRepository;
+import kr.bi.go_to.repository.PlaceRepository;
 import kr.bi.go_to.service.MemberService;
+import kr.bi.go_to.service.obstaclereport.geocoding.NaverReverseGeocodingClient;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.PrecisionModel;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 public class ObstacleReportService {
@@ -32,8 +40,8 @@ public class ObstacleReportService {
     private static final GeometryFactory GEOMETRY_FACTORY = new GeometryFactory(new PrecisionModel(), 4326);
 
     /**
-     * 줌 경계값(먼/중간/가까운 줌 구분)은 프론트 네이버 지도 줌 레벨 기준이 아직 확정되지 않아 임의로 정한 값이다.
-     * 실제 값이 정해지면 교체 필요 (TODO.md REQ-PM-06 2-2 참고).
+     * 줌 경계값(먼/중간/가까운 줌 구분)은 goto-fe `src/screens/home/zoomTiers.ts`의
+     * FAR_ZOOM_UPPER_BOUND/CLOSE_ZOOM_THRESHOLD와 반드시 같은 값을 유지해야 한다.
      */
     private static final int FAR_ZOOM_UPPER_BOUND = 12;
 
@@ -41,20 +49,33 @@ public class ObstacleReportService {
     private static final int FAR_ZOOM_MAX_CLUSTERS = 5;
     private static final int MID_ZOOM_MAX_CLUSTERS = 6;
 
+    /** 중간 줌 "주변 접근성 이슈" 라벨링 시 최근접 장소를 찾는 반경. */
+    private static final int NEARBY_PLACE_LABEL_RADIUS_METERS = 500;
+
     private final ObstacleReportRepository obstacleReportRepository;
     private final ObstacleReportConfirmationRepository obstacleReportConfirmationRepository;
+    private final PlaceRepository placeRepository;
+    private final NaverReverseGeocodingClient naverReverseGeocodingClient;
     private final MemberService memberService;
     private final Clock clock;
+    private final TransactionTemplate readOnlyTransactionTemplate;
 
     public ObstacleReportService(
             ObstacleReportRepository obstacleReportRepository,
             ObstacleReportConfirmationRepository obstacleReportConfirmationRepository,
+            PlaceRepository placeRepository,
+            NaverReverseGeocodingClient naverReverseGeocodingClient,
             MemberService memberService,
-            Clock clock) {
+            Clock clock,
+            PlatformTransactionManager transactionManager) {
         this.obstacleReportRepository = obstacleReportRepository;
         this.obstacleReportConfirmationRepository = obstacleReportConfirmationRepository;
+        this.placeRepository = placeRepository;
+        this.naverReverseGeocodingClient = naverReverseGeocodingClient;
         this.memberService = memberService;
         this.clock = clock;
+        this.readOnlyTransactionTemplate = new TransactionTemplate(transactionManager);
+        this.readOnlyTransactionTemplate.setReadOnly(true);
     }
 
     @Transactional
@@ -98,8 +119,17 @@ public class ObstacleReportService {
     }
 
     @Transactional(readOnly = true)
-    public NearbyObstacleSummary getNearbySummary(double lat, double lng, double radiusMeters) {
-        List<ObstacleReport> reports = obstacleReportRepository.findActiveWithinRadius(lng, lat, radiusMeters);
+    public NearbyObstacleSummary getNearbySummary(
+            double lat,
+            double lng,
+            double radiusMeters,
+            Set<MobilityType> mobilityTypeFilter,
+            Set<ObstacleIssueType> avoidFilter) {
+        Set<String> mobilityTypes = mobilityTypeFilter.stream().map(Enum::name).collect(Collectors.toSet());
+        Set<String> avoid = avoidFilter.stream().map(Enum::name).collect(Collectors.toSet());
+
+        List<ObstacleReport> reports = obstacleReportRepository.findActiveWithinRadius(
+                lng, lat, radiusMeters, !mobilityTypes.isEmpty(), mobilityTypes, !avoid.isEmpty(), avoid);
         Instant now = clock.instant();
 
         int detourRecommendedCount = 0;
@@ -123,12 +153,39 @@ public class ObstacleReportService {
         return new NearbyObstacleSummary(detourRecommendedCount, cautionCount, safeCount, needsConfirmationCount);
     }
 
-    @Transactional(readOnly = true)
     public List<ObstacleReportClusterResponse> getClusters(ObstacleReportClusterRequest request) {
-        String mobilityType =
-                request.mobilityType() != null ? request.mobilityType().name() : null;
+        // DB 조회/클러스터링은 짧은 읽기 전용 트랜잭션 안에서 끝낸다. 중간 줌의 nearbyPlaceLabel
+        // 계산(외부 Reverse Geocoding API 호출 포함)은 이 트랜잭션이 끝난 뒤 별도로 수행해,
+        // 외부 API가 느려지거나 멈춰도 DB 커넥션을 붙든 채로 대기하지 않도록 한다.
+        List<ObstacleReportClusterResponse> capped =
+                readOnlyTransactionTemplate.execute(status -> queryCappedClusters(request));
+
+        int zoom = request.zoom();
+        if (capped == null || capped.isEmpty() || zoom < FAR_ZOOM_UPPER_BOUND || zoom >= CLOSE_ZOOM_THRESHOLD) {
+            return capped == null ? List.of() : capped;
+        }
+
+        // 중간 줌: "주변 접근성 이슈" 카드용 최근접 장소/행정동 라벨을 붙인다.
+        return capped.stream()
+                .map(cluster ->
+                        cluster.withNearbyPlaceLabel(resolveNearbyPlaceLabel(cluster.centerLat(), cluster.centerLng())))
+                .toList();
+    }
+
+    private List<ObstacleReportClusterResponse> queryCappedClusters(ObstacleReportClusterRequest request) {
+        Set<String> mobilityTypes =
+                request.mobilityTypes().stream().map(Enum::name).collect(Collectors.toSet());
+        Set<String> avoid = request.avoid().stream().map(Enum::name).collect(Collectors.toSet());
+
         List<ObstacleReport> reports = obstacleReportRepository.findWithinBbox(
-                request.minLng(), request.minLat(), request.maxLng(), request.maxLat(), mobilityType);
+                request.minLng(),
+                request.minLat(),
+                request.maxLng(),
+                request.maxLat(),
+                !mobilityTypes.isEmpty(),
+                mobilityTypes,
+                !avoid.isEmpty(),
+                avoid);
 
         if (reports.isEmpty()) {
             return List.of();
@@ -159,7 +216,23 @@ public class ObstacleReportService {
                 .toList();
 
         int maxClusters = zoom < FAR_ZOOM_UPPER_BOUND ? FAR_ZOOM_MAX_CLUSTERS : MID_ZOOM_MAX_CLUSTERS;
+        // 먼 줌: 외부 API 호출 비용을 아끼기 위해 nearbyPlaceLabel은 getClusters()에서 이 zoom 대역을
+        // 걸러내며, 여기서는 항상 라벨 없는 capped 리스트만 반환한다.
         return clusters.size() > maxClusters ? clusters.subList(0, maxClusters) : clusters;
+    }
+
+    /** 최근접 활성 장소를 먼저 찾고, 없으면 네이버 리버스 지오코딩으로 행정동/도로명을 폴백한다. 둘 다 실패하면 null. */
+    private String resolveNearbyPlaceLabel(double lat, double lng) {
+        List<Place> nearbyPlaces =
+                placeRepository.findNearbyActivePlaces(lat, lng, NEARBY_PLACE_LABEL_RADIUS_METERS, 1);
+        if (!nearbyPlaces.isEmpty()) {
+            return nearbyPlaces.get(0).getName() + " 인근";
+        }
+
+        return naverReverseGeocodingClient
+                .reverseGeocode(lat, lng)
+                .map(administrativeAreaName -> administrativeAreaName + " 인근")
+                .orElse(null);
     }
 
     private void confirm(Long memberId, ObstacleReport report) {
