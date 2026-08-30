@@ -47,14 +47,22 @@ public class NaverReverseGeocodingClient {
     @Value("${naver-reverse-geocoding.client-secret:}")
     private String clientSecret;
 
-    public NaverReverseGeocodingClient(RestClient.Builder restClientBuilder) {
+    /**
+     * 애플리케이션 전역에 주입되는 {@link RestClient.Builder} 빈은 재사용 목적상 스코프가
+     * prototype이 아닌 경우(예: 테스트의 Mock 설정) 여러 소비자가 같은 인스턴스를 공유할 수
+     * 있는데, {@code requestFactory(...)}는 그 빌더 인스턴스를 직접 변경(mutate)한다. 공유
+     * 빌더를 여기서 바꾸면 다른 컴포넌트가 만드는 RestClient까지 이 타임아웃/HTTP1.1 설정을
+     * 의도치 않게 물려받을 수 있어(테스트에서 Tour API mock RestClient가 실제로 이 문제를
+     * 겪었다), 주입받지 않고 완전히 독립된 빌더로 만든다.
+     */
+    public NaverReverseGeocodingClient() {
         HttpClient httpClient = HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)
                 .connectTimeout(REQUEST_TIMEOUT)
                 .build();
         JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
         requestFactory.setReadTimeout(REQUEST_TIMEOUT);
-        this.restClient = restClientBuilder.requestFactory(requestFactory).build();
+        this.restClient = RestClient.builder().requestFactory(requestFactory).build();
     }
 
     /**

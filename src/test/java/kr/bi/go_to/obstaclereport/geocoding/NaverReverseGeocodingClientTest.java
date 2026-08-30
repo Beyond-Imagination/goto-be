@@ -11,7 +11,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.web.client.RestClient;
 
 class NaverReverseGeocodingClientTest {
 
@@ -40,7 +39,7 @@ class NaverReverseGeocodingClientTest {
     @Test
     @DisplayName("client-id/client-secret이 비어있으면 호출 없이 empty를 반환한다")
     void reverseGeocodeSkipsCallWhenCredentialsAreBlank() {
-        NaverReverseGeocodingClient client = new NaverReverseGeocodingClient(RestClient.builder());
+        NaverReverseGeocodingClient client = new NaverReverseGeocodingClient();
         ReflectionTestUtils.setField(client, "baseUrl", "http://localhost:1");
         ReflectionTestUtils.setField(client, "clientId", "");
         ReflectionTestUtils.setField(client, "clientSecret", "");
@@ -86,7 +85,7 @@ class NaverReverseGeocodingClientTest {
     }
 
     private NaverReverseGeocodingClient newClient(HttpServer server, String clientId, String clientSecret) {
-        NaverReverseGeocodingClient client = new NaverReverseGeocodingClient(RestClient.builder());
+        NaverReverseGeocodingClient client = new NaverReverseGeocodingClient();
         ReflectionTestUtils.setField(
                 client,
                 "baseUrl",
