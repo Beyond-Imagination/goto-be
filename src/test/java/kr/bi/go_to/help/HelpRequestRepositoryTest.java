@@ -5,9 +5,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 import kr.bi.go_to.config.ClockConfig;
 import kr.bi.go_to.config.JpaAuditConfig;
 import kr.bi.go_to.enums.Role;
+import kr.bi.go_to.model.help.HelpKind;
 import kr.bi.go_to.model.help.HelpRequest;
 import kr.bi.go_to.model.help.HelpRequestRejection;
 import kr.bi.go_to.model.help.HelpRequestStatus;
@@ -225,6 +227,7 @@ class HelpRequestRepositoryTest {
                 new BigDecimal(longitude),
                 null,
                 null,
+                Set.of(HelpKind.MOBILITY_ASSIST),
                 requestedAt,
                 expiresAt));
     }

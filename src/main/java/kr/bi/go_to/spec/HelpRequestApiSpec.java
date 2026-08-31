@@ -76,7 +76,7 @@ public interface HelpRequestApiSpec {
             @RequestParam(required = false) @Min(1) Long placeId,
             @RequestParam(required = false) @DecimalMin("-90.0") @DecimalMax("90.0") Double latitude,
             @RequestParam(required = false) @DecimalMin("-180.0") @DecimalMax("180.0") Double longitude,
-            @RequestParam(defaultValue = "100") @Min(1) @Max(500) int radiusMeters,
+            @RequestParam(defaultValue = "100") @Min(1) @Max(1000) int radiusMeters,
             @RequestParam(defaultValue = "5") @Min(1) @Max(10) int limit);
 
     @Operation(
@@ -126,6 +126,12 @@ public interface HelpRequestApiSpec {
             description = "도움을 제공하고 싶지 않은 사용자가 해당 도움 요청을 자신의 주변 목록에서 숨길 때 호출합니다. 도움을 받는 요청자가 도우미 후보를 거절하는 API가 아닙니다.")
     @ApiResponse(responseCode = "204", description = "거절 처리 성공")
     void reject(AuthenticatedMember member, UUID id);
+
+    @Operation(
+            tags = SwaggerTag.HELP_REQUEST_NAME,
+            summary = "도움 수락 취소",
+            description = "수락했던 도우미가 사정이 생겨 수락을 무를 때 호출합니다. 요청은 다시 열린 상태가 되어 다른 도우미가 수락할 수 있습니다.")
+    HelpRequestResponse cancelAccept(AuthenticatedMember member, UUID id);
 
     @Operation(
             tags = SwaggerTag.HELP_REQUEST_NAME,

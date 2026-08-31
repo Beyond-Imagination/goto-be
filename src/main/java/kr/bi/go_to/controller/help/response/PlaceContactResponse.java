@@ -17,7 +17,12 @@ public record PlaceContactResponse(
         @Schema(description = "현재 위치로부터의 거리(m). 선택된 장소 조회이면 null", nullable = true, example = "35") Long distanceMeters,
         @Schema(description = "연락처 제공 가능 여부", example = "true") boolean contactAvailable,
         @Schema(description = "장소에 연결된 공식 연락처 목록") List<ContactMethodResponse> contacts,
-        @Schema(description = "장소 공식 홈페이지", nullable = true) String homepage) {
+        @Schema(description = "장소 공식 홈페이지", nullable = true) String homepage,
+        @Schema(
+                        description = "장소 대표 이미지 URL",
+                        nullable = true,
+                        example = "https://tong.visitkorea.or.kr/cms/resource/example.jpg")
+                String thumbnailUrl) {
 
     public PlaceContactResponse {
         contacts = List.copyOf(contacts);
