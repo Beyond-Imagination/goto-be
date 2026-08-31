@@ -11,7 +11,8 @@ public enum SwaggerTag {
     PLACE("C. Place", "장소 탐색 API"),
     ADMIN("D. Admin", "관리자 API"),
     REPORT("E. Report", "시설물 상태 제보 API"),
-    OBSTACLE_REPORT("F. Obstacle Report", "장애물 제보 및 클러스터링 API");
+    OBSTACLE_REPORT("F. Obstacle Report", "장애물 제보 및 클러스터링 API"),
+    MY_PAGE("G. My Page", "내 정보 API");
 
     public static final String AUTH_NAME = "A. Auth";
     public static final String AUTH_DESCRIPTION = "인증 API";
@@ -25,6 +26,8 @@ public enum SwaggerTag {
     public static final String REPORT_DESCRIPTION = "시설물 상태 제보 API";
     public static final String OBSTACLE_REPORT_NAME = "F. Obstacle Report";
     public static final String OBSTACLE_REPORT_DESCRIPTION = "장애물 제보 및 클러스터링 API";
+    public static final String MY_PAGE_NAME = "G. My Page";
+    public static final String MY_PAGE_DESCRIPTION = "내 정보 API";
 
     private final String tagName;
     private final String description;

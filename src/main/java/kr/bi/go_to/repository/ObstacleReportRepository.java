@@ -9,7 +9,14 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface ObstacleReportRepository extends JpaRepository<ObstacleReport, Long> {
+public interface ObstacleReportRepository extends JpaRepository<ObstacleReport, Long>, ObstacleReportRepositoryCustom {
+
+    /**
+     * 내가 작성한 장애물 제보를 최신순으로 조회한다. (내 정보 03 화면)
+     */
+    List<ObstacleReport> findByReporter_IdOrderByCreatedAtDesc(Long reporterId);
+
+    long countByReporter_Id(Long reporterId);
 
     @Query(
             value =
