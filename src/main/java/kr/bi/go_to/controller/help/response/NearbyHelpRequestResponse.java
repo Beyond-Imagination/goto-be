@@ -1,6 +1,8 @@
 package kr.bi.go_to.controller.help.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.UUID;
 import kr.bi.go_to.model.help.HelpRequest;
@@ -13,8 +15,18 @@ public record NearbyHelpRequestResponse(
         @Schema(description = "사용자가 입력한 현재 위치 설명", example = "국립경주박물관 앞 보도") String locationLabel,
         @Schema(description = "요청 상세 메시지", nullable = true, example = "보도 턱 앞에서 이동 도움이 필요해요.") String message,
         @Schema(description = "조회 위치와 요청 위치 사이 거리(미터)", example = "42") long distanceMeters,
+        @Schema(description = "지도 표시용 근사 위도. 수락 전에는 정확한 위치를 노출하지 않기 위해 약 100m 격자로 뭉갠 값이다.", example = "37.566")
+                BigDecimal approximateLatitude,
+        @Schema(description = "지도 표시용 근사 경도. 수락 전에는 정확한 위치를 노출하지 않기 위해 약 100m 격자로 뭉갠 값이다.", example = "126.978")
+                BigDecimal approximateLongitude,
         @Schema(description = "요청 생성 시각") Instant requestedAt,
         @Schema(description = "요청 만료 시각") Instant expiresAt) {
+
+    /**
+     * 화면기획 20.1 — 수락 전 도우미에게는 대략적인 위치만 보여준다.
+     * 소수점 3자리(위도 기준 약 110m)로 내려 정확한 지점이 드러나지 않게 한다.
+     */
+    private static final int APPROXIMATE_SCALE = 3;
 
     public static NearbyHelpRequestResponse from(HelpRequest helpRequest, long distanceMeters) {
         return new NearbyHelpRequestResponse(
@@ -24,7 +36,13 @@ public record NearbyHelpRequestResponse(
                 helpRequest.getLocationLabel(),
                 helpRequest.getMessage(),
                 distanceMeters,
+                approximate(helpRequest.getLatitude()),
+                approximate(helpRequest.getLongitude()),
                 helpRequest.getRequestedAt(),
                 helpRequest.getExpiresAt());
+    }
+
+    private static BigDecimal approximate(BigDecimal coordinate) {
+        return coordinate == null ? null : coordinate.setScale(APPROXIMATE_SCALE, RoundingMode.HALF_UP);
     }
 }

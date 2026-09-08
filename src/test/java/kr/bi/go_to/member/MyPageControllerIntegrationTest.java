@@ -1,6 +1,8 @@
 package kr.bi.go_to.member;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyDouble;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -21,6 +23,7 @@ import kr.bi.go_to.repository.ObstacleReportConfirmationRepository;
 import kr.bi.go_to.repository.ObstacleReportRepository;
 import kr.bi.go_to.repository.RefreshTokenRepository;
 import kr.bi.go_to.service.JwtService;
+import kr.bi.go_to.service.obstaclereport.geocoding.NaverReverseGeocodingClient;
 import kr.bi.go_to.support.TestcontainersConfiguration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -36,6 +39,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @SpringBootTest
@@ -64,6 +68,10 @@ class MyPageControllerIntegrationTest {
     @Autowired
     JwtService jwtService;
 
+    /** 테스트에서 NCP를 실제로 호출하지 않도록 리버스 지오코딩만 대역으로 바꾼다. */
+    @MockitoBean
+    NaverReverseGeocodingClient naverReverseGeocodingClient;
+
     Member me;
     String token;
 
@@ -79,6 +87,9 @@ class MyPageControllerIntegrationTest {
         preferences.setInformationPreferences(new MemberPreferences.InformationPreferences(
                 List.of(kr.bi.go_to.enums.PriorityFacility.ELEVATOR),
                 List.of(kr.bi.go_to.enums.AvoidCondition.STAIRS)));
+
+        when(naverReverseGeocodingClient.reverseGeocode(anyDouble(), anyDouble()))
+                .thenReturn(java.util.Optional.empty());
 
         me = memberRepository.save(new Member(Role.USER, "마이페이지사용자", 15L, preferences));
         token = jwtService.createAccessToken(me.getId().toString());
@@ -237,6 +248,7 @@ class MyPageControllerIntegrationTest {
                 .andExpect(jsonPath("$[0].issueType").value("SIDEWALK_DAMAGE"))
                 .andExpect(jsonPath("$[0].severity").value("CAUTION"))
                 .andExpect(jsonPath("$[0].confirmedCount").value(4))
+                .andExpect(jsonPath("$[0].address").doesNotExist())
                 .andExpect(jsonPath("$[0].latitude").value(37.5665))
                 .andExpect(jsonPath("$[0].longitude").value(126.978));
     }
@@ -257,6 +269,36 @@ class MyPageControllerIntegrationTest {
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].report.id").value(target.getId()))
                 .andExpect(jsonPath("$[0].confirmedAt").exists());
+    }
+
+    @Test
+    @DisplayName("리버스 지오코딩이 성공하면 내 제보 목록에 행정동 주소가 채워진다")
+    void fillsAddressFromReverseGeocoding() throws Exception {
+        saveReport(me, 0);
+        when(naverReverseGeocodingClient.reverseGeocode(anyDouble(), anyDouble()))
+                .thenReturn(java.util.Optional.of("마포구 상암동"));
+
+        mockMvc.perform(get("/api/v1/members/me/obstacle-reports").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].address").value("마포구 상암동"));
+    }
+
+    @Test
+    @DisplayName("내가 확인한 리포트에도 같은 방식으로 주소가 채워진다")
+    void fillsAddressOnConfirmedReports() throws Exception {
+        Member reporter = memberRepository.save(new Member(Role.USER, "주소제보작성자"));
+        ObstacleReport target = saveReport(reporter, 1);
+        obstacleReportConfirmationRepository.save(ObstacleReportConfirmation.builder()
+                .obstacleReport(target)
+                .member(me)
+                .build());
+        when(naverReverseGeocodingClient.reverseGeocode(anyDouble(), anyDouble()))
+                .thenReturn(java.util.Optional.of("종로구 세종로"));
+
+        mockMvc.perform(get("/api/v1/members/me/obstacle-report-confirmations")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].report.address").value("종로구 세종로"));
     }
 
     @Test
