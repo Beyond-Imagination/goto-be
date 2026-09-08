@@ -53,7 +53,7 @@ public class HelpRequestController implements HelpRequestApiSpec {
             @RequestParam(required = false) @Min(1) Long placeId,
             @RequestParam(required = false) @DecimalMin("-90.0") @DecimalMax("90.0") Double latitude,
             @RequestParam(required = false) @DecimalMin("-180.0") @DecimalMax("180.0") Double longitude,
-            @RequestParam(defaultValue = "100") @Min(1) @Max(500) int radiusMeters,
+            @RequestParam(defaultValue = "100") @Min(1) @Max(1000) int radiusMeters,
             @RequestParam(defaultValue = "5") @Min(1) @Max(10) int limit) {
         return helpRequestService.findPlaceContacts(placeId, latitude, longitude, radiusMeters, limit);
     }
@@ -97,6 +97,13 @@ public class HelpRequestController implements HelpRequestApiSpec {
     @Override
     public void reject(@AuthenticationPrincipal AuthenticatedMember member, @PathVariable UUID id) {
         helpRequestService.reject(member.id(), id);
+    }
+
+    @PostMapping("/{id}/cancel-accept")
+    @Override
+    public HelpRequestResponse cancelAccept(
+            @AuthenticationPrincipal AuthenticatedMember member, @PathVariable UUID id) {
+        return helpRequestService.cancelAccept(member.id(), id);
     }
 
     @PostMapping("/{id}/complete")

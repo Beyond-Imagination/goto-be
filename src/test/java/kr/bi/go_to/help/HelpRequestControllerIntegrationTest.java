@@ -1,5 +1,6 @@
 package kr.bi.go_to.help;
 
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -97,6 +98,7 @@ class HelpRequestControllerIntegrationTest {
                           "longitude": 129.2286552,
                           "floorLevel": 0,
                           "message": "보도 턱 앞에서 이동 도움이 필요해요.",
+                          "kinds": ["MOBILITY_ASSIST", "DOOR_ASSIST"],
                           "expiresInMinutes": 30
                         }
                         """))
@@ -105,7 +107,7 @@ class HelpRequestControllerIntegrationTest {
                 .andExpect(jsonPath("$.placeId").doesNotExist())
                 .andExpect(jsonPath("$.latitude").value(35.8294371))
                 .andExpect(jsonPath("$.longitude").value(129.2286552))
-                .andExpect(jsonPath("$.emergencyCallRecommended").value(false))
+                .andExpect(jsonPath("$.kinds", containsInAnyOrder("MOBILITY_ASSIST", "DOOR_ASSIST")))
                 .andExpect(jsonPath("$.shareMessage").value("현재 국립경주박물관 앞 보도 0층 근처에서 이동 도움이 필요합니다."))
                 .andReturn()
                 .getResponse()
@@ -122,6 +124,7 @@ class HelpRequestControllerIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(helpRequestId.toString()))
                 .andExpect(jsonPath("$[0].locationLabel").value("국립경주박물관 앞 보도"))
+                .andExpect(jsonPath("$[0].kinds", containsInAnyOrder("MOBILITY_ASSIST", "DOOR_ASSIST")))
                 .andExpect(jsonPath("$[0].latitude").doesNotExist())
                 .andExpect(jsonPath("$[0].longitude").doesNotExist());
 
@@ -138,6 +141,25 @@ class HelpRequestControllerIntegrationTest {
                 .andExpect(jsonPath("$.helperNickname").value("helper"))
                 .andExpect(jsonPath("$.latitude").value(35.8294371))
                 .andExpect(jsonPath("$.longitude").value(129.2286552));
+
+        // 요청자는 도우미의 수락을 무를 수 없다.
+        mockMvc.perform(post("/api/v1/help-requests/{id}/cancel-accept", helpRequestId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(requesterToken)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.errorCode").value("ONLY_HELPER_CAN_CANCEL_ACCEPT"));
+
+        // 수락한 도우미가 무르면 요청이 다시 열린 상태가 된다.
+        mockMvc.perform(post("/api/v1/help-requests/{id}/cancel-accept", helpRequestId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(helperToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("REQUESTED"))
+                .andExpect(jsonPath("$.helperNickname").doesNotExist())
+                .andExpect(jsonPath("$.acceptedAt").doesNotExist());
+
+        mockMvc.perform(post("/api/v1/help-requests/{id}/accept", helpRequestId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(helperToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ACCEPTED"));
 
         mockMvc.perform(post("/api/v1/help-requests/{id}/complete", helpRequestId)
                         .header(HttpHeaders.AUTHORIZATION, bearer(requesterToken)))
@@ -160,7 +182,8 @@ class HelpRequestControllerIntegrationTest {
                         {
                           "locationLabel": "경주역 앞",
                           "latitude": 35.8394371,
-                          "longitude": 129.2186552
+                          "longitude": 129.2186552,
+                          "kinds": ["WAYFINDING"]
                         }
                         """))
                 .andExpect(status().isCreated())
@@ -306,6 +329,7 @@ class HelpRequestControllerIntegrationTest {
                           "locationLabel": "%s",
                           "latitude": 35.8394371,
                           "longitude": 129.2186552,
+                          "kinds": ["MOBILITY_ASSIST"],
                           "expiresInMinutes": 30
                         }
                         """,

@@ -75,9 +75,13 @@ public class HelpRequestService {
                 request.longitude(),
                 request.floorLevel(),
                 trimToNull(request.message()),
+                request.kinds(),
                 now,
                 now.plus(Duration.ofMinutes(expiresInMinutes))));
 
+        // TODO(푸시): 지금은 도우미가 GET /nearby를 조회할 때만 요청이 노출되는 pull 방식이다.
+        //  기기 토큰 저장소와 FCM 발송이 준비되면 이 지점에서 요청 위치 반경 내 사용자에게 푸시를 보내고,
+        //  FE 대기 화면의 "요청을 보내고 있어요" 문구도 완료형으로 바꿔야 한다.
         return HelpRequestResponse.from(helpRequest);
     }
 
@@ -183,6 +187,26 @@ public class HelpRequestService {
         }
     }
 
+    /** 도우미가 수락을 무른다. 요청은 다시 열린 상태가 되고 다른 도우미가 수락할 수 있다. */
+    @Transactional
+    public HelpRequestResponse cancelAccept(Long memberId, UUID id) {
+        Member member = memberService.getUser(memberId);
+        HelpRequest helpRequest = findExistingForUpdate(id);
+
+        if (!helpRequest.isHelper(member)) {
+            throw new BusinessException(ErrorCode.ONLY_HELPER_CAN_CANCEL_ACCEPT);
+        }
+        if (helpRequest.getStatus() != HelpRequestStatus.ACCEPTED) {
+            throw new BusinessException(ErrorCode.HELP_REQUEST_NOT_ACCEPTED);
+        }
+        if (helpRequest.isExpired(Instant.now(clock))) {
+            throw new BusinessException(ErrorCode.HELP_REQUEST_EXPIRED);
+        }
+
+        helpRequest.cancelAccept();
+        return HelpRequestResponse.from(helpRequest);
+    }
+
     @Transactional
     public HelpRequestResponse complete(Long memberId, UUID id) {
         Member member = memberService.getUser(memberId);
@@ -272,7 +296,8 @@ public class HelpRequestService {
                 distanceMeters,
                 !contacts.isEmpty(),
                 contacts,
-                trimToNull(place.getHomepage()));
+                trimToNull(place.getHomepage()),
+                trimToNull(place.getThumbnailUrl()));
     }
 
     private HelpPlaceContactsResponse placeContactsResponse(List<PlaceContactResponse> contacts) {
