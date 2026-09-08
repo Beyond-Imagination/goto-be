@@ -1,6 +1,8 @@
 package kr.bi.go_to.model.help;
 
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -11,6 +13,8 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.EnumSet;
+import java.util.Set;
 import java.util.UUID;
 import kr.bi.go_to.model.common.BaseAuditEntity;
 import kr.bi.go_to.model.common.UuidV7;
@@ -55,6 +59,12 @@ public class HelpRequest extends BaseAuditEntity {
     @Column(length = 500)
     private String message;
 
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "help_request_kinds", joinColumns = @JoinColumn(name = "help_request_id"))
+    @Enumerated(EnumType.STRING)
+    @Column(name = "kind", nullable = false, length = 30)
+    private Set<HelpKind> kinds = EnumSet.noneOf(HelpKind.class);
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private HelpRequestStatus status;
@@ -79,6 +89,7 @@ public class HelpRequest extends BaseAuditEntity {
             BigDecimal longitude,
             Integer floorLevel,
             String message,
+            Set<HelpKind> kinds,
             Instant requestedAt,
             Instant expiresAt) {
         this.id = UuidV7.generate();
@@ -89,6 +100,7 @@ public class HelpRequest extends BaseAuditEntity {
         this.longitude = longitude;
         this.floorLevel = floorLevel;
         this.message = message;
+        this.kinds = kinds == null || kinds.isEmpty() ? EnumSet.noneOf(HelpKind.class) : EnumSet.copyOf(kinds);
         this.status = HelpRequestStatus.REQUESTED;
         this.requestedAt = requestedAt;
         this.expiresAt = expiresAt;
@@ -116,6 +128,13 @@ public class HelpRequest extends BaseAuditEntity {
         this.helper = helper;
         status = HelpRequestStatus.ACCEPTED;
         acceptedAt = now;
+    }
+
+    /** 도우미가 수락을 무르면 요청은 다시 열린 상태로 돌아간다. */
+    public void cancelAccept() {
+        this.helper = null;
+        this.acceptedAt = null;
+        this.status = HelpRequestStatus.REQUESTED;
     }
 
     public void complete(Instant now) {
