@@ -5,6 +5,9 @@ import org.springframework.http.HttpStatus;
 public enum ErrorCode {
     // 400 BAD_REQUEST
     INVALID_REQUEST(HttpStatus.BAD_REQUEST, "요청 값이 올바르지 않습니다."),
+    INVALID_REPORT_CURSOR(HttpStatus.BAD_REQUEST, "잘못된 커서입니다. 목록을 처음부터 다시 불러와 주세요."),
+    INVALID_IMAGE_FILE(HttpStatus.BAD_REQUEST, "이미지 파일만 업로드할 수 있습니다."),
+    IMAGE_FILE_TOO_LARGE(HttpStatus.BAD_REQUEST, "이미지 용량이 너무 큽니다."),
     UNSUPPORTED_QUERY_PARAMETER(HttpStatus.BAD_REQUEST, "지원하지 않는 쿼리 파라미터입니다."),
     CANNOT_ACCEPT_OWN_HELP_REQUEST(HttpStatus.BAD_REQUEST, "자신의 도움 요청은 수락할 수 없습니다."),
     CANNOT_REJECT_OWN_HELP_REQUEST(HttpStatus.BAD_REQUEST, "자신의 도움 요청은 거절할 수 없습니다."),
@@ -29,6 +32,8 @@ public enum ErrorCode {
     FLOOR_MAP_NOT_FOUND(HttpStatus.NOT_FOUND, "층 도면을 찾을 수 없습니다."),
     FACILITY_NODE_NOT_FOUND(HttpStatus.NOT_FOUND, "시설물 노드를 찾을 수 없습니다."),
     OBSTACLE_REPORT_NOT_FOUND(HttpStatus.NOT_FOUND, "장애물 제보를 찾을 수 없습니다."),
+    PLACE_STATE_REPORT_NOT_FOUND(HttpStatus.NOT_FOUND, "장소 상태 제보를 찾을 수 없습니다."),
+    REPORT_NOT_FOUND(HttpStatus.NOT_FOUND, "시설 상태 제보를 찾을 수 없습니다."),
     TERM_NOT_FOUND(HttpStatus.NOT_FOUND, "약관을 찾을 수 없습니다."),
 
     // 409 CONFLICT
@@ -43,6 +48,8 @@ public enum ErrorCode {
     OAUTH_SIGNUP_ALREADY_COMPLETED(HttpStatus.CONFLICT, "이미 가입 처리된 OAuth 계정입니다. 로그인 후 다시 시도해주세요."),
 
     OAUTH_PROVIDER_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "OAuth provider에 연결할 수 없습니다."),
+    IMAGE_STORAGE_NOT_CONFIGURED(HttpStatus.SERVICE_UNAVAILABLE, "이미지 저장소가 설정되지 않았습니다."),
+    IMAGE_UPLOAD_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "이미지 업로드에 실패했습니다. 잠시 후 다시 시도해주세요."),
 
     // 500 INTERNAL_SERVER_ERROR
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류가 발생했습니다.");

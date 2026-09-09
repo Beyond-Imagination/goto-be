@@ -91,6 +91,7 @@ public class ObstacleReportService {
                 .severity(request.severity())
                 .affectedMobilityTypes(request.affectedMobilityTypes())
                 .photoUrls(request.photoUrls())
+                .description(request.description())
                 .build();
 
         return ObstacleReportResponse.from(obstacleReportRepository.save(report), clock.instant());

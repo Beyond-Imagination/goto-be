@@ -9,12 +9,15 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import kr.bi.go_to.config.security.AuthenticatedMember;
+import kr.bi.go_to.controller.member.request.MyConfirmedReportPageRequest;
+import kr.bi.go_to.controller.member.request.MyReportPageRequest;
 import kr.bi.go_to.controller.member.request.UpdateMyPreferencesRequest;
 import kr.bi.go_to.controller.member.request.UpdateMySettingsRequest;
-import kr.bi.go_to.controller.member.response.MyConfirmedReportResponse;
+import kr.bi.go_to.controller.member.response.MyConfirmedReportPageResponse;
 import kr.bi.go_to.controller.member.response.MyObstacleReportResponse;
 import kr.bi.go_to.controller.member.response.MyPreferencesResponse;
 import kr.bi.go_to.controller.member.response.MyProfileResponse;
+import kr.bi.go_to.controller.member.response.MyReportPageResponse;
 import kr.bi.go_to.controller.member.response.MySettingsResponse;
 import kr.bi.go_to.enums.SwaggerTag;
 import kr.bi.go_to.exception.ErrorResponse;
@@ -132,21 +135,45 @@ public interface MyPageApiSpec {
 
     @Operation(
             tags = SwaggerTag.MY_PAGE_NAME,
-            summary = "내가 확인한 제보 목록 조회",
-            description = "내가 「아직 있어요」로 확인한 제보를 최신순으로 반환합니다.")
+            summary = "내 제보 기록 목록 조회 (커서 페이지네이션)",
+            description = "장애물·장소·시설 제보를 한 목록으로 합쳐 최신순으로 반환합니다. "
+                    + "kind로 분류를 좁힐 수 있고, 응답의 nextCursor를 다음 요청 cursor에 그대로 넣으면 이어서 읽습니다. "
+                    + "nextCursor가 null이면 마지막 페이지입니다.")
     @ApiResponses({
         @ApiResponse(
                 responseCode = "200",
                 description = "조회 성공",
-                content =
-                        @Content(
-                                array =
-                                        @ArraySchema(
-                                                schema = @Schema(implementation = MyConfirmedReportResponse.class)))),
+                content = @Content(schema = @Schema(implementation = MyReportPageResponse.class))),
+        @ApiResponse(
+                responseCode = "400",
+                description = "커서 형식이 잘못되었거나 size가 범위를 벗어남",
+                content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
         @ApiResponse(
                 responseCode = "401",
                 description = "인증 필요",
                 content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
     })
-    List<MyConfirmedReportResponse> findMyConfirmedReports(AuthenticatedMember member);
+    MyReportPageResponse findMyReports(AuthenticatedMember member, MyReportPageRequest request);
+
+    @Operation(
+            tags = SwaggerTag.MY_PAGE_NAME,
+            summary = "내가 확인한 제보 목록 조회 (커서 페이지네이션)",
+            description =
+                    "내가 「아직 있어요」로 확인한 제보를 확인 시각 최신순으로 반환합니다. " + "status로 아직 있음(ACTIVE)·해결 됨(RESOLVED)을 좁힐 수 있습니다.")
+    @ApiResponses({
+        @ApiResponse(
+                responseCode = "200",
+                description = "조회 성공",
+                content = @Content(schema = @Schema(implementation = MyConfirmedReportPageResponse.class))),
+        @ApiResponse(
+                responseCode = "400",
+                description = "커서 형식이 잘못되었거나 size가 범위를 벗어남",
+                content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+        @ApiResponse(
+                responseCode = "401",
+                description = "인증 필요",
+                content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+    })
+    MyConfirmedReportPageResponse findMyConfirmedReports(
+            AuthenticatedMember member, MyConfirmedReportPageRequest request);
 }

@@ -44,6 +44,14 @@ public class DbReportService implements ReportService {
         return toData(report);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public ReportData get(Long reportId) {
+        return toData(reportRepository
+                .findById(reportId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.REPORT_NOT_FOUND)));
+    }
+
     private ReportData toData(Report report) {
         FacilityNode node = report.getNode();
         Point point = node.getGeojsonPoint();
@@ -58,7 +66,9 @@ public class DbReportService implements ReportService {
                         longitude(point),
                         node.getFloorMap().getFloorLevel(),
                         node.isCheckpoint(),
-                        node.getSnapRadius()),
+                        node.getSnapRadius(),
+                        node.getFloorMap().getPlace().getId(),
+                        node.getFloorMap().getPlace().getName()),
                 report.getIssueType(),
                 report.getDescription(),
                 report.getCreatedAt());
