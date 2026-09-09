@@ -10,10 +10,10 @@ public record MyConfirmedReportResponse(
         @Schema(description = "내가 확인한 시각", example = "2026-08-21T04:15:30Z") Instant confirmedAt,
         @Schema(description = "확인 대상 제보") MyObstacleReportResponse report) {
 
-    public static MyConfirmedReportResponse from(ObstacleReportConfirmation confirmation, Instant now) {
+    public static MyConfirmedReportResponse from(ObstacleReportConfirmation confirmation, Instant now, String address) {
         return new MyConfirmedReportResponse(
                 confirmation.getId(),
                 confirmation.getCreatedAt(),
-                MyObstacleReportResponse.from(confirmation.getObstacleReport(), now));
+                MyObstacleReportResponse.from(confirmation.getObstacleReport(), now, address));
     }
 }

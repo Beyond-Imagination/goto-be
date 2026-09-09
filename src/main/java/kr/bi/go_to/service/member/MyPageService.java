@@ -13,9 +13,11 @@ import kr.bi.go_to.controller.member.response.MyProfileResponse;
 import kr.bi.go_to.controller.member.response.MySettingsResponse;
 import kr.bi.go_to.model.member.Member;
 import kr.bi.go_to.model.member.MemberPreferences;
+import kr.bi.go_to.model.obstaclereport.ObstacleReport;
 import kr.bi.go_to.repository.ObstacleReportConfirmationRepository;
 import kr.bi.go_to.repository.ObstacleReportRepository;
 import kr.bi.go_to.service.MemberService;
+import kr.bi.go_to.service.obstaclereport.geocoding.NaverReverseGeocodingClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,16 +31,19 @@ public class MyPageService {
     private final MemberService memberService;
     private final ObstacleReportRepository obstacleReportRepository;
     private final ObstacleReportConfirmationRepository obstacleReportConfirmationRepository;
+    private final NaverReverseGeocodingClient naverReverseGeocodingClient;
     private final Clock clock;
 
     public MyPageService(
             MemberService memberService,
             ObstacleReportRepository obstacleReportRepository,
             ObstacleReportConfirmationRepository obstacleReportConfirmationRepository,
+            NaverReverseGeocodingClient naverReverseGeocodingClient,
             Clock clock) {
         this.memberService = memberService;
         this.obstacleReportRepository = obstacleReportRepository;
         this.obstacleReportConfirmationRepository = obstacleReportConfirmationRepository;
+        this.naverReverseGeocodingClient = naverReverseGeocodingClient;
         this.clock = clock;
     }
 
@@ -83,7 +88,7 @@ public class MyPageService {
     public List<MyObstacleReportResponse> listMyObstacleReports(Long memberId) {
         Instant now = clock.instant();
         return obstacleReportRepository.findByReporter_IdOrderByCreatedAtDesc(memberId).stream()
-                .map(report -> MyObstacleReportResponse.from(report, now))
+                .map(report -> MyObstacleReportResponse.from(report, now, resolveAddress(report)))
                 .toList();
     }
 
@@ -91,8 +96,22 @@ public class MyPageService {
     public List<MyConfirmedReportResponse> listMyConfirmedReports(Long memberId) {
         Instant now = clock.instant();
         return obstacleReportConfirmationRepository.findMineWithReport(memberId).stream()
-                .map(confirmation -> MyConfirmedReportResponse.from(confirmation, now))
+                .map(confirmation -> MyConfirmedReportResponse.from(
+                        confirmation, now, resolveAddress(confirmation.getObstacleReport())))
                 .toList();
+    }
+
+    /**
+     * 제보 좌표를 행정동 이름으로 바꾼다.
+     * 키 미설정·호출 실패·매칭 없음은 모두 null이 되고, 그 경우 FE가 좌표 표기로 대체한다.
+     * 좌표를 ~100m 격자로 반올림한 키로 캐싱되므로 목록에 인접한 제보가 여러 건 있어도 외부 호출은 한 번이다.
+     */
+    private String resolveAddress(ObstacleReport report) {
+        return naverReverseGeocodingClient
+                .reverseGeocode(
+                        report.getLocationPoint().getY(),
+                        report.getLocationPoint().getX())
+                .orElse(null);
     }
 
     private MyActivityStatsResponse getStats(Long memberId) {
