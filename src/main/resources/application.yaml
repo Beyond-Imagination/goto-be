@@ -10,6 +10,12 @@ spring:
     aws:
       region:
         static: ap-northeast-2
+  servlet:
+    multipart:
+      # ImageStorageProperties.maxFileSizeBytes(10MB)와 맞춘다. 요청 한도를 조금 더 크게 둬야
+      # 멀티파트 오버헤드 때문에 서버가 413을 먼저 던지지 않는다.
+      max-file-size: 10MB
+      max-request-size: 12MB
   datasource:
     driver-class-name: org.postgresql.Driver
   jpa:
@@ -57,6 +63,12 @@ naver-reverse-geocoding:
   base-url: "https://naveropenapi.apigw.ntruss.com/map-reversegeocode/v2/gc"
 
 goto:
+  # bucket, public-base-url은 Parameter Store(/goto/goto.image-storage.*)에서 주입된다.
+  # bucket이 비어 있으면 업로드 API만 503을 돌려주고 나머지 기능은 정상 동작한다.
+  # public-base-url(CloudFront 도메인)은 끝 슬래시 없이 넣는다. 비어 있으면
+  # S3 기본 URL(https://{bucket}.s3.{region}.amazonaws.com/{key})을 만든다.
+  image-storage:
+    key-prefix: "obstacle-reports"
   batch:
     initial-load:
       auto-run-enabled: true

@@ -110,6 +110,49 @@ class DbReportServiceTest {
     }
 
     @Test
+    void includesPlaceAndFloorInNodeData() {
+        ReportData report = dbReportService.create(reporter.getId(), node.getId(), "BROKEN", null);
+
+        assertThat(report.node().nodeType()).isEqualTo("ELEVATOR");
+        assertThat(report.node().name()).isEqualTo("Main Elevator");
+        assertThat(report.node().floorLevel()).isEqualTo(2);
+        assertThat(report.node().placeName()).isEqualTo("Report Place");
+        assertThat(report.node().isCheckpoint()).isTrue();
+        assertThat(report.node().snapRadius()).isEqualTo(5);
+    }
+
+    @Test
+    void getReturnsSavedReportAfterClearingPersistenceContext() {
+        ReportData created = dbReportService.create(reporter.getId(), node.getId(), "OUT_OF_SERVICE", "점검 중");
+        entityManager.flush();
+        entityManager.clear();
+
+        ReportData found = dbReportService.get(created.id());
+
+        assertThat(found.id()).isEqualTo(created.id());
+        assertThat(found.issueType()).isEqualTo("OUT_OF_SERVICE");
+        assertThat(found.description()).isEqualTo("점검 중");
+        assertThat(found.node().placeName()).isEqualTo("Report Place");
+        assertThat(found.reporterId()).isEqualTo(reporter.getId());
+    }
+
+    @Test
+    void getThrowsWhenReportDoesNotExist() {
+        assertThatThrownBy(() -> dbReportService.get(999L))
+                .isInstanceOfSatisfying(BusinessException.class, exception -> assertThat(exception.getErrorCode())
+                        .isEqualTo(ErrorCode.REPORT_NOT_FOUND));
+    }
+
+    @Test
+    void storesBlankDescriptionAsNull() {
+        ReportData report = dbReportService.create(reporter.getId(), node.getId(), "DAMAGED", "   ");
+
+        assertThat(report.description()).isNull();
+        assertThat(reportRepository.findById(report.id()).orElseThrow().getDescription())
+                .isNull();
+    }
+
+    @Test
     void throwsWhenReporterDoesNotExist() {
         assertThatThrownBy(() -> dbReportService.create(999L, node.getId(), "BROKEN", null))
                 .isInstanceOfSatisfying(BusinessException.class, exception -> assertThat(exception.getErrorCode())

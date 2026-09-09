@@ -7,6 +7,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import kr.bi.go_to.controller.report.request.CreateReportRequest;
 import kr.bi.go_to.controller.report.response.ReportResponse;
+import kr.bi.go_to.model.report.FacilityIssueType;
 import kr.bi.go_to.service.report.mock.MockReportService;
 import kr.bi.go_to.usecase.CreateReportUseCase;
 import org.junit.jupiter.api.Test;
@@ -19,9 +20,15 @@ class CreateReportUseCaseTest {
 
     @Test
     void returnsCalibrationWhenReportedNodeIsCheckpoint() {
-        ReportResponse response = useCase.execute(10L, new CreateReportRequest(1L, "BROKEN", " stopped "));
+        ReportResponse response =
+                useCase.execute(10L, new CreateReportRequest(1L, FacilityIssueType.BROKEN, " stopped "));
 
         assertThat(response.nodeId()).isEqualTo(1L);
+        assertThat(response.issueType()).isEqualTo("BROKEN");
+        assertThat(response.nodeType()).isEqualTo("ELEVATOR");
+        assertThat(response.nodeName()).isEqualTo("Main lobby elevator");
+        assertThat(response.floorLevel()).isEqualTo(1);
+        assertThat(response.placeName()).isEqualTo("Mock Place");
         assertThat(response.description()).isEqualTo("stopped");
         assertThat(response.createdAt()).isEqualTo(Instant.parse("2026-07-12T04:30:10Z"));
         assertThat(response.calibration()).isNotNull();
@@ -33,7 +40,7 @@ class CreateReportUseCaseTest {
 
     @Test
     void returnsNullCalibrationWhenReportedNodeIsNotCheckpoint() {
-        ReportResponse response = useCase.execute(10L, new CreateReportRequest(3L, "BLOCKED", null));
+        ReportResponse response = useCase.execute(10L, new CreateReportRequest(3L, FacilityIssueType.BLOCKED, null));
 
         assertThat(response.nodeId()).isEqualTo(3L);
         assertThat(response.calibration()).isNull();

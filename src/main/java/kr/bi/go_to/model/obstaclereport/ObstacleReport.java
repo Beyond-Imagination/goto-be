@@ -103,6 +103,12 @@ public class ObstacleReport extends BaseAuditEntity {
     private List<String> photoUrls = List.of();
 
     /**
+     * 제보자가 남긴 메모 (선택 입력). 유형·심각도만으로 전달되지 않는 상황 설명을 담는다.
+     */
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
+    /**
      * 리포트 생명주기 상태. RESOLVED는 재오픈되지 않는다.
      */
     @Enumerated(EnumType.STRING)

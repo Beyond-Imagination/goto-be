@@ -6,7 +6,9 @@ import kr.bi.go_to.config.security.AuthenticatedMember;
 import kr.bi.go_to.controller.member.request.UpdateMyPreferencesRequest;
 import kr.bi.go_to.controller.member.request.UpdateMySettingsRequest;
 import kr.bi.go_to.controller.member.response.MyConfirmedReportResponse;
+import kr.bi.go_to.controller.member.response.MyFacilityReportResponse;
 import kr.bi.go_to.controller.member.response.MyObstacleReportResponse;
+import kr.bi.go_to.controller.member.response.MyPlaceStateReportResponse;
 import kr.bi.go_to.controller.member.response.MyPreferencesResponse;
 import kr.bi.go_to.controller.member.response.MyProfileResponse;
 import kr.bi.go_to.controller.member.response.MySettingsResponse;
@@ -70,6 +72,19 @@ public class MyPageController implements MyPageApiSpec {
     @GetMapping("/obstacle-reports")
     public List<MyObstacleReportResponse> findMyObstacleReports(@AuthenticationPrincipal AuthenticatedMember member) {
         return myPageService.listMyObstacleReports(member.id());
+    }
+
+    @Override
+    @GetMapping("/place-state-reports")
+    public List<MyPlaceStateReportResponse> findMyPlaceStateReports(
+            @AuthenticationPrincipal AuthenticatedMember member) {
+        return myPageService.listMyPlaceStateReports(member.id());
+    }
+
+    @Override
+    @GetMapping("/facility-reports")
+    public List<MyFacilityReportResponse> findMyFacilityReports(@AuthenticationPrincipal AuthenticatedMember member) {
+        return myPageService.listMyFacilityReports(member.id());
     }
 
     @Override

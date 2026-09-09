@@ -7,7 +7,9 @@ import kr.bi.go_to.controller.member.request.UpdateMyPreferencesRequest;
 import kr.bi.go_to.controller.member.request.UpdateMySettingsRequest;
 import kr.bi.go_to.controller.member.response.MyActivityStatsResponse;
 import kr.bi.go_to.controller.member.response.MyConfirmedReportResponse;
+import kr.bi.go_to.controller.member.response.MyFacilityReportResponse;
 import kr.bi.go_to.controller.member.response.MyObstacleReportResponse;
+import kr.bi.go_to.controller.member.response.MyPlaceStateReportResponse;
 import kr.bi.go_to.controller.member.response.MyPreferencesResponse;
 import kr.bi.go_to.controller.member.response.MyProfileResponse;
 import kr.bi.go_to.controller.member.response.MySettingsResponse;
@@ -16,6 +18,8 @@ import kr.bi.go_to.model.member.MemberPreferences;
 import kr.bi.go_to.model.obstaclereport.ObstacleReport;
 import kr.bi.go_to.repository.ObstacleReportConfirmationRepository;
 import kr.bi.go_to.repository.ObstacleReportRepository;
+import kr.bi.go_to.repository.PlaceStateReportRepository;
+import kr.bi.go_to.repository.ReportRepository;
 import kr.bi.go_to.service.MemberService;
 import kr.bi.go_to.service.obstaclereport.geocoding.NaverReverseGeocodingClient;
 import org.springframework.stereotype.Service;
@@ -31,6 +35,8 @@ public class MyPageService {
     private final MemberService memberService;
     private final ObstacleReportRepository obstacleReportRepository;
     private final ObstacleReportConfirmationRepository obstacleReportConfirmationRepository;
+    private final PlaceStateReportRepository placeStateReportRepository;
+    private final ReportRepository reportRepository;
     private final NaverReverseGeocodingClient naverReverseGeocodingClient;
     private final Clock clock;
 
@@ -38,11 +44,15 @@ public class MyPageService {
             MemberService memberService,
             ObstacleReportRepository obstacleReportRepository,
             ObstacleReportConfirmationRepository obstacleReportConfirmationRepository,
+            PlaceStateReportRepository placeStateReportRepository,
+            ReportRepository reportRepository,
             NaverReverseGeocodingClient naverReverseGeocodingClient,
             Clock clock) {
         this.memberService = memberService;
         this.obstacleReportRepository = obstacleReportRepository;
         this.obstacleReportConfirmationRepository = obstacleReportConfirmationRepository;
+        this.placeStateReportRepository = placeStateReportRepository;
+        this.reportRepository = reportRepository;
         this.naverReverseGeocodingClient = naverReverseGeocodingClient;
         this.clock = clock;
     }
@@ -80,15 +90,30 @@ public class MyPageService {
     }
 
     /**
-     * TODO(GOTO-110): 실내 시설 제보(Report 엔티티)와 장소 상태 제보는 아직 조회 경로가 없어 이 목록에 포함되지 않는다.
-     *  FE 내 정보 03의 분류 필터 중 「장소」·「시설」이 항상 빈 목록이 되는 원인이며,
-     *  ReportRepository에 reporter 기준 조회를 추가하고 응답을 합집합으로 돌려주도록 확장이 필요하다.
+     * 장애물 제보만 반환한다. 장소·시설 제보는 필요한 필드가 달라
+     * listMyPlaceStateReports·listMyFacilityReports로 각각 분리했다.
      */
     @Transactional(readOnly = true)
     public List<MyObstacleReportResponse> listMyObstacleReports(Long memberId) {
         Instant now = clock.instant();
         return obstacleReportRepository.findByReporter_IdOrderByCreatedAtDesc(memberId).stream()
                 .map(report -> MyObstacleReportResponse.from(report, now, resolveAddress(report)))
+                .toList();
+    }
+
+    /** 내 제보 기록의 「장소」 분류. 목록이 장소명·주소를 쓰므로 Place를 fetch join 해서 가져온다. */
+    @Transactional(readOnly = true)
+    public List<MyPlaceStateReportResponse> listMyPlaceStateReports(Long memberId) {
+        return placeStateReportRepository.findMineWithPlace(memberId).stream()
+                .map(MyPlaceStateReportResponse::from)
+                .toList();
+    }
+
+    /** 내 제보 기록의 「시설」 분류. 목록이 시설명·층·장소명을 쓰므로 노드·층·장소를 fetch join 해서 가져온다. */
+    @Transactional(readOnly = true)
+    public List<MyFacilityReportResponse> listMyFacilityReports(Long memberId) {
+        return reportRepository.findMineWithNodeAndPlace(memberId).stream()
+                .map(MyFacilityReportResponse::from)
                 .toList();
     }
 
@@ -115,8 +140,11 @@ public class MyPageService {
     }
 
     private MyActivityStatsResponse getStats(Long memberId) {
+        // 「제보건수」는 사용자가 남긴 제보 전체다. 장애물·장소·시설 제보를 함께 센다.
         return new MyActivityStatsResponse(
-                obstacleReportRepository.countByReporter_Id(memberId),
+                obstacleReportRepository.countByReporter_Id(memberId)
+                        + placeStateReportRepository.countByReporter_Id(memberId)
+                        + reportRepository.countByReporter_Id(memberId),
                 obstacleReportRepository.sumConfirmedCountByReporter(memberId),
                 obstacleReportConfirmationRepository.countResolvedByMember(memberId));
     }

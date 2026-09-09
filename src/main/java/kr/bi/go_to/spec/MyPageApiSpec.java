@@ -12,7 +12,9 @@ import kr.bi.go_to.config.security.AuthenticatedMember;
 import kr.bi.go_to.controller.member.request.UpdateMyPreferencesRequest;
 import kr.bi.go_to.controller.member.request.UpdateMySettingsRequest;
 import kr.bi.go_to.controller.member.response.MyConfirmedReportResponse;
+import kr.bi.go_to.controller.member.response.MyFacilityReportResponse;
 import kr.bi.go_to.controller.member.response.MyObstacleReportResponse;
+import kr.bi.go_to.controller.member.response.MyPlaceStateReportResponse;
 import kr.bi.go_to.controller.member.response.MyPreferencesResponse;
 import kr.bi.go_to.controller.member.response.MyProfileResponse;
 import kr.bi.go_to.controller.member.response.MySettingsResponse;
@@ -129,6 +131,46 @@ public interface MyPageApiSpec {
                 content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
     })
     List<MyObstacleReportResponse> findMyObstacleReports(AuthenticatedMember member);
+
+    @Operation(
+            tags = SwaggerTag.MY_PAGE_NAME,
+            summary = "내가 작성한 장소 상태 제보 목록 조회",
+            description = "최신순으로 반환합니다. 내 제보 기록의 「장소」 분류에 쓰입니다.")
+    @ApiResponses({
+        @ApiResponse(
+                responseCode = "200",
+                description = "조회 성공",
+                content =
+                        @Content(
+                                array =
+                                        @ArraySchema(
+                                                schema = @Schema(implementation = MyPlaceStateReportResponse.class)))),
+        @ApiResponse(
+                responseCode = "401",
+                description = "인증 필요",
+                content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+    })
+    List<MyPlaceStateReportResponse> findMyPlaceStateReports(AuthenticatedMember member);
+
+    @Operation(
+            tags = SwaggerTag.MY_PAGE_NAME,
+            summary = "내가 작성한 시설 상태 제보 목록 조회",
+            description = "최신순으로 반환합니다. 내 제보 기록의 「시설」 분류에 쓰입니다.")
+    @ApiResponses({
+        @ApiResponse(
+                responseCode = "200",
+                description = "조회 성공",
+                content =
+                        @Content(
+                                array =
+                                        @ArraySchema(
+                                                schema = @Schema(implementation = MyFacilityReportResponse.class)))),
+        @ApiResponse(
+                responseCode = "401",
+                description = "인증 필요",
+                content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+    })
+    List<MyFacilityReportResponse> findMyFacilityReports(AuthenticatedMember member);
 
     @Operation(
             tags = SwaggerTag.MY_PAGE_NAME,
