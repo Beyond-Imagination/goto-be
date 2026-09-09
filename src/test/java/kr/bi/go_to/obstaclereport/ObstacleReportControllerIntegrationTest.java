@@ -80,7 +80,64 @@ class ObstacleReportControllerIntegrationTest {
                 .andExpect(jsonPath("$.severity").value("CAUTION"))
                 .andExpect(jsonPath("$.status").value("ACTIVE"))
                 .andExpect(jsonPath("$.confirmedCount").value(0))
-                .andExpect(jsonPath("$.stale").value(false));
+                .andExpect(jsonPath("$.stale").value(false))
+                .andExpect(jsonPath("$.description").value((Object) null));
+    }
+
+    @Test
+    @DisplayName("메모를 함께 보내면 저장되고 상세 조회에서도 그대로 내려온다")
+    void createsObstacleReportWithDescription() throws Exception {
+        String body =
+                """
+                {
+                  "lat": 37.5665,
+                  "lng": 126.9780,
+                  "issueType": "OBSTRUCTION",
+                  "severity": "CAUTION",
+                  "affectedMobilityTypes": ["WHEELCHAIR"],
+                  "description": "  보도에 자재가 쌓여 있어요  "
+                }
+                """;
+
+        String created = mockMvc.perform(post("/api/v1/obstacle-reports")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(reporterToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isCreated())
+                // 앞뒤 공백은 다듬어 저장한다.
+                .andExpect(jsonPath("$.description").value("보도에 자재가 쌓여 있어요"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        Long reportId = ((Number) objectMapper.readValue(created, MAP_TYPE).get("id")).longValue();
+
+        mockMvc.perform(get("/api/v1/obstacle-reports/{id}", reportId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(reporterToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.description").value("보도에 자재가 쌓여 있어요"));
+    }
+
+    @Test
+    @DisplayName("빈 메모를 보내면 null로 저장된다")
+    void blankDescriptionIsStoredAsNull() throws Exception {
+        String body =
+                """
+                {
+                  "lat": 37.5665,
+                  "lng": 126.9780,
+                  "issueType": "OTHER",
+                  "severity": "INFO",
+                  "affectedMobilityTypes": ["WHEELCHAIR"],
+                  "description": "   "
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/obstacle-reports")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(reporterToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.description").value((Object) null));
     }
 
     @Test

@@ -22,6 +22,7 @@ public record MyObstacleReportResponse(
         @Schema(description = "표시용 행정동 주소. 네이버 리버스 지오코딩 결과이며, API 실패혹은 매칭 없음이면 null이다.", example = "마포구 상암동")
                 String address,
         @Schema(description = "첨부 사진 URL 목록", example = "[]") List<String> photoUrls,
+        @Schema(description = "제보자가 남긴 메모 (없으면 null)", example = "보도가 깨져서 휠체어가 지나가기 어려워요") String description,
         @Schema(description = "이 제보를 확인해 준 사람 수", example = "5") int confirmedCount,
         @Schema(description = "마지막 확인 시각", example = "2026-08-20T04:15:30Z") Instant lastConfirmedAt,
         @Schema(description = "제보 작성 시각", example = "2026-08-12T04:15:30Z") Instant createdAt) {
@@ -39,6 +40,7 @@ public record MyObstacleReportResponse(
                 address,
                 // 지연 로딩 컬렉션을 그대로 담으면 트랜잭션 종료 후 직렬화에서 LazyInitializationException이 난다.
                 List.copyOf(report.getPhotoUrls()),
+                report.getDescription(),
                 report.getConfirmedCount(),
                 report.getLastConfirmedAt(),
                 report.getCreatedAt());

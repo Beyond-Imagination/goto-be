@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import kr.bi.go_to.enums.MobilityType;
 import kr.bi.go_to.enums.Role;
 import kr.bi.go_to.model.member.Member;
@@ -18,10 +19,17 @@ import kr.bi.go_to.model.obstaclereport.ObstacleIssueType;
 import kr.bi.go_to.model.obstaclereport.ObstacleReport;
 import kr.bi.go_to.model.obstaclereport.ObstacleReportConfirmation;
 import kr.bi.go_to.model.obstaclereport.ObstacleSeverity;
+import kr.bi.go_to.model.placereport.PlaceAccessStatus;
+import kr.bi.go_to.model.placereport.PlaceStateReport;
+import kr.bi.go_to.repository.FacilityNodeRepository;
+import kr.bi.go_to.repository.FloorMapRepository;
 import kr.bi.go_to.repository.MemberRepository;
 import kr.bi.go_to.repository.ObstacleReportConfirmationRepository;
 import kr.bi.go_to.repository.ObstacleReportRepository;
+import kr.bi.go_to.repository.PlaceRepository;
+import kr.bi.go_to.repository.PlaceStateReportRepository;
 import kr.bi.go_to.repository.RefreshTokenRepository;
+import kr.bi.go_to.repository.ReportRepository;
 import kr.bi.go_to.service.JwtService;
 import kr.bi.go_to.service.obstaclereport.geocoding.NaverReverseGeocodingClient;
 import kr.bi.go_to.support.TestcontainersConfiguration;
@@ -41,6 +49,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -48,10 +58,15 @@ import org.springframework.test.web.servlet.MockMvc;
 @Import(TestcontainersConfiguration.class)
 class MyPageControllerIntegrationTest {
 
+    private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
+
     private static final GeometryFactory GEOMETRY_FACTORY = new GeometryFactory(new PrecisionModel(), 4326);
 
     @Autowired
     MockMvc mockMvc;
+
+    @Autowired
+    ObjectMapper objectMapper;
 
     @Autowired
     MemberRepository memberRepository;
@@ -61,6 +76,21 @@ class MyPageControllerIntegrationTest {
 
     @Autowired
     ObstacleReportConfirmationRepository obstacleReportConfirmationRepository;
+
+    @Autowired
+    PlaceStateReportRepository placeStateReportRepository;
+
+    @Autowired
+    ReportRepository reportRepository;
+
+    @Autowired
+    FacilityNodeRepository facilityNodeRepository;
+
+    @Autowired
+    FloorMapRepository floorMapRepository;
+
+    @Autowired
+    PlaceRepository placeRepository;
 
     @Autowired
     RefreshTokenRepository refreshTokenRepository;
@@ -79,6 +109,11 @@ class MyPageControllerIntegrationTest {
     void setUp() {
         obstacleReportConfirmationRepository.deleteAll();
         obstacleReportRepository.deleteAll();
+        placeStateReportRepository.deleteAll();
+        reportRepository.deleteAll();
+        facilityNodeRepository.deleteAll();
+        floorMapRepository.deleteAll();
+        placeRepository.deleteAll();
         refreshTokenRepository.deleteAll();
         memberRepository.deleteAll();
 
@@ -266,9 +301,11 @@ class MyPageControllerIntegrationTest {
         mockMvc.perform(get("/api/v1/members/me/obstacle-report-confirmations")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].report.id").value(target.getId()))
-                .andExpect(jsonPath("$[0].confirmedAt").exists());
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.items[0].report.id").value(target.getId()))
+                .andExpect(jsonPath("$.items[0].confirmedAt").exists())
+                // 한 건뿐이라 다음 페이지가 없다.
+                .andExpect(jsonPath("$.nextCursor").value((Object) null));
     }
 
     @Test
@@ -298,7 +335,200 @@ class MyPageControllerIntegrationTest {
         mockMvc.perform(get("/api/v1/members/me/obstacle-report-confirmations")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].report.address").value("종로구 세종로"));
+                .andExpect(jsonPath("$.items[0].report.address").value("종로구 세종로"));
+    }
+
+    private kr.bi.go_to.model.place.Place savePlace(String name) {
+        return placeRepository.save(kr.bi.go_to.model.place.Place.builder()
+                .externalId(name)
+                .source("TEST")
+                .name(name)
+                .sanitizedAddress(name + " 주소")
+                .build());
+    }
+
+    private PlaceStateReport savePlaceReport(Member reporter, String placeName) {
+        return placeStateReportRepository.saveAndFlush(PlaceStateReport.builder()
+                .place(savePlace(placeName))
+                .reporter(reporter)
+                .accessStatus(PlaceAccessStatus.PARTIALLY_ACCESSIBLE)
+                .photoUrls(List.of())
+                .build());
+    }
+
+    private kr.bi.go_to.model.report.Report saveFacilityReport(Member reporter, String placeName) {
+        kr.bi.go_to.model.map.FloorMap floorMap = floorMapRepository.save(kr.bi.go_to.model.map.FloorMap.builder()
+                .place(savePlace(placeName))
+                .floorLevel(1)
+                .build());
+        kr.bi.go_to.model.map.FacilityNode node =
+                facilityNodeRepository.save(kr.bi.go_to.model.map.FacilityNode.builder()
+                        .floorMap(floorMap)
+                        .nodeType("ELEVATOR")
+                        .name(placeName + " 엘리베이터")
+                        .geojsonPoint(point(129.2287, 35.8295))
+                        .isCheckpoint(false)
+                        .build());
+
+        return reportRepository.saveAndFlush(kr.bi.go_to.model.report.Report.create(node, reporter, "BROKEN", null));
+    }
+
+    @Test
+    @DisplayName("내 제보 기록은 장애물·장소·시설을 한 목록으로 합쳐 최신순으로 반환한다")
+    void mergesThreeKindsInLatestOrder() throws Exception {
+        ObstacleReport obstacle = saveReport(me, 1);
+        PlaceStateReport place = savePlaceReport(me, "서울숲 공원");
+        kr.bi.go_to.model.report.Report facility = saveFacilityReport(me, "성수동 주민센터");
+
+        mockMvc.perform(get("/api/v1/members/me/reports").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items.length()").value(3))
+                // 저장 순서의 역순(최신순)으로 내려온다.
+                .andExpect(jsonPath("$.items[0].kind").value("FACILITY"))
+                .andExpect(jsonPath("$.items[0].facility.id").value(facility.getId()))
+                .andExpect(jsonPath("$.items[0].obstacle").value((Object) null))
+                .andExpect(jsonPath("$.items[1].kind").value("PLACE"))
+                .andExpect(jsonPath("$.items[1].place.id").value(place.getId()))
+                .andExpect(jsonPath("$.items[2].kind").value("OBSTACLE"))
+                .andExpect(jsonPath("$.items[2].obstacle.id").value(obstacle.getId()))
+                .andExpect(jsonPath("$.nextCursor").value((Object) null));
+    }
+
+    @Test
+    @DisplayName("kind 필터를 주면 그 분류만 반환한다")
+    void filtersByKind() throws Exception {
+        saveReport(me, 1);
+        PlaceStateReport place = savePlaceReport(me, "필터 공원");
+        saveFacilityReport(me, "필터 주민센터");
+
+        mockMvc.perform(get("/api/v1/members/me/reports")
+                        .param("kind", "PLACE")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.items[0].place.id").value(place.getId()));
+    }
+
+    @Test
+    @DisplayName("size로 페이지를 끊고 nextCursor로 이어 읽으면 모든 제보를 중복 없이 한 번씩 받는다")
+    void pagesThroughEveryReportExactlyOnce() throws Exception {
+        // 분류를 섞어 5건을 만든다. 커서가 분류별 위치를 따로 들고 다니는지 확인하는 게 핵심이다.
+        saveReport(me, 1);
+        savePlaceReport(me, "페이지 공원");
+        saveFacilityReport(me, "페이지 주민센터");
+        saveReport(me, 2);
+        savePlaceReport(me, "페이지 공원2");
+
+        java.util.List<String> seen = new java.util.ArrayList<>();
+        String cursor = null;
+        for (int page = 0; page < 10; page++) {
+            var request = get("/api/v1/members/me/reports")
+                    .param("size", "2")
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + token);
+            if (cursor != null) {
+                request = request.param("cursor", cursor);
+            }
+
+            String body = mockMvc.perform(request)
+                    .andExpect(status().isOk())
+                    .andReturn()
+                    .getResponse()
+                    .getContentAsString();
+            Map<String, Object> parsed = objectMapper.readValue(body, MAP_TYPE);
+
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> items = (List<Map<String, Object>>) parsed.get("items");
+            assertThat(items).hasSizeLessThanOrEqualTo(2);
+            for (Map<String, Object> item : items) {
+                String kind = (String) item.get("kind");
+                @SuppressWarnings("unchecked")
+                Map<String, Object> payload = (Map<String, Object>) item.get(kind.toLowerCase(java.util.Locale.ROOT));
+                seen.add(kind + "#" + payload.get("id"));
+            }
+
+            cursor = (String) parsed.get("nextCursor");
+            if (cursor == null) {
+                break;
+            }
+        }
+
+        assertThat(cursor).as("마지막 페이지에서 커서가 비어야 한다").isNull();
+        assertThat(seen).hasSize(5).doesNotHaveDuplicates();
+    }
+
+    @Test
+    @DisplayName("커서가 깨졌거나 size가 범위를 벗어나면 400을 반환한다")
+    void rejectsBadPagingParameters() throws Exception {
+        mockMvc.perform(get("/api/v1/members/me/reports")
+                        .param("cursor", "!!not-a-cursor!!")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(get("/api/v1/members/me/reports")
+                        .param("size", "0")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(get("/api/v1/members/me/reports")
+                        .param("size", "51")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("다른 회원의 제보는 어떤 분류에서도 내 목록에 섞이지 않는다")
+    void doesNotLeakOtherMembersReports() throws Exception {
+        Member other = memberRepository.save(new Member(Role.USER, "남의제보전체"));
+        saveReport(other, 0);
+        savePlaceReport(other, "남의 공원");
+        saveFacilityReport(other, "남의 주민센터");
+
+        mockMvc.perform(get("/api/v1/members/me/reports").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items.length()").value(0))
+                .andExpect(jsonPath("$.nextCursor").value((Object) null));
+    }
+
+    @Test
+    @DisplayName("내가 확인한 리포트도 size·cursor로 끊어 읽고, status로 좁힐 수 있다")
+    void pagesAndFiltersConfirmations() throws Exception {
+        Member reporter = memberRepository.save(new Member(Role.USER, "확인페이지작성자"));
+        ObstacleReport active = saveReport(reporter, 1);
+        ObstacleReport resolved = saveReport(reporter, 1);
+        resolved.resolve();
+        obstacleReportRepository.saveAndFlush(resolved);
+        for (ObstacleReport target : List.of(active, resolved)) {
+            obstacleReportConfirmationRepository.saveAndFlush(ObstacleReportConfirmation.builder()
+                    .obstacleReport(target)
+                    .member(me)
+                    .build());
+        }
+
+        String firstPage = mockMvc.perform(get("/api/v1/members/me/obstacle-report-confirmations")
+                        .param("size", "1")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.nextCursor").isNotEmpty())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        String cursor = (String) objectMapper.readValue(firstPage, MAP_TYPE).get("nextCursor");
+
+        mockMvc.perform(get("/api/v1/members/me/obstacle-report-confirmations")
+                        .param("size", "1")
+                        .param("cursor", cursor)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.nextCursor").value((Object) null));
+
+        mockMvc.perform(get("/api/v1/members/me/obstacle-report-confirmations")
+                        .param("status", "RESOLVED")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.items[0].report.id").value(resolved.getId()));
     }
 
     @Test
@@ -308,6 +538,7 @@ class MyPageControllerIntegrationTest {
         mockMvc.perform(get("/api/v1/members/me/preferences")).andExpect(status().isUnauthorized());
         mockMvc.perform(get("/api/v1/members/me/settings")).andExpect(status().isUnauthorized());
         mockMvc.perform(get("/api/v1/members/me/obstacle-reports")).andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/v1/members/me/reports")).andExpect(status().isUnauthorized());
         mockMvc.perform(get("/api/v1/members/me/obstacle-report-confirmations")).andExpect(status().isUnauthorized());
     }
 }

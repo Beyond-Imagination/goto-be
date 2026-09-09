@@ -40,4 +40,21 @@ public interface ReportApiSpec {
                 content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     ReportResponse create(AuthenticatedMember member, @Valid @RequestBody CreateReportRequest request);
+
+    @Operation(tags = SwaggerTag.REPORT_NAME, summary = "시설물 상태 제보 상세 조회", description = "제보와 함께 시설 유형·이름·층·장소를 반환합니다.")
+    @ApiResponses({
+        @ApiResponse(
+                responseCode = "200",
+                description = "조회 성공",
+                content = @Content(schema = @Schema(implementation = ReportResponse.class))),
+        @ApiResponse(
+                responseCode = "401",
+                description = "인증 필요",
+                content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+        @ApiResponse(
+                responseCode = "404",
+                description = "제보를 찾을 수 없음",
+                content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    ReportResponse get(Long id);
 }

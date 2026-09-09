@@ -15,7 +15,7 @@ public class CreateReportUseCase {
     }
 
     public ReportResponse execute(Long reporterId, CreateReportRequest request) {
-        return ReportResponse.from(
-                reportService.create(reporterId, request.nodeId(), request.issueType(), request.description()));
+        return ReportResponse.from(reportService.create(
+                reporterId, request.nodeId(), request.issueType().name(), request.description()));
     }
 }

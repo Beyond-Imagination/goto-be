@@ -93,7 +93,7 @@ public class ObstacleReport extends BaseAuditEntity {
     private Set<MobilityType> affectedMobilityTypes = new HashSet<>();
 
     /**
-     * 이미 호스팅된 사진 URL 목록 (업로드 인프라는 이번 스코프에 포함하지 않음)
+     * 사진 URL 목록. 업로드 API(POST /api/v1/uploads/images)로 올린 뒤 받은 URL만 저장한다
      */
     @ElementCollection
     @CollectionTable(name = "obstacle_report_photo_urls", joinColumns = @JoinColumn(name = "obstacle_report_id"))
@@ -101,6 +101,12 @@ public class ObstacleReport extends BaseAuditEntity {
     @Column(name = "photo_url", nullable = false, length = 2048)
     @Builder.Default
     private List<String> photoUrls = List.of();
+
+    /**
+     * 제보자가 남긴 메모 (선택 입력). 유형·심각도만으로 전달되지 않는 상황 설명을 담는다.
+     */
+    @Column(columnDefinition = "TEXT")
+    private String description;
 
     /**
      * 리포트 생명주기 상태. RESOLVED는 재오픈되지 않는다.
