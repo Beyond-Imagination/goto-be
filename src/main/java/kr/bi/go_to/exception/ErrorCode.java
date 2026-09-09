@@ -32,6 +32,7 @@ public enum ErrorCode {
     FLOOR_MAP_NOT_FOUND(HttpStatus.NOT_FOUND, "층 도면을 찾을 수 없습니다."),
     FACILITY_NODE_NOT_FOUND(HttpStatus.NOT_FOUND, "시설물 노드를 찾을 수 없습니다."),
     OBSTACLE_REPORT_NOT_FOUND(HttpStatus.NOT_FOUND, "장애물 제보를 찾을 수 없습니다."),
+    SAVED_PLACE_NOT_FOUND(HttpStatus.NOT_FOUND, "저장하지 않은 장소입니다."),
     PLACE_STATE_REPORT_NOT_FOUND(HttpStatus.NOT_FOUND, "장소 상태 제보를 찾을 수 없습니다."),
     REPORT_NOT_FOUND(HttpStatus.NOT_FOUND, "시설 상태 제보를 찾을 수 없습니다."),
     TERM_NOT_FOUND(HttpStatus.NOT_FOUND, "약관을 찾을 수 없습니다."),

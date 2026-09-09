@@ -1,5 +1,6 @@
 package kr.bi.go_to.model.savedplace;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -55,4 +56,17 @@ public class SavedPlace extends BaseAuditEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "place_id", nullable = false)
     private Place place;
+
+    /**
+     * 이 장소의 상태 변경 알림을 받을지 여부.
+     * 저장하면 기본으로 받고(true), 저장 화면에서 장소별로 끌 수 있다.
+     * 받을 알림 종류(시설 상태 변경 / 주변 장애물)는 members.preferences의 알림 설정이 정한다.
+     */
+    @Column(name = "notification_enabled", nullable = false)
+    @Builder.Default
+    private boolean notificationEnabled = true;
+
+    public void updateNotificationEnabled(boolean enabled) {
+        this.notificationEnabled = enabled;
+    }
 }
