@@ -98,13 +98,13 @@ class PlaceStateReportQueryDslRepositoryTest {
     }
 
     @Test
-    @DisplayName("findMineWithPlace는 내 제보만 최신순으로 돌려주고 장소를 함께 가져온다")
-    void findMineWithPlaceReturnsOnlyMine() {
+    @DisplayName("findMinePage는 내 제보만 최신순으로 돌려주고 장소를 함께 가져온다")
+    void findMinePageReturnsOnlyMine() {
         PlaceStateReport mineFirst = saveReport(me, seoulForest, PlaceAccessStatus.ACCESSIBLE);
         PlaceStateReport mineSecond = saveReport(me, cityHall, PlaceAccessStatus.INACCESSIBLE);
         saveReport(other, seoulForest, PlaceAccessStatus.PARTIALLY_ACCESSIBLE);
 
-        List<PlaceStateReport> mine = placeStateReportRepository.findMineWithPlace(me.getId());
+        List<PlaceStateReport> mine = placeStateReportRepository.findMinePage(me.getId(), null, null, 10);
 
         assertThat(mine).extracting(PlaceStateReport::getId).containsExactly(mineSecond.getId(), mineFirst.getId());
         // fetch join이 걸려 있으므로 트랜잭션 안에서 장소명이 바로 읽힌다.
@@ -112,9 +112,31 @@ class PlaceStateReportQueryDslRepositoryTest {
     }
 
     @Test
-    @DisplayName("findMineWithPlace는 제보가 없으면 빈 목록이다")
-    void findMineWithPlaceReturnsEmptyWhenNoReports() {
-        assertThat(placeStateReportRepository.findMineWithPlace(me.getId())).isEmpty();
+    @DisplayName("findMinePage는 제보가 없으면 빈 목록이다")
+    void findMinePageReturnsEmptyWhenNoReports() {
+        assertThat(placeStateReportRepository.findMinePage(me.getId(), null, null, 10))
+                .isEmpty();
+    }
+
+    @Test
+    @DisplayName("findMinePage는 limit만큼 끊고, 커서를 주면 그 다음 항목부터 이어 읽는다")
+    void findMinePagePagesWithCursor() {
+        PlaceStateReport oldest = saveReport(me, seoulForest, PlaceAccessStatus.ACCESSIBLE);
+        PlaceStateReport middle = saveReport(me, cityHall, PlaceAccessStatus.PARTIALLY_ACCESSIBLE);
+        PlaceStateReport newest = saveReport(me, seoulForest, PlaceAccessStatus.INACCESSIBLE);
+
+        List<PlaceStateReport> firstPage = placeStateReportRepository.findMinePage(me.getId(), null, null, 2);
+        assertThat(firstPage).extracting(PlaceStateReport::getId).containsExactly(newest.getId(), middle.getId());
+
+        PlaceStateReport last = firstPage.get(firstPage.size() - 1);
+        List<PlaceStateReport> secondPage =
+                placeStateReportRepository.findMinePage(me.getId(), last.getCreatedAt(), last.getId(), 2);
+        assertThat(secondPage).extracting(PlaceStateReport::getId).containsExactly(oldest.getId());
+
+        PlaceStateReport lastOfSecond = secondPage.get(0);
+        assertThat(placeStateReportRepository.findMinePage(
+                        me.getId(), lastOfSecond.getCreatedAt(), lastOfSecond.getId(), 2))
+                .isEmpty();
     }
 
     @Test

@@ -93,7 +93,7 @@ public class ObstacleReport extends BaseAuditEntity {
     private Set<MobilityType> affectedMobilityTypes = new HashSet<>();
 
     /**
-     * 이미 호스팅된 사진 URL 목록 (업로드 인프라는 이번 스코프에 포함하지 않음)
+     * 사진 URL 목록. 업로드 API(POST /api/v1/uploads/images)로 올린 뒤 받은 URL만 저장한다
      */
     @ElementCollection
     @CollectionTable(name = "obstacle_report_photo_urls", joinColumns = @JoinColumn(name = "obstacle_report_id"))

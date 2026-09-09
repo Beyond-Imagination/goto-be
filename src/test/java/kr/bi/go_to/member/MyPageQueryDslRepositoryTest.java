@@ -12,6 +12,7 @@ import kr.bi.go_to.model.member.Member;
 import kr.bi.go_to.model.obstaclereport.ObstacleIssueType;
 import kr.bi.go_to.model.obstaclereport.ObstacleReport;
 import kr.bi.go_to.model.obstaclereport.ObstacleReportConfirmation;
+import kr.bi.go_to.model.obstaclereport.ObstacleReportStatus;
 import kr.bi.go_to.model.obstaclereport.ObstacleSeverity;
 import kr.bi.go_to.repository.MemberRepository;
 import kr.bi.go_to.repository.ObstacleReportConfirmationRepository;
@@ -138,7 +139,7 @@ class MyPageQueryDslRepositoryTest {
                 .isZero();
     }
 
-    // ── findMineWithReport ──────────────────────────────────────────
+    // ── findMinePage ────────────────────────────────────────────────
 
     @Test
     @DisplayName("내가 확인한 목록은 내 확인 기록만 최신순으로 돌려준다")
@@ -151,7 +152,8 @@ class MyPageQueryDslRepositoryTest {
         ObstacleReportConfirmation newer = saveConfirmation(me, second);
         saveConfirmation(other, notMine);
 
-        List<ObstacleReportConfirmation> mine = obstacleReportConfirmationRepository.findMineWithReport(me.getId());
+        List<ObstacleReportConfirmation> mine =
+                obstacleReportConfirmationRepository.findMinePage(me.getId(), null, null, null, 10);
 
         assertThat(mine).extracting(ObstacleReportConfirmation::getId).containsExactly(newer.getId(), older.getId());
         assertThat(mine)
@@ -164,7 +166,7 @@ class MyPageQueryDslRepositoryTest {
     void findsEmptyWhenNoConfirmations() {
         saveReport(other, 1);
 
-        assertThat(obstacleReportConfirmationRepository.findMineWithReport(me.getId()))
+        assertThat(obstacleReportConfirmationRepository.findMinePage(me.getId(), null, null, null, 10))
                 .isEmpty();
     }
 
@@ -176,13 +178,56 @@ class MyPageQueryDslRepositoryTest {
         // 영속성 컨텍스트를 비워 프록시가 아닌 fetch join 결과임을 보장한다.
         entityManager.clear();
 
-        List<ObstacleReportConfirmation> mine = obstacleReportConfirmationRepository.findMineWithReport(me.getId());
+        List<ObstacleReportConfirmation> mine =
+                obstacleReportConfirmationRepository.findMinePage(me.getId(), null, null, null, 10);
 
         assertThat(mine).hasSize(1);
         ObstacleReport loaded = mine.get(0).getObstacleReport();
         assertThat(org.hibernate.Hibernate.isInitialized(loaded)).isTrue();
         assertThat(loaded.getConfirmedCount()).isEqualTo(4);
         assertThat(loaded.getIssueType()).isEqualTo(ObstacleIssueType.SIDEWALK_DAMAGE);
+    }
+
+    @Test
+    @DisplayName("확인 목록은 limit만큼 끊고 커서로 정확히 이어 읽는다")
+    void pagesConfirmationsWithCursor() {
+        ObstacleReportConfirmation oldest = saveConfirmation(me, saveReport(other, 1));
+        ObstacleReportConfirmation middle = saveConfirmation(me, saveReport(other, 1));
+        ObstacleReportConfirmation newest = saveConfirmation(me, saveReport(other, 1));
+
+        List<ObstacleReportConfirmation> firstPage =
+                obstacleReportConfirmationRepository.findMinePage(me.getId(), null, null, null, 2);
+        assertThat(firstPage)
+                .extracting(ObstacleReportConfirmation::getId)
+                .containsExactly(newest.getId(), middle.getId());
+
+        ObstacleReportConfirmation last = firstPage.get(firstPage.size() - 1);
+        List<ObstacleReportConfirmation> secondPage = obstacleReportConfirmationRepository.findMinePage(
+                me.getId(), null, last.getCreatedAt(), last.getId(), 2);
+        assertThat(secondPage).extracting(ObstacleReportConfirmation::getId).containsExactly(oldest.getId());
+
+        ObstacleReportConfirmation lastOfSecond = secondPage.get(0);
+        assertThat(obstacleReportConfirmationRepository.findMinePage(
+                        me.getId(), null, lastOfSecond.getCreatedAt(), lastOfSecond.getId(), 2))
+                .isEmpty();
+    }
+
+    @Test
+    @DisplayName("상태 필터를 주면 그 상태의 제보에 대한 확인만 돌려준다")
+    void filtersConfirmationsByReportStatus() {
+        ObstacleReportConfirmation onActive = saveConfirmation(me, saveReport(other, 1));
+        ObstacleReportConfirmation onResolved = saveConfirmation(me, saveResolvedReport(other));
+
+        assertThat(obstacleReportConfirmationRepository.findMinePage(
+                        me.getId(), ObstacleReportStatus.ACTIVE, null, null, 10))
+                .extracting(ObstacleReportConfirmation::getId)
+                .containsExactly(onActive.getId());
+        assertThat(obstacleReportConfirmationRepository.findMinePage(
+                        me.getId(), ObstacleReportStatus.RESOLVED, null, null, 10))
+                .extracting(ObstacleReportConfirmation::getId)
+                .containsExactly(onResolved.getId());
+        assertThat(obstacleReportConfirmationRepository.findMinePage(me.getId(), null, null, null, 10))
+                .hasSize(2);
     }
 
     // ── countResolvedByMember ───────────────────────────────────────

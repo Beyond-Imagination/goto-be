@@ -8,6 +8,9 @@
 --    컬럼 주석만 실제 enum 값과 맞춘다.
 COMMENT ON COLUMN obstacle_reports.issue_type IS '장애물 유형 (STAIRS, HIGH_CURB, STEEP_SLOPE, NARROW_PASSAGE, CONSTRUCTION, SIDEWALK_DAMAGE, LONG_WALKING_DISTANCE, OBSTRUCTION, ILLEGAL_PARKING, BRAILLE_BLOCK_DAMAGE, SLIPPERY_SURFACE, OTHER)';
 
+-- 1-1. 업로드 API(POST /api/v1/uploads/images)가 생겨 V19의 "업로드 인프라는 이번 스코프 밖" 주석은 더 이상 맞지 않는다.
+COMMENT ON TABLE obstacle_report_photo_urls IS '사진 URL 목록. 업로드 API(POST /api/v1/uploads/images)로 올린 뒤 받은 URL만 저장한다';
+
 -- 2. 장애물 제보 메모
 ALTER TABLE obstacle_reports ADD COLUMN description TEXT;
 

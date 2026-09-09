@@ -120,7 +120,7 @@ class MyFacilityReportQueryDslRepositoryTest {
         Report mineSecond = saveReport(me, hallRamp, "BLOCKED");
         saveReport(other, museumElevator, "DAMAGED");
 
-        List<Report> mine = reportRepository.findMineWithNodeAndPlace(me.getId());
+        List<Report> mine = reportRepository.findMinePage(me.getId(), null, null, 10);
 
         assertThat(mine).extracting(Report::getId).containsExactly(mineSecond.getId(), mineFirst.getId());
     }
@@ -133,7 +133,7 @@ class MyFacilityReportQueryDslRepositoryTest {
         // 영속성 컨텍스트를 비워, 조회 결과가 지연 로딩이 아니라 fetch join으로 채워졌는지 확인한다.
         entityManager.clear();
 
-        List<Report> mine = reportRepository.findMineWithNodeAndPlace(me.getId());
+        List<Report> mine = reportRepository.findMinePage(me.getId(), null, null, 10);
         entityManager.detach(mine.get(0));
 
         Report report = mine.get(0);
@@ -147,7 +147,7 @@ class MyFacilityReportQueryDslRepositoryTest {
     void keepsNegativeFloorLevel() {
         saveReport(me, hallRamp, "BLOCKED");
 
-        List<Report> mine = reportRepository.findMineWithNodeAndPlace(me.getId());
+        List<Report> mine = reportRepository.findMinePage(me.getId(), null, null, 10);
 
         assertThat(mine.get(0).getNode().getFloorMap().getFloorLevel()).isEqualTo(-1);
     }
@@ -157,7 +157,51 @@ class MyFacilityReportQueryDslRepositoryTest {
     void returnsEmptyWhenNoReports() {
         saveReport(other, museumElevator, "BROKEN");
 
-        assertThat(reportRepository.findMineWithNodeAndPlace(me.getId())).isEmpty();
+        assertThat(reportRepository.findMinePage(me.getId(), null, null, 10)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("findMinePage는 limit만큼 끊고, 커서를 주면 그 다음 항목부터 이어 읽는다")
+    void pagesWithCursor() {
+        Report oldest = saveReport(me, museumElevator, "BROKEN");
+        Report middle = saveReport(me, hallRamp, "BLOCKED");
+        Report newest = saveReport(me, museumElevator, "DAMAGED");
+
+        List<Report> firstPage = reportRepository.findMinePage(me.getId(), null, null, 2);
+        assertThat(firstPage).extracting(Report::getId).containsExactly(newest.getId(), middle.getId());
+
+        Report last = firstPage.get(firstPage.size() - 1);
+        List<Report> secondPage = reportRepository.findMinePage(me.getId(), last.getCreatedAt(), last.getId(), 2);
+        assertThat(secondPage).extracting(Report::getId).containsExactly(oldest.getId());
+
+        Report lastOfSecond = secondPage.get(0);
+        assertThat(reportRepository.findMinePage(me.getId(), lastOfSecond.getCreatedAt(), lastOfSecond.getId(), 2))
+                .isEmpty();
+    }
+
+    @Test
+    @DisplayName("같은 시각에 저장된 제보도 커서가 겹치지 않고 정확히 이어진다")
+    void pagesWithoutDuplicatesOnSameCreatedAt() {
+        // 같은 트랜잭션에서 저장하면 created_at이 같은 값으로 들어갈 수 있어, id로 갈라지는지 확인한다.
+        Report first = saveReport(me, museumElevator, "BROKEN");
+        Report second = saveReport(me, hallRamp, "BLOCKED");
+        Report third = saveReport(me, museumElevator, "MISSING");
+
+        List<Long> collected = new java.util.ArrayList<>();
+        java.time.Instant afterCreatedAt = null;
+        Long afterId = null;
+        for (int page = 0; page < 5; page++) {
+            List<Report> rows = reportRepository.findMinePage(me.getId(), afterCreatedAt, afterId, 1);
+            if (rows.isEmpty()) {
+                break;
+            }
+            collected.add(rows.get(0).getId());
+            afterCreatedAt = rows.get(0).getCreatedAt();
+            afterId = rows.get(0).getId();
+        }
+
+        assertThat(collected).containsExactly(third.getId(), second.getId(), first.getId());
+        assertThat(collected).doesNotHaveDuplicates();
     }
 
     @Test

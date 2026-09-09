@@ -202,15 +202,17 @@ class ReportControllerIntegrationTest {
                 .andExpect(jsonPath("$.issueType").value("OUT_OF_SERVICE"))
                 .andExpect(jsonPath("$.placeName").value("국립경주박물관"));
 
-        mockMvc.perform(get("/api/v1/members/me/facility-reports")
+        mockMvc.perform(get("/api/v1/members/me/reports")
+                        .param("kind", "FACILITY")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + reporterToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].id").value(reportId))
-                .andExpect(jsonPath("$[0].nodeName").value("본관 엘리베이터"))
-                .andExpect(jsonPath("$[0].floorLevel").value(2))
-                .andExpect(jsonPath("$[0].placeName").value("국립경주박물관"))
-                .andExpect(jsonPath("$[0].address").value("경북 경주시 일정로 186"));
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.items[0].kind").value("FACILITY"))
+                .andExpect(jsonPath("$.items[0].facility.id").value(reportId))
+                .andExpect(jsonPath("$.items[0].facility.nodeName").value("본관 엘리베이터"))
+                .andExpect(jsonPath("$.items[0].facility.floorLevel").value(2))
+                .andExpect(jsonPath("$.items[0].facility.placeName").value("국립경주박물관"))
+                .andExpect(jsonPath("$.items[0].facility.address").value("경북 경주시 일정로 186"));
     }
 
     @Test
@@ -243,10 +245,11 @@ class ReportControllerIntegrationTest {
 
         String otherToken = TestMemberAuthentication.accessToken(memberRepository, jwtService, "다른사람");
 
-        mockMvc.perform(get("/api/v1/members/me/facility-reports")
+        mockMvc.perform(get("/api/v1/members/me/reports")
+                        .param("kind", "FACILITY")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + otherToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(0));
+                .andExpect(jsonPath("$.items.length()").value(0));
     }
 
     @Test

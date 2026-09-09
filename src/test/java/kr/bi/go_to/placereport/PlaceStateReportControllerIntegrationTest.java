@@ -169,11 +169,13 @@ class PlaceStateReportControllerIntegrationTest {
                 .andExpect(jsonPath("$.placeName").value("서울숲 공원"));
 
         // 내 제보 기록의 「장소」 분류도 같은 제보를 돌려준다.
-        mockMvc.perform(get("/api/v1/members/me/place-state-reports")
+        mockMvc.perform(get("/api/v1/members/me/reports")
+                        .param("kind", "PLACE")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + reporterToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].placeName").value("서울숲 공원"));
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.items[0].kind").value("PLACE"))
+                .andExpect(jsonPath("$.items[0].place.placeName").value("서울숲 공원"));
     }
 
     @Test

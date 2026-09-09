@@ -3,19 +3,22 @@ package kr.bi.go_to.controller.member;
 import jakarta.validation.Valid;
 import java.util.List;
 import kr.bi.go_to.config.security.AuthenticatedMember;
+import kr.bi.go_to.controller.member.request.MyConfirmedReportPageRequest;
+import kr.bi.go_to.controller.member.request.MyReportPageRequest;
 import kr.bi.go_to.controller.member.request.UpdateMyPreferencesRequest;
 import kr.bi.go_to.controller.member.request.UpdateMySettingsRequest;
-import kr.bi.go_to.controller.member.response.MyConfirmedReportResponse;
-import kr.bi.go_to.controller.member.response.MyFacilityReportResponse;
+import kr.bi.go_to.controller.member.response.MyConfirmedReportPageResponse;
 import kr.bi.go_to.controller.member.response.MyObstacleReportResponse;
-import kr.bi.go_to.controller.member.response.MyPlaceStateReportResponse;
 import kr.bi.go_to.controller.member.response.MyPreferencesResponse;
 import kr.bi.go_to.controller.member.response.MyProfileResponse;
+import kr.bi.go_to.controller.member.response.MyReportPageResponse;
 import kr.bi.go_to.controller.member.response.MySettingsResponse;
 import kr.bi.go_to.service.member.MyPageService;
 import kr.bi.go_to.spec.MyPageApiSpec;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -75,21 +78,18 @@ public class MyPageController implements MyPageApiSpec {
     }
 
     @Override
-    @GetMapping("/place-state-reports")
-    public List<MyPlaceStateReportResponse> findMyPlaceStateReports(
-            @AuthenticationPrincipal AuthenticatedMember member) {
-        return myPageService.listMyPlaceStateReports(member.id());
-    }
-
-    @Override
-    @GetMapping("/facility-reports")
-    public List<MyFacilityReportResponse> findMyFacilityReports(@AuthenticationPrincipal AuthenticatedMember member) {
-        return myPageService.listMyFacilityReports(member.id());
+    @GetMapping("/reports")
+    public MyReportPageResponse findMyReports(
+            @AuthenticationPrincipal AuthenticatedMember member,
+            @Valid @ParameterObject @ModelAttribute MyReportPageRequest request) {
+        return myPageService.listMyReports(member.id(), request);
     }
 
     @Override
     @GetMapping("/obstacle-report-confirmations")
-    public List<MyConfirmedReportResponse> findMyConfirmedReports(@AuthenticationPrincipal AuthenticatedMember member) {
-        return myPageService.listMyConfirmedReports(member.id());
+    public MyConfirmedReportPageResponse findMyConfirmedReports(
+            @AuthenticationPrincipal AuthenticatedMember member,
+            @Valid @ParameterObject @ModelAttribute MyConfirmedReportPageRequest request) {
+        return myPageService.listMyConfirmedReports(member.id(), request);
     }
 }
