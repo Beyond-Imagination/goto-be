@@ -4,6 +4,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 import kr.bi.go_to.controller.place.response.BfDetailsResponse;
 import kr.bi.go_to.model.place.Place;
+import kr.bi.go_to.model.placereport.PlaceAccessStatus;
+import kr.bi.go_to.model.placereport.PlaceStateReport;
 import kr.bi.go_to.model.savedplace.SavedPlace;
 import org.locationtech.jts.geom.Point;
 
@@ -19,9 +21,13 @@ public record SavedPlaceResponse(
         BfDetailsResponse bfDetails,
         @Schema(description = "실내 지도(FLOOR_MAP) 존재 여부") boolean hasIndoorMap,
         @Schema(description = "저장 당시 장소가 이후 소프트 삭제되지 않고 여전히 이용 가능한지 여부") boolean isAvailable,
-        @Schema(description = "저장한 일시") Instant savedAt) {
+        @Schema(description = "저장한 일시") Instant savedAt,
+        @Schema(description = "이 장소의 상태 변경 알림을 받는지 여부", example = "true") boolean notificationEnabled,
+        @Schema(description = "이 장소의 가장 최근 장소 상태 제보. 제보가 없으면 null", nullable = true, example = "PARTIALLY_ACCESSIBLE")
+                PlaceAccessStatus latestAccessStatus,
+        @Schema(description = "가장 최근 장소 상태 제보 시각. 제보가 없으면 null", nullable = true) Instant latestReportedAt) {
 
-    public static SavedPlaceResponse from(SavedPlace savedPlace, boolean hasIndoorMap) {
+    public static SavedPlaceResponse from(SavedPlace savedPlace, boolean hasIndoorMap, PlaceStateReport latestReport) {
         Place place = savedPlace.getPlace();
         Point locationPoint = place.getLocationPoint();
         return new SavedPlaceResponse(
@@ -35,6 +41,9 @@ public record SavedPlaceResponse(
                 null,
                 hasIndoorMap,
                 !place.isDeleted(),
-                savedPlace.getCreatedAt());
+                savedPlace.getCreatedAt(),
+                savedPlace.isNotificationEnabled(),
+                latestReport == null ? null : latestReport.getAccessStatus(),
+                latestReport == null ? null : latestReport.getCreatedAt());
     }
 }

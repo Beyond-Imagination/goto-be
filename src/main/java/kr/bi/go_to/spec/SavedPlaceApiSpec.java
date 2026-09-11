@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import kr.bi.go_to.config.security.AuthenticatedMember;
+import kr.bi.go_to.controller.savedplace.request.UpdateSavedPlaceNotificationRequest;
 import kr.bi.go_to.controller.savedplace.response.SavedPlaceResponse;
 import kr.bi.go_to.enums.SwaggerTag;
 import kr.bi.go_to.exception.ErrorResponse;
@@ -30,4 +31,25 @@ public interface SavedPlaceApiSpec {
                 content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     List<SavedPlaceResponse> findMine(AuthenticatedMember member);
+
+    @Operation(
+            tags = SwaggerTag.PLACE_NAME,
+            summary = "저장 장소별 상태 변경 알림 on/off",
+            description = "저장한 장소마다 알림을 켜고 끕니다. 받을 알림 종류(시설 상태 변경 · 주변 장애물)는 내 정보의 알림 설정이 정합니다.")
+    @ApiResponses({
+        @ApiResponse(
+                responseCode = "200",
+                description = "변경 성공",
+                content = @Content(schema = @Schema(implementation = SavedPlaceResponse.class))),
+        @ApiResponse(
+                responseCode = "401",
+                description = "인증 필요",
+                content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+        @ApiResponse(
+                responseCode = "404",
+                description = "저장하지 않은 장소",
+                content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    SavedPlaceResponse updateNotification(
+            AuthenticatedMember member, Long placeId, UpdateSavedPlaceNotificationRequest request);
 }
