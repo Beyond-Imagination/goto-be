@@ -44,7 +44,11 @@ public class ObstacleReport extends BaseAuditEntity {
     /**
      * 오래됨(STALE) 판단 임계값 — 마지막 확인으로부터 이 기간이 지나면 조회 시점에 STALE로 파생 표시한다.
      */
-    private static final Duration STALE_THRESHOLD = Duration.ofDays(30);
+    /**
+     * 이 기간 동안 확인이 없으면 정보가 오래된 것으로 본다.
+     * 「오래된 제보」 표시와 제보자 확인 요청 알림이 같은 기준을 쓰도록 여기서 공개한다.
+     */
+    public static final Duration STALE_THRESHOLD = Duration.ofDays(30);
 
     /**
      * 장애물 제보 고유 식별자 (PK)
@@ -128,6 +132,16 @@ public class ObstacleReport extends BaseAuditEntity {
      */
     @Column(name = "last_confirmed_at")
     private Instant lastConfirmedAt;
+
+    /**
+     * 제보자에게 마지막으로 확인 요청 알림을 보낸 시각 (없으면 null)
+     */
+    @Column(name = "confirmation_requested_at")
+    private Instant confirmationRequestedAt;
+
+    public void markConfirmationRequested(Instant now) {
+        this.confirmationRequestedAt = now;
+    }
 
     public void confirm(Instant now) {
         this.confirmedCount++;

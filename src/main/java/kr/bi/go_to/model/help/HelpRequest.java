@@ -81,6 +81,13 @@ public class HelpRequest extends BaseAuditEntity {
 
     private Instant canceledAt;
 
+    /**
+     * 주변 도움 요청 푸시를 더 넓은 대상으로 확대 발송한 시각 (없으면 아직 확대 전).
+     * 1단계는 요청 즉시 방금 위치를 보고한 기기에만 나가고, 수락이 없을 때만 여기까지 온다.
+     */
+    @Column(name = "push_escalated_at")
+    private Instant pushEscalatedAt;
+
     public HelpRequest(
             Place place,
             Member requester,
@@ -104,6 +111,10 @@ public class HelpRequest extends BaseAuditEntity {
         this.status = HelpRequestStatus.REQUESTED;
         this.requestedAt = requestedAt;
         this.expiresAt = expiresAt;
+    }
+
+    public void markPushEscalated(Instant now) {
+        this.pushEscalatedAt = now;
     }
 
     public boolean isRequester(Member member) {

@@ -4,13 +4,17 @@ import kr.bi.go_to.exception.BusinessException;
 import kr.bi.go_to.exception.ErrorCode;
 import kr.bi.go_to.model.map.FacilityNode;
 import kr.bi.go_to.model.member.Member;
+import kr.bi.go_to.model.place.Place;
 import kr.bi.go_to.model.report.Report;
 import kr.bi.go_to.repository.FacilityNodeRepository;
 import kr.bi.go_to.repository.MemberRepository;
 import kr.bi.go_to.repository.ReportRepository;
+import kr.bi.go_to.service.push.PushMessages;
+import kr.bi.go_to.service.push.event.FacilityReportedEvent;
 import kr.bi.go_to.service.report.model.FacilityNodeData;
 import kr.bi.go_to.service.report.model.ReportData;
 import org.locationtech.jts.geom.Point;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,14 +25,17 @@ public class DbReportService implements ReportService {
     private final ReportRepository reportRepository;
     private final FacilityNodeRepository facilityNodeRepository;
     private final MemberRepository memberRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     public DbReportService(
             ReportRepository reportRepository,
             FacilityNodeRepository facilityNodeRepository,
-            MemberRepository memberRepository) {
+            MemberRepository memberRepository,
+            ApplicationEventPublisher eventPublisher) {
         this.reportRepository = reportRepository;
         this.facilityNodeRepository = facilityNodeRepository;
         this.memberRepository = memberRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -41,6 +48,16 @@ public class DbReportService implements ReportService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.FACILITY_NODE_NOT_FOUND));
 
         Report report = reportRepository.save(Report.create(node, reporter, issueType.trim(), trimToNull(description)));
+
+        // 이 시설이 속한 장소를 저장해 둔 사람들에게 알린다(커밋 이후 발송).
+        Place place = node.getFloorMap().getPlace();
+        eventPublisher.publishEvent(new FacilityReportedEvent(
+                place.getId(),
+                place.getName(),
+                node.getName(),
+                PushMessages.facilityIssueLabel(report.getIssueType()),
+                reporterId));
+
         return toData(report);
     }
 

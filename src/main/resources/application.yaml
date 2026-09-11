@@ -69,6 +69,19 @@ goto:
   # S3 기본 URL(https://{bucket}.s3.{region}.amazonaws.com/{key})을 만든다.
   image-storage:
     key-prefix: "obstacle-reports"
+  # Firebase 서비스 계정 키는 yaml에 두지 않는다.
+  # Parameter Store(/goto/goto.push.credentials)에 base64로 넣거나 goto.push.credentials-path로 파일을 준다.
+  # 둘 다 비어 있으면 푸시는 로그만 남기고 나머지 기능은 그대로 동작한다.
+  push:
+    help-request-radius-meters: 300
+    # 1단계는 최근 1시간 안에 위치를 보고한 기기에만 보내고, 5분 안에 수락이 없으면
+    # location-freshness(6시간)까지 대상을 넓혀 한 번 더 보낸다.
+    immediate-location-freshness: 1h
+    escalation-delay: 5m
+    location-freshness: 6h
+    saved-place-obstacle-radius-meters: 500
+    batch-size: 500
+    dry-run: false
   batch:
     initial-load:
       auto-run-enabled: true

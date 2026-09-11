@@ -259,12 +259,19 @@ class MyPageControllerIntegrationTest {
     }
 
     @Test
-    @DisplayName("설정을 저장한 적 없는 회원도 기본값(전부 false)으로 조회된다")
+    @DisplayName("설정을 저장한 적 없는 회원은 알림은 모두 켜짐, 보기 설정은 꺼짐으로 조회된다")
     void returnsDefaultSettingsForUntouchedMember() throws Exception {
+        // 알림을 받아야 저장한 장소의 변화를 알 수 있어 기본값이 켜짐이다.
+        // 기기(OS) 알림 권한은 별도로 허용해야 실제로 도착한다.
         mockMvc.perform(get("/api/v1/members/me/settings").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.notifications.savedPlaceStatusChange").value(false))
-                .andExpect(jsonPath("$.notifications.myHelpRequestAccepted").value(false))
+                .andExpect(jsonPath("$.notifications.savedPlaceStatusChange").value(true))
+                .andExpect(jsonPath("$.notifications.savedPlaceNearbyObstacle").value(true))
+                .andExpect(jsonPath("$.notifications.myReportConfirmed").value(true))
+                .andExpect(jsonPath("$.notifications.myReportConfirmationRequested")
+                        .value(true))
+                .andExpect(jsonPath("$.notifications.nearbyHelpRequest").value(true))
+                .andExpect(jsonPath("$.notifications.myHelpRequestAccepted").value(true))
                 .andExpect(jsonPath("$.display.largeText").value(false))
                 .andExpect(jsonPath("$.display.statusAlerts").value(false));
     }

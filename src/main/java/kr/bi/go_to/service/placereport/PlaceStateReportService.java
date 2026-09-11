@@ -14,6 +14,8 @@ import kr.bi.go_to.model.placereport.PlaceStateReport;
 import kr.bi.go_to.repository.PlaceRepository;
 import kr.bi.go_to.repository.PlaceStateReportRepository;
 import kr.bi.go_to.service.MemberService;
+import kr.bi.go_to.service.push.event.PlaceStateReportedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,14 +32,17 @@ public class PlaceStateReportService {
     private final PlaceStateReportRepository placeStateReportRepository;
     private final PlaceRepository placeRepository;
     private final MemberService memberService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public PlaceStateReportService(
             PlaceStateReportRepository placeStateReportRepository,
             PlaceRepository placeRepository,
-            MemberService memberService) {
+            MemberService memberService,
+            ApplicationEventPublisher eventPublisher) {
         this.placeStateReportRepository = placeStateReportRepository;
         this.placeRepository = placeRepository;
         this.memberService = memberService;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -57,7 +62,12 @@ public class PlaceStateReportService {
                 .description(request.description())
                 .build();
 
-        return PlaceStateReportResponse.from(placeStateReportRepository.save(report));
+        PlaceStateReport saved = placeStateReportRepository.save(report);
+        // 이 장소를 저장해 둔 사람들에게 알린다. 커밋 이후에 발송된다(PushNotificationEventListener).
+        eventPublisher.publishEvent(
+                new PlaceStateReportedEvent(place.getId(), place.getName(), memberId, saved.getAccessStatus()));
+
+        return PlaceStateReportResponse.from(saved);
     }
 
     /** EnumMap은 빈 Map을 그대로 받으면 키 타입을 알 수 없어 생성자에서 예외가 난다. */
