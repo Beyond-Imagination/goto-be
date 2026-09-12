@@ -2,12 +2,12 @@ package kr.bi.go_to.controller.help.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.Set;
 import java.util.UUID;
 import kr.bi.go_to.model.help.HelpKind;
 import kr.bi.go_to.model.help.HelpRequest;
+import kr.bi.go_to.util.CoordinatePrecision;
 
 @Schema(name = "NearbyHelpRequestResponse", description = "주변 도움 요청 목록 응답")
 public record NearbyHelpRequestResponse(
@@ -25,12 +25,6 @@ public record NearbyHelpRequestResponse(
         @Schema(description = "요청 생성 시각") Instant requestedAt,
         @Schema(description = "요청 만료 시각") Instant expiresAt) {
 
-    /**
-     * 화면기획 20.1 — 수락 전 도우미에게는 대략적인 위치만 보여준다.
-     * 소수점 3자리(위도 기준 약 110m)로 내려 정확한 지점이 드러나지 않게 한다.
-     */
-    private static final int APPROXIMATE_SCALE = 3;
-
     public static NearbyHelpRequestResponse from(HelpRequest helpRequest, long distanceMeters) {
         return new NearbyHelpRequestResponse(
                 helpRequest.getId(),
@@ -46,7 +40,8 @@ public record NearbyHelpRequestResponse(
                 helpRequest.getExpiresAt());
     }
 
+    /** 화면기획 20.1 — 수락 전 도우미에게는 대략적인 위치만 보여준다. */
     private static BigDecimal approximate(BigDecimal coordinate) {
-        return coordinate == null ? null : coordinate.setScale(APPROXIMATE_SCALE, RoundingMode.HALF_UP);
+        return CoordinatePrecision.approximate(coordinate);
     }
 }

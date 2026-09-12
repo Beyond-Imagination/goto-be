@@ -33,6 +33,7 @@ import org.junit.jupiter.api.Test;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.PrecisionModel;
+import org.springframework.context.ApplicationEventPublisher;
 
 class PlaceStateReportServiceTest {
 
@@ -41,8 +42,8 @@ class PlaceStateReportServiceTest {
     private final PlaceStateReportRepository placeStateReportRepository = mock(PlaceStateReportRepository.class);
     private final PlaceRepository placeRepository = mock(PlaceRepository.class);
     private final MemberService memberService = mock(MemberService.class);
-    private final PlaceStateReportService service =
-            new PlaceStateReportService(placeStateReportRepository, placeRepository, memberService);
+    private final PlaceStateReportService service = new PlaceStateReportService(
+            placeStateReportRepository, placeRepository, memberService, mock(ApplicationEventPublisher.class));
 
     private final Member reporter = new Member(Role.USER, "장소제보자");
 

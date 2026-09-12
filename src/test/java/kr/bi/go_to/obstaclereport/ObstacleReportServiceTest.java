@@ -37,6 +37,7 @@ import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.PrecisionModel;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
@@ -56,6 +57,7 @@ class ObstacleReportServiceTest {
             naverReverseGeocodingClient,
             mock(MemberService.class),
             Clock.fixed(NOW, ZoneOffset.UTC),
+            mock(ApplicationEventPublisher.class),
             noopTransactionManager());
 
     /**

@@ -25,10 +25,13 @@ import kr.bi.go_to.repository.ObstacleReportRepository;
 import kr.bi.go_to.repository.PlaceRepository;
 import kr.bi.go_to.service.MemberService;
 import kr.bi.go_to.service.obstaclereport.geocoding.NaverReverseGeocodingClient;
+import kr.bi.go_to.service.push.event.ObstacleReportConfirmedEvent;
+import kr.bi.go_to.service.push.event.ObstacleReportedEvent;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.PrecisionModel;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
@@ -58,6 +61,7 @@ public class ObstacleReportService {
     private final NaverReverseGeocodingClient naverReverseGeocodingClient;
     private final MemberService memberService;
     private final Clock clock;
+    private final ApplicationEventPublisher eventPublisher;
     private final TransactionTemplate readOnlyTransactionTemplate;
 
     public ObstacleReportService(
@@ -67,6 +71,7 @@ public class ObstacleReportService {
             NaverReverseGeocodingClient naverReverseGeocodingClient,
             MemberService memberService,
             Clock clock,
+            ApplicationEventPublisher eventPublisher,
             PlatformTransactionManager transactionManager) {
         this.obstacleReportRepository = obstacleReportRepository;
         this.obstacleReportConfirmationRepository = obstacleReportConfirmationRepository;
@@ -74,6 +79,7 @@ public class ObstacleReportService {
         this.naverReverseGeocodingClient = naverReverseGeocodingClient;
         this.memberService = memberService;
         this.clock = clock;
+        this.eventPublisher = eventPublisher;
         this.readOnlyTransactionTemplate = new TransactionTemplate(transactionManager);
         this.readOnlyTransactionTemplate.setReadOnly(true);
     }
@@ -94,7 +100,12 @@ public class ObstacleReportService {
                 .description(request.description())
                 .build();
 
-        return ObstacleReportResponse.from(obstacleReportRepository.save(report), clock.instant());
+        ObstacleReport saved = obstacleReportRepository.save(report);
+        // 이 좌표 근처에 저장 장소를 둔 사람들에게 알린다(커밋 이후 발송).
+        eventPublisher.publishEvent(new ObstacleReportedEvent(
+                saved.getId(), memberId, request.lat(), request.lng(), saved.getIssueType(), saved.getSeverity()));
+
+        return ObstacleReportResponse.from(saved, clock.instant());
     }
 
     @Transactional(readOnly = true)
@@ -249,6 +260,13 @@ public class ObstacleReportService {
                 .member(member)
                 .build());
         report.confirm(clock.instant());
+
+        eventPublisher.publishEvent(new ObstacleReportConfirmedEvent(
+                report.getId(),
+                report.getReporter().getId(),
+                memberId,
+                report.getIssueType(),
+                report.getConfirmedCount()));
     }
 
     private ObstacleReport getOrThrow(Long reportId) {

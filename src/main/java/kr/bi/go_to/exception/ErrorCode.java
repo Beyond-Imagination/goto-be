@@ -6,6 +6,8 @@ public enum ErrorCode {
     // 400 BAD_REQUEST
     INVALID_REQUEST(HttpStatus.BAD_REQUEST, "요청 값이 올바르지 않습니다."),
     INVALID_REPORT_CURSOR(HttpStatus.BAD_REQUEST, "잘못된 커서입니다. 목록을 처음부터 다시 불러와 주세요."),
+    INVALID_NOTIFICATION_CURSOR(HttpStatus.BAD_REQUEST, "잘못된 알림 커서입니다. 목록을 처음부터 다시 불러와 주세요."),
+    NOTIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "알림을 찾을 수 없습니다."),
     INVALID_IMAGE_FILE(HttpStatus.BAD_REQUEST, "이미지 파일만 업로드할 수 있습니다."),
     IMAGE_FILE_TOO_LARGE(HttpStatus.BAD_REQUEST, "이미지 용량이 너무 큽니다."),
     UNSUPPORTED_QUERY_PARAMETER(HttpStatus.BAD_REQUEST, "지원하지 않는 쿼리 파라미터입니다."),

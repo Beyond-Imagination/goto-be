@@ -24,8 +24,11 @@ import kr.bi.go_to.properties.CacheProperties;
 import kr.bi.go_to.repository.HelpRequestRejectionRepository;
 import kr.bi.go_to.repository.HelpRequestRepository;
 import kr.bi.go_to.repository.PlaceRepository;
+import kr.bi.go_to.service.push.event.HelpRequestAcceptedEvent;
+import kr.bi.go_to.service.push.event.HelpRequestCreatedEvent;
 import org.locationtech.jts.geom.Point;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,18 +48,21 @@ public class HelpRequestService {
     private final PlaceRepository placeRepository;
     private final MemberService memberService;
     private final Clock clock;
+    private final ApplicationEventPublisher eventPublisher;
 
     public HelpRequestService(
             HelpRequestRepository helpRequestRepository,
             HelpRequestRejectionRepository rejectionRepository,
             PlaceRepository placeRepository,
             MemberService memberService,
-            Clock clock) {
+            Clock clock,
+            ApplicationEventPublisher eventPublisher) {
         this.helpRequestRepository = helpRequestRepository;
         this.rejectionRepository = rejectionRepository;
         this.placeRepository = placeRepository;
         this.memberService = memberService;
         this.clock = clock;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -79,9 +85,16 @@ public class HelpRequestService {
                 now,
                 now.plus(Duration.ofMinutes(expiresInMinutes))));
 
-        // TODO(푸시): 지금은 도우미가 GET /nearby를 조회할 때만 요청이 노출되는 pull 방식이다.
-        //  기기 토큰 저장소와 FCM 발송이 준비되면 이 지점에서 요청 위치 반경 내 사용자에게 푸시를 보내고,
-        //  FE 대기 화면의 "요청을 보내고 있어요" 문구도 완료형으로 바꿔야 한다.
+        // 요청 위치 반경(goto.push.help-request-radius-meters) 안에 있는 기기에 푸시를 보낸다.
+        // 커밋 이후에 나가므로, 롤백된 요청으로 알림이 가는 일은 없다.
+        eventPublisher.publishEvent(new HelpRequestCreatedEvent(
+                helpRequest.getId(),
+                requester.getId(),
+                request.latitude().doubleValue(),
+                request.longitude().doubleValue(),
+                helpRequest.getLocationLabel(),
+                List.copyOf(helpRequest.getKinds())));
+
         return HelpRequestResponse.from(helpRequest);
     }
 
@@ -170,6 +183,9 @@ public class HelpRequestService {
         }
 
         helpRequest.accept(helper, Instant.now(clock));
+        eventPublisher.publishEvent(new HelpRequestAcceptedEvent(
+                helpRequest.getId(), helpRequest.getRequester().getId(), helper.getNickname()));
+
         return HelpRequestResponse.from(helpRequest);
     }
 
