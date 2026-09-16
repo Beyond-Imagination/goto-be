@@ -47,17 +47,10 @@ public record PlaceDetailResponse(
 
     public record Summary(String title, String description) {}
 
-    public record Issue(Long id, String title, String reportedAtLabel, Instant createdAt, int confirmCount, String status) {}
+    public record Issue(
+            Long id, String title, String reportedAtLabel, Instant createdAt, int confirmCount, String status) {}
 
-    public record AccessibilityRow(
-            RowKey key,
-            String label,
-            RowValue official,
-            RowValue recent) {}
+    public record AccessibilityRow(RowKey key, String label, RowValue official, RowValue recent) {}
 
-    public record RowValue(
-            RowStatus status,
-            String text,
-            String description,
-            boolean reportCtaEnabled) {}
+    public record RowValue(RowStatus status, String text, String description, boolean reportCtaEnabled) {}
 }

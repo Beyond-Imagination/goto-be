@@ -47,9 +47,11 @@ public class PlaceDetailService {
 
     @Transactional(readOnly = true)
     public PlaceDetailResponse getDetail(Long placeId) {
-        Place place = placeRepository.findByIdAndIsDeletedFalse(placeId)
+        Place place = placeRepository
+                .findByIdAndIsDeletedFalse(placeId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PLACE_NOT_FOUND));
-        PlaceBfDetails bfDetails = placeBfInfoRepository.findById(placeId)
+        PlaceBfDetails bfDetails = placeBfInfoRepository
+                .findById(placeId)
                 .map(PlaceBfInfo::getBfDetails)
                 .orElse(null);
         List<PlaceStateReport> reports = placeStateReportRepository.findLatestByPlace(placeId, RECENT_REPORT_LIMIT);
@@ -81,11 +83,20 @@ public class PlaceDetailService {
 
     private List<AccessibilityRow> rows(PlaceBfDetails bfDetails, PlaceStateReport latestReport) {
         return List.of(
-                row(RowKey.ENTRANCE, "입구 접근성", official(bfDetails, "route", "접근 가능", "경사로 있음"),
+                row(
+                        RowKey.ENTRANCE,
+                        "입구 접근성",
+                        official(bfDetails, "route", "접근 가능", "경사로 있음"),
                         recentAccess(latestReport)),
-                row(RowKey.ELEVATOR, "엘리베이터", official(bfDetails, "elevator", "정상", "운영 중"),
+                row(
+                        RowKey.ELEVATOR,
+                        "엘리베이터",
+                        official(bfDetails, "elevator", "정상", "운영 중"),
                         recentFacility(latestReport, PriorityFacility.ELEVATOR)),
-                row(RowKey.ACCESSIBLE_TOILET, "장애인 화장실", official(bfDetails, "restroom", "있음", "장애인 화장실 있음"),
+                row(
+                        RowKey.ACCESSIBLE_TOILET,
+                        "장애인 화장실",
+                        official(bfDetails, "restroom", "있음", "장애인 화장실 있음"),
                         recentFacility(latestReport, PriorityFacility.ACCESSIBLE_TOILET)),
                 row(RowKey.PARKING, "주차장", noOfficial(), recentFacility(latestReport, PriorityFacility.PARKING)),
                 row(RowKey.NURSING_ROOM, "수유실", noOfficial(), noReport()));
@@ -95,13 +106,15 @@ public class PlaceDetailService {
         return new AccessibilityRow(key, label, official, recent);
     }
 
-    private RowValue official(PlaceBfDetails bfDetails, String mobilityKey, String availableText, String availableDescription) {
+    private RowValue official(
+            PlaceBfDetails bfDetails, String mobilityKey, String availableText, String availableDescription) {
         PlaceBfDetails.BfItem item = mobilityItem(bfDetails, mobilityKey);
         if (item == null || item.getIsAvailable() == null) {
             return noOfficial();
         }
         if (Boolean.TRUE.equals(item.getIsAvailable())) {
-            return new RowValue(RowStatus.AVAILABLE, availableText, textOrDefault(item.getDetails(), availableDescription), false);
+            return new RowValue(
+                    RowStatus.AVAILABLE, availableText, textOrDefault(item.getDetails(), availableDescription), false);
         }
         return new RowValue(RowStatus.UNAVAILABLE, "주의 필요", textOrDefault(item.getDetails(), "방문 전 확인이 필요해요"), false);
     }
@@ -167,7 +180,8 @@ public class PlaceDetailService {
     private boolean isWarningReport(PlaceStateReport report) {
         return report.getAccessStatus() != PlaceAccessStatus.ACCESSIBLE
                 || report.getFacilityStatuses().values().stream()
-                        .anyMatch(status -> status == PlaceFacilityStatus.UNAVAILABLE || status == PlaceFacilityStatus.BROKEN);
+                        .anyMatch(status ->
+                                status == PlaceFacilityStatus.UNAVAILABLE || status == PlaceFacilityStatus.BROKEN);
     }
 
     private Issue toIssue(PlaceStateReport report) {

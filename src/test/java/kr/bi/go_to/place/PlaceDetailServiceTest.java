@@ -38,13 +38,16 @@ class PlaceDetailServiceTest {
     void returnsWarningWhenOfficialOrRecentStateNeedsAttention() {
         Place place = place();
         when(placeRepository.findByIdAndIsDeletedFalse(1L)).thenReturn(Optional.of(place));
-        when(placeBfInfoRepository.findById(1L)).thenReturn(Optional.of(new PlaceBfInfo(place, bfDetails(false, true, true))));
+        when(placeBfInfoRepository.findById(1L))
+                .thenReturn(Optional.of(new PlaceBfInfo(place, bfDetails(false, true, true))));
         when(placeStateReportRepository.findLatestByPlace(1L, 20)).thenReturn(List.of(report(place)));
 
         PlaceDetailResponse response = service.getDetail(1L);
 
         assertThat(response.detailState()).isEqualTo(PlaceDetailResponse.DetailState.WARNING);
-        assertThat(response.badges()).extracting(PlaceDetailResponse.Badge::text).contains("주의 필요");
+        assertThat(response.badges())
+                .extracting(PlaceDetailResponse.Badge::text)
+                .contains("주의 필요");
         assertThat(response.issues()).hasSize(1);
         assertThat(response.accessibilityRows())
                 .filteredOn(row -> row.key() == PlaceDetailResponse.RowKey.ENTRANCE)
@@ -57,7 +60,8 @@ class PlaceDetailServiceTest {
     void returnsReportMissingWhenOfficialInfoExistsButThereIsNoRecentReport() {
         Place place = place();
         when(placeRepository.findByIdAndIsDeletedFalse(1L)).thenReturn(Optional.of(place));
-        when(placeBfInfoRepository.findById(1L)).thenReturn(Optional.of(new PlaceBfInfo(place, bfDetails(true, true, true))));
+        when(placeBfInfoRepository.findById(1L))
+                .thenReturn(Optional.of(new PlaceBfInfo(place, bfDetails(true, true, true))));
         when(placeStateReportRepository.findLatestByPlace(1L, 20)).thenReturn(List.of());
 
         PlaceDetailResponse response = service.getDetail(1L);
