@@ -35,6 +35,11 @@ public interface PlaceSearchRepository extends JpaRepository<Place, Long> {
                     WHERE p.location_point IS NOT NULL
                       AND p.is_deleted = false
                       AND (:category IS NULL OR p.category_code = :category)
+                      AND (
+                          :keyword IS NULL
+                          OR p.name ILIKE CONCAT('%', :keyword, '%')
+                          OR p.sanitized_address ILIKE CONCAT('%', :keyword, '%')
+                      )
                     ORDER BY distanceMeters ASC
                     LIMIT :limit
                     """,
@@ -43,7 +48,8 @@ public interface PlaceSearchRepository extends JpaRepository<Place, Long> {
             @Param("latitude") double latitude,
             @Param("longitude") double longitude,
             @Param("limit") int limit,
-            @Param("category") String category);
+            @Param("category") String category,
+            @Param("keyword") String keyword);
 
     @Query(
             value =

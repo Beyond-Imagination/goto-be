@@ -6,9 +6,11 @@ import kr.bi.go_to.config.security.AuthenticatedMember;
 import kr.bi.go_to.controller.place.request.NearbyAccessibilitySummaryRequest;
 import kr.bi.go_to.controller.place.request.PlaceSearchRequest;
 import kr.bi.go_to.controller.place.response.NearbyAccessibilitySummaryResponse;
+import kr.bi.go_to.controller.place.response.PlaceDetailResponse;
 import kr.bi.go_to.controller.place.response.PlaceSearchResponse;
 import kr.bi.go_to.exception.BusinessException;
 import kr.bi.go_to.exception.ErrorCode;
+import kr.bi.go_to.service.place.PlaceDetailService;
 import kr.bi.go_to.service.savedplace.SavedPlaceService;
 import kr.bi.go_to.spec.PlaceApiSpec;
 import kr.bi.go_to.usecase.GetNearbyAccessibilitySummaryUseCase;
@@ -32,14 +34,17 @@ public class PlaceController implements PlaceApiSpec {
     private final SearchPlacesUseCase searchPlacesUseCase;
     private final GetNearbyAccessibilitySummaryUseCase getNearbyAccessibilitySummaryUseCase;
     private final SavedPlaceService savedPlaceService;
+    private final PlaceDetailService placeDetailService;
 
     public PlaceController(
             SearchPlacesUseCase searchPlacesUseCase,
             GetNearbyAccessibilitySummaryUseCase getNearbyAccessibilitySummaryUseCase,
-            SavedPlaceService savedPlaceService) {
+            SavedPlaceService savedPlaceService,
+            PlaceDetailService placeDetailService) {
         this.searchPlacesUseCase = searchPlacesUseCase;
         this.getNearbyAccessibilitySummaryUseCase = getNearbyAccessibilitySummaryUseCase;
         this.savedPlaceService = savedPlaceService;
+        this.placeDetailService = placeDetailService;
     }
 
     @Override
@@ -57,6 +62,12 @@ public class PlaceController implements PlaceApiSpec {
     public NearbyAccessibilitySummaryResponse nearbySummary(
             @Valid @ParameterObject @ModelAttribute NearbyAccessibilitySummaryRequest request) {
         return getNearbyAccessibilitySummaryUseCase.execute(request);
+    }
+
+    @Override
+    @GetMapping("/{placeId}/detail")
+    public PlaceDetailResponse detail(@PathVariable Long placeId) {
+        return placeDetailService.getDetail(placeId);
     }
 
     @Override

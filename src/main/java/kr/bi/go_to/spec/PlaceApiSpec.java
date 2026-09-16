@@ -13,6 +13,7 @@ import kr.bi.go_to.config.security.AuthenticatedMember;
 import kr.bi.go_to.controller.place.request.NearbyAccessibilitySummaryRequest;
 import kr.bi.go_to.controller.place.request.PlaceSearchRequest;
 import kr.bi.go_to.controller.place.response.NearbyAccessibilitySummaryResponse;
+import kr.bi.go_to.controller.place.response.PlaceDetailResponse;
 import kr.bi.go_to.controller.place.response.PlaceSearchResponse;
 import kr.bi.go_to.enums.SwaggerTag;
 import kr.bi.go_to.exception.ErrorResponse;
@@ -56,6 +57,22 @@ public interface PlaceApiSpec {
     })
     NearbyAccessibilitySummaryResponse nearbySummary(
             @Valid @ParameterObject @ModelAttribute NearbyAccessibilitySummaryRequest request);
+
+    @Operation(
+            tags = SwaggerTag.PLACE_NAME,
+            summary = "장소 상세 정보",
+            description = "장소 상세 하단 탭 렌더링에 필요한 공식 정보, 최신 제보, 상태 문구를 한 번에 반환합니다.")
+    @ApiResponses({
+        @ApiResponse(
+                responseCode = "200",
+                description = "장소 상세 조회 성공",
+                content = @Content(schema = @Schema(implementation = PlaceDetailResponse.class))),
+        @ApiResponse(
+                responseCode = "404",
+                description = "장소를 찾을 수 없음",
+                content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    PlaceDetailResponse detail(@PathVariable Long placeId);
 
     @Operation(
             tags = SwaggerTag.PLACE_NAME,

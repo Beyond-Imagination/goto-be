@@ -2,6 +2,7 @@ package kr.bi.go_to.service.place.mock;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Locale;
 import kr.bi.go_to.service.place.PlaceService;
 import kr.bi.go_to.service.place.model.BfDetailsData;
 import kr.bi.go_to.service.place.model.PlaceData;
@@ -92,13 +93,24 @@ public class MockPlaceService implements PlaceService {
                     false));
 
     @Override
-    public List<PlaceData> searchNearby(double latitude, double longitude, int limit, String category) {
+    public List<PlaceData> searchNearby(double latitude, double longitude, int limit, String category, String keyword) {
         return PLACES.stream()
                 .filter(place -> category == null || category.equals(place.categoryCode()))
+                .filter(place -> keyword == null || containsKeyword(place, keyword))
                 .map(place -> withDistance(place, latitude, longitude))
                 .sorted((left, right) -> Double.compare(left.distanceMeters(), right.distanceMeters()))
                 .limit(limit)
                 .toList();
+    }
+
+    private boolean containsKeyword(PlaceData place, String keyword) {
+        String normalizedKeyword = keyword.toLowerCase(Locale.ROOT);
+        return containsIgnoreCase(place.name(), normalizedKeyword)
+                || containsIgnoreCase(place.sanitizedAddress(), normalizedKeyword);
+    }
+
+    private boolean containsIgnoreCase(String value, String normalizedKeyword) {
+        return value != null && value.toLowerCase(Locale.ROOT).contains(normalizedKeyword);
     }
 
     @Override
