@@ -19,8 +19,8 @@ public class DbPlaceService implements PlaceService {
     }
 
     @Override
-    public List<PlaceData> searchNearby(double latitude, double longitude, int limit, String category) {
-        return placeSearchRepository.searchNearby(latitude, longitude, limit, category).stream()
+    public List<PlaceData> searchNearby(double latitude, double longitude, int limit, String category, String keyword) {
+        return placeSearchRepository.searchNearby(latitude, longitude, limit, category, keyword).stream()
                 .map(this::toData)
                 .toList();
     }

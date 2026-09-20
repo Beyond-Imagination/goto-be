@@ -22,10 +22,11 @@ public class SearchPlacesUseCase {
 
     public PlaceSearchResponse execute(PlaceSearchRequest request) {
         // categoryPrefixes/mobilityTypes/avoid는 DbPlaceService 구현 전까지 no-op이다 (ADR-0004).
-        List<PlaceSearchItemResponse> places =
-                placeService.searchNearby(request.lat(), request.lng(), request.k(), request.categoryCode()).stream()
-                        .map(this::toResponse)
-                        .toList();
+        List<PlaceSearchItemResponse> places = placeService
+                .searchNearby(request.lat(), request.lng(), request.k(), request.categoryCode(), request.keyword())
+                .stream()
+                .map(this::toResponse)
+                .toList();
         List<String> categories = placeService.findDistinctCategories();
 
         AppliedFiltersResponse appliedFilters =

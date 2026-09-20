@@ -75,7 +75,7 @@ class PlaceSearchRepositoryTest {
         saveBfInfo(near, true, false, true);
         saveBfInfo(middle, false, true, false);
 
-        List<PlaceSearchProjection> result = placeSearchRepository.searchNearby(37.5665, 126.9780, 2, "museum");
+        List<PlaceSearchProjection> result = placeSearchRepository.searchNearby(37.5665, 126.9780, 2, "museum", null);
 
         assertThat(result).hasSize(2);
         assertThat(result).extracting(PlaceSearchProjection::getName).containsExactly("Near Museum", "Middle Museum");
@@ -93,12 +93,27 @@ class PlaceSearchRepositoryTest {
         savePlace("without-floor-map", "museum", "Museum Without Floor Map", 37.5667, 126.9782, false);
         saveFloorMap(withFloorMap);
 
-        List<PlaceSearchProjection> result = placeSearchRepository.searchNearby(37.5665, 126.9780, 10, "museum");
+        List<PlaceSearchProjection> result = placeSearchRepository.searchNearby(37.5665, 126.9780, 10, "museum", null);
 
         assertThat(result)
                 .extracting(PlaceSearchProjection::getName, PlaceSearchProjection::getHasIndoorMap)
                 .containsExactlyInAnyOrder(
                         tuple("Museum With Floor Map", true), tuple("Museum Without Floor Map", false));
+    }
+
+    @Test
+    void filtersByKeywordInNameOrAddressBeforeApplyingLimit() {
+        savePlace("museum", "museum", "National Museum", 37.5666, 126.9781, false);
+        savePlace("library", "museum", "City Library", 37.5667, 126.9782, false);
+        savePlace("address-match", "museum", "Archive", 37.5668, 126.9783, false);
+
+        List<PlaceSearchProjection> nameResult =
+                placeSearchRepository.searchNearby(37.5665, 126.9780, 10, "museum", "museum");
+        List<PlaceSearchProjection> addressResult =
+                placeSearchRepository.searchNearby(37.5665, 126.9780, 10, "museum", "archive address");
+
+        assertThat(nameResult).extracting(PlaceSearchProjection::getName).containsExactly("National Museum");
+        assertThat(addressResult).extracting(PlaceSearchProjection::getName).containsExactly("Archive");
     }
 
     @Test

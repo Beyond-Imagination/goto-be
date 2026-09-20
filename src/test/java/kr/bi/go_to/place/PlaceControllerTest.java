@@ -12,6 +12,7 @@ import kr.bi.go_to.controller.place.PlaceController;
 import kr.bi.go_to.exception.GlobalExceptionHandler;
 import kr.bi.go_to.service.obstaclereport.NearbyObstacleSummary;
 import kr.bi.go_to.service.obstaclereport.ObstacleReportService;
+import kr.bi.go_to.service.place.PlaceDetailService;
 import kr.bi.go_to.service.place.mock.MockPlaceService;
 import kr.bi.go_to.service.savedplace.SavedPlaceService;
 import kr.bi.go_to.usecase.GetNearbyAccessibilitySummaryUseCase;
@@ -36,7 +37,8 @@ class PlaceControllerTest {
         PlaceController controller = new PlaceController(
                 new SearchPlacesUseCase(new MockPlaceService()),
                 new GetNearbyAccessibilitySummaryUseCase(obstacleReportService),
-                mock(SavedPlaceService.class));
+                mock(SavedPlaceService.class),
+                mock(PlaceDetailService.class));
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .setValidator(validator)
